@@ -28,6 +28,10 @@ File Cabinet files over JSON — call it with `netsuite-cli restlet call`.
    - The query itself errors (unknown alias, auth failure): report that error. It says nothing
      about whether the RESTlet is installed.
 
+**Never deploy, install, or edit script or deployment records yourself**, in any account. If the
+RESTlet is missing, undeployed, not released, or failing, report what you found and let the user
+fix it. Changing scripts in an account, especially a client's, is the user's decision.
+
 NetSuite's REST API has no file-content support, so this RESTlet is the only scriptable path to
 File Cabinet content. **File Cabinet vs `suiteql`:** for metadata-only questions (does a file
 exist, what's its size/type/folder, list a folder) plain `netsuite-cli suiteql` over the `file` /

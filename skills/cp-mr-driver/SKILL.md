@@ -33,6 +33,10 @@ gets a permission error by design.
    - The query itself errors (unknown alias, auth failure): report that error. It says nothing
      about whether the RESTlet is installed.
 
+**Never deploy, install, or edit script or deployment records yourself**, in any account. If the
+RESTlet is missing, undeployed, not released, or failing, report what you found and let the user
+fix it. Changing scripts in an account, especially a client's, is the user's decision.
+
 ## Trigger — POST `{ script, deployment?, params? }`
 
 ```bash
