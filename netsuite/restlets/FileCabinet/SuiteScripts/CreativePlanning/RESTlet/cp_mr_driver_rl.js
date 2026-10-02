@@ -2,7 +2,7 @@
  * @NApiVersion 2.1
  * @NScriptType Restlet
  * @NModuleScope SameAccount
- * Author: Jon Lamb
+ * Author: Creative Planning Business Services
  * Date: 08/13/2026
  * Version: 1.0
  * Description: Trigger Map/Reduce scripts and poll their progress over JSON — NetSuite's REST API
@@ -51,7 +51,7 @@ define(["require", "exports", "N/log", "N/task"], function (require, exports, lo
     const serializeStatus = (taskId) => {
         const status = checkStatus(taskId);
         // checkStatus doesn't throw for an unknown task id — it returns a status object whose status is
-        // null (observed in sb2). Surfacing that as an error keeps a typo'd taskid from reading like a
+        // null (observed in a sandbox). Surfacing that as an error keeps a typo'd taskid from reading like a
         // valid task that simply hasn't started.
         if (status.status === null || status.status === undefined) {
             throw new ValidationError(`no task found for taskid ${JSON.stringify(taskId)} — check the id returned by POST`);

@@ -2,14 +2,14 @@
  * @NApiVersion 2.1
  * @NScriptType Restlet
  * @NModuleScope SameAccount
- * Author: Jon Lamb
+ * Author: Creative Planning Business Services
  * Date: 08/10/2026
  * Version: 1.0
  * Description: Describe, download, list, create, edit and delete File Cabinet files over JSON —
  *   NetSuite's REST API has no file-content support. Primarily called by netsuite-cli via
  *   `restlet call`. Contract: GET ?id=|path= describes; &contents=T downloads; ?folder= lists;
  *   POST creates (overwrite-guarded); PUT patches (contents/name/folder/description/flags);
- *   DELETE removes a file. See docs/superpowers/specs/2026-08-10-file-cabinet-restlet-design.html.
+ *   DELETE removes a file.
  */
 define(["require", "exports", "N/log", "../netsuite_modules/file-cabinet/index.js"], function (require, exports, log, index_js_1) {
     "use strict";

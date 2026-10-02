@@ -1,7 +1,7 @@
 /**
  * @NApiVersion 2.1
  * @NModuleScope SameAccount
- * Author: Jon Lamb
+ * Author: Creative Planning Business Services
  * Date: 08/01/2026
  * Version: 1.0
  * Description: Shared serialization core for cp_saved_search_rl — maps saved searches to and from
