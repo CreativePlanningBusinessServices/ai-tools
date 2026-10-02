@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Test double for netsuite-cli used by verify.test.sh. STUB_MODE picks the account's state:
+#   ok (default) | missing-script | mismatch | auth-fail
+mode="${STUB_MODE:-ok}"
+args="$*"
+if [ "$mode" = auth-fail ]; then
+  echo '{"kind":"auth","message":"token rejected for account alias"}' >&2
+  exit 3
+fi
+case "$args" in
+  suiteql*"FROM script "*)
+    if [ "$mode" = missing-script ]; then
+      echo '{"items":[{"scriptid":"customscript_cp_saved_search_rl"},{"scriptid":"customscript_cp_file_cabinet_rl"}]}'
+    else
+      echo '{"items":[{"scriptid":"customscript_cp_saved_search_rl"},{"scriptid":"customscript_cp_file_cabinet_rl"},{"scriptid":"customscript_cp_mr_driver_rl"}]}'
+    fi ;;
+  suiteql*"FROM savedsearch"*)
+    echo '{"items":[{"id":"42"}]}' ;;
+  *customscript_cp_file_cabinet_rl*"folder=/"*)
+    echo '{"folder":{"id":null,"path":"/"},"folders":[],"files":[]}' ;;
+  *customscript_cp_saved_search_rl*"id=42"*)
+    echo '{"id":"customsearch_example","internalId":42,"title":"Example","type":"customer"}' ;;
+  *customscript_cp_mr_driver_rl*"taskid="*)
+    echo '{"error":"no task found for taskid \"MAPREDUCETASK_0000000000\""}' ;;
+  *customscript_cp_file_cabinet_rl*"contents=T"*)
+    path="$(printf '%s\n' "$@" | sed -n 's#^path=/SuiteScripts/CreativePlanning/##p')"
+    file="$STUB_PACKAGE_DIR/FileCabinet/SuiteScripts/CreativePlanning/$path"
+    if [ "$mode" = mismatch ]; then
+      { cat "$file"; echo '// changed in the account'; } | jq -Rs '{contents: ., contentsEncoding: "utf8"}'
+    else
+      jq -Rs '{contents: ., contentsEncoding: "utf8"}' < "$file"
+    fi ;;
+  *)
+    echo "{\"kind\":\"usage\",\"message\":\"stub: unexpected call: $args\"}" >&2
+    exit 2 ;;
+esac
