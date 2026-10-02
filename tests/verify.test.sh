@@ -7,11 +7,15 @@ tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 pkg="$tmp/pkg"
 js_root="$pkg/FileCabinet/SuiteScripts/CreativePlanning"
 for file in RESTlet/cp_saved_search_rl.js RESTlet/cp_file_cabinet_rl.js RESTlet/cp_mr_driver_rl.js \
-            netsuite_modules/saved-search-serializer/index.js netsuite_modules/file-cabinet/index.js; do
+            netsuite_modules/saved-search-serializer/index.js netsuite_modules/file-cabinet/index.js \
+            netsuite_modules/extra/index.js; do
   mkdir -p "$js_root/$(dirname "$file")"
   printf 'define([], function () {});\n// %s\n' "$file" > "$js_root/$file"
 done
 cp "$here/../netsuite/restlets/verify.sh" "$pkg/verify.sh"
+# verify.sh takes its file list from deploy.xml; this one lists an extra module.
+sed 's#</files>#    <path>~/FileCabinet/SuiteScripts/CreativePlanning/netsuite_modules/extra/index.js</path>\
+    </files>#' "$here/../netsuite/restlets/deploy.xml" > "$pkg/deploy.xml"
 export PATH="$here/bin:$PATH" STUB_PACKAGE_DIR="$pkg"
 
 run_verify() { STUB_MODE="$1" bash "$pkg/verify.sh" testalias > "$tmp/out.log" 2>&1; echo $?; }
@@ -19,6 +23,7 @@ run_verify() { STUB_MODE="$1" bash "$pkg/verify.sh" testalias > "$tmp/out.log" 2
 assert_eq "$(run_verify ok)" 0 "healthy install exits 0"
 assert_contains "$(cat "$tmp/out.log")" "all checks passed" "healthy install says so"
 assert_not_contains "$(cat "$tmp/out.log")" "FAIL" "healthy install has no FAIL lines"
+assert_contains "$(cat "$tmp/out.log")" "PASS deployed netsuite_modules/extra/index.js matches package" "every file in deploy.xml is checked"
 
 assert_eq "$(run_verify missing-script)" 1 "missing script exits 1"
 assert_contains "$(cat "$tmp/out.log")" "FAIL all three scripts installed" "missing script is named"

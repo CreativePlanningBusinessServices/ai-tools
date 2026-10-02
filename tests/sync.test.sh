@@ -43,6 +43,7 @@ relative_status="$(cd "$tmp" && SYNC_OUT_DIR="$tmp/pkg-relative" bash "$sync" so
 assert_eq "$relative_status" 0 "relative source path syncs"
 
 for case in "missing-file:did not produce" "bad-dep:loads modules not in the package" \
+            "bad-module-dep:netsuite_modules/shared/helpers.js" \
             "build-fails:build failed" "no-such-ref:ref not found"; do
   ref="${case%%:*}"; message="${case#*:}"
   before="$(snapshot "$tmp/pkg")"
@@ -51,6 +52,16 @@ for case in "missing-file:did not produce" "bad-dep:loads modules not in the pac
   assert_eq "$(snapshot "$tmp/pkg")" "$before" "$ref: package unchanged"
   assert_eq "$(worktree_count)" 1 "$ref: worktree removed"
 done
+
+# A packaged file that deploy.xml doesn't list would sync fine and then never reach the account.
+mkdir -p "$tmp/short-deploy"
+cp "$sync" "$tmp/short-deploy/sync.sh"
+grep -v 'cp_mr_driver_rl.js' "$here/../netsuite/restlets/deploy.xml" > "$tmp/short-deploy/deploy.xml"
+before="$(snapshot "$tmp/pkg")"
+SYNC_OUT_DIR="$tmp/pkg" bash "$tmp/short-deploy/sync.sh" "$tmp/source" main > /dev/null 2> "$tmp/err.log"
+assert_eq "$?" 1 "a file missing from deploy.xml exits 1"
+assert_contains "$(cat "$tmp/err.log")" "not listed in deploy.xml: RESTlet/cp_mr_driver_rl.js" "the unlisted file is named"
+assert_eq "$(snapshot "$tmp/pkg")" "$before" "unlisted file: package unchanged"
 
 mkdir -p "$tmp/not-a-repo"
 assert_eq "$(run_sync main "$tmp/pkg" "$tmp/not-a-repo")" 1 "non-repo source exits 1"

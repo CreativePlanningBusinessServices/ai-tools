@@ -1,6 +1,6 @@
 # Builds a throwaway git repo shaped like sdf-creative-planning: committed deployment XMLs and
 # a `build` script that writes the compiled JS, which (as in the real repo) is not committed.
-# Branches: main (good), missing-file, bad-dep, build-fails.
+# Branches: main (good), missing-file, bad-dep, bad-module-dep, build-fails.
 make_fake_source() {
   local dir="$1"
   mkdir -p "$dir/Objects/Scripts/RESTlet"
@@ -37,6 +37,12 @@ EOF
 echo 'define(["require", "exports", "../netsuite_modules/not-packaged/index.js"], function () {});' > "$out/RESTlet/cp_saved_search_rl.js"
 EOF
   fake_commit "$dir" "depend on an unpackaged module"
+
+  git -C "$dir" checkout -q -b bad-module-dep main
+  cat >> "$dir/build.sh" <<'EOF'
+echo 'define(["require", "exports", "../shared/helpers.js"], function () {});' > "$out/netsuite_modules/file-cabinet/index.js"
+EOF
+  fake_commit "$dir" "module depends on an unpackaged file"
 
   git -C "$dir" checkout -q -b build-fails main
   echo 'exit 1' >> "$dir/build.sh"

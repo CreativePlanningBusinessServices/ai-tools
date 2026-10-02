@@ -6,8 +6,15 @@ set -uo pipefail
 alias_name="${1:?usage: verify.sh <netsuite-cli account alias>}"
 package_dir="$(cd "$(dirname "$0")" && pwd)"
 js_root=FileCabinet/SuiteScripts/CreativePlanning
-js_files=(RESTlet/cp_saved_search_rl.js RESTlet/cp_file_cabinet_rl.js RESTlet/cp_mr_driver_rl.js
-          netsuite_modules/saved-search-serializer/index.js netsuite_modules/file-cabinet/index.js)
+# The files to compare are exactly the ones deploy.xml ships.
+js_files=()
+while IFS= read -r file; do
+  js_files+=("$file")
+done < <(sed -n "s#.*<path>~/$js_root/\(.*\)</path>.*#\1#p" "$package_dir/deploy.xml")
+if [ "${#js_files[@]}" -eq 0 ]; then
+  echo "verify: no files listed in $package_dir/deploy.xml"
+  exit 1
+fi
 expected_scripts="customscript_cp_file_cabinet_rl customscript_cp_mr_driver_rl customscript_cp_saved_search_rl "
 failures=0
 

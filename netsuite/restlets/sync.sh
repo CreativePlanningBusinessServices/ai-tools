@@ -16,6 +16,16 @@ xml_files=(customscript_cp_saved_search_rl.xml customscript_cp_file_cabinet_rl.x
 
 die() { echo "sync: $*" >&2; exit 1; }
 
+# deploy.xml lists files one by one; a packaged file it doesn't list would never reach the account.
+deploy_xml="$(cd "$(dirname "$0")" && pwd)/deploy.xml"
+[ -f "$deploy_xml" ] || die "deploy.xml not found next to sync.sh"
+for file in "${js_files[@]}"; do
+  grep -qF "<path>~/$js_root/$file</path>" "$deploy_xml" || die "packaged file not listed in deploy.xml: $file"
+done
+for file in "${xml_files[@]}"; do
+  grep -qF "<path>~/$xml_root/$file</path>" "$deploy_xml" || die "packaged object not listed in deploy.xml: $file"
+done
+
 git -C "$source_repo" rev-parse --git-dir > /dev/null 2>&1 || die "not a git repo: $source_repo"
 source_repo="$(cd "$source_repo" && pwd)"
 if git -C "$source_repo" remote get-url origin > /dev/null 2>&1; then
@@ -48,9 +58,9 @@ for file in "${xml_files[@]}"; do
   cp "$worktree/$xml_root/$file" "$staging/$xml_root/$file"
 done
 
-# Every relative module a RESTlet loads must ship with it, or the RESTlet fails at runtime
-# in the target account.
-for file in "${restlet_files[@]}"; do
+# Every relative module any packaged file loads must ship with it, or the RESTlet fails at
+# runtime in the target account. Checking every file covers dependencies of dependencies.
+for file in "${js_files[@]}"; do
   missing="$(node -e '
     const fs = require("fs"), path = require("path");
     const [file, root] = process.argv.slice(1);
