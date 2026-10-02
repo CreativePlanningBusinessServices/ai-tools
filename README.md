@@ -40,12 +40,23 @@ This installs CP-maintained scripts, named "CP | …", into the account. In a cl
 follow whatever change process applies for that client before deploying.
 
 1. Make sure SuiteScript (server-side scripting) is enabled in the account.
-2. Connect the SuiteCloud CLI to the account once:
-   `cd ai-tools/netsuite/restlets && suitecloud account:setup`
-3. Validate, then deploy:
+2. **Point the project at this account, every time you deploy.** The SuiteCloud CLI deploys to
+   whichever account was set up last for this folder, and there's no flag to choose one at
+   deploy time. So before each deploy, run setup and pick (or add) the auth ID for the account
+   you're installing into:
+
+   ```bash
+   cd ai-tools/netsuite/restlets
+   suitecloud account:setup
+   cat project.json        # defaultAuthId must be the account you mean to change
+   ```
+
+   If `defaultAuthId` names any other account, stop and run setup again.
+3. Validate, preview, then deploy:
 
    ```bash
    suitecloud project:validate --server
+   suitecloud project:deploy --dryrun
    suitecloud project:deploy
    ```
 
