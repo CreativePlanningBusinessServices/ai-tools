@@ -1,0 +1,22 @@
+<restlet scriptid="customscript_cp_saved_search_rl">
+  <description>Create, edit, describe, run and delete saved searches over JSON. Primarily called by netsuite-cli via `restlet call`; contract documented in the cp-saved-search skill. GET ?id= describes; GET ?id=&amp;run=T runs; POST creates; POST {"run":true,...} runs a definition without saving it; PUT updates (full-definition replace); DELETE ?id= removes a search.</description>
+  <isinactive>F</isinactive>
+  <name>CP | Saved Search RESTlet</name>
+  <notifyadmins>F</notifyadmins>
+  <notifyemails></notifyemails>
+  <notifyowner>T</notifyowner>
+  <notifyuser>F</notifyuser>
+  <scriptfile>[/SuiteScripts/CreativePlanning/RESTlet/cp_saved_search_rl.js]</scriptfile>
+  <scriptdeployments>
+    <scriptdeployment scriptid="customdeploy_cp_saved_search_rl">
+      <allemployees>F</allemployees>
+      <allpartners>F</allpartners>
+      <allroles>T</allroles>
+      <audslctrole></audslctrole>
+      <isdeployed>T</isdeployed>
+      <loglevel>AUDIT</loglevel>
+      <status>RELEASED</status>
+      <title>CP | Saved Search RESTlet</title>
+    </scriptdeployment>
+  </scriptdeployments>
+</restlet>
