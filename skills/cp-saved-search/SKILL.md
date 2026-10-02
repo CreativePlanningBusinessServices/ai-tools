@@ -29,6 +29,10 @@ with `netsuite-cli restlet call`.
    - The query itself errors (unknown alias, auth failure): report that error. It says nothing
      about whether the RESTlet is installed.
 
+**Never deploy, install, or edit script or deployment records yourself**, in any account. If the
+RESTlet is missing, undeployed, not released, or failing, report what you found and let the user
+fix it. Changing scripts in an account, especially a client's, is the user's decision.
+
 This is the go-forward saved-search path here: NetSuite has no native REST API for saved-search
 definitions, and the CLI's `saved-search run` command rides SuiteTalk SOAP, which NetSuite is
 sunsetting (no new TBA/SOAP integrations after 2027.1; endpoints removed in 2028.2). Prefer this
@@ -260,8 +264,8 @@ wrong param spelling does). Verified live on a transaction search and a timebill
 
 | Filter | Param form | Example |
 |---|---|---|
-| Custom body/column field | **BARE uppercase field id** (a `Transaction_` prefix is silently ignored) | `CUSTBODY_ERP_SUPPORT_CONTRACT=19` |
-| Standard field | `<Type>_<FIELD>` prefixed (bare is ignored) | `Transaction_NAME=522995`, `Transaction_CLASS=116`, `Time_CUSTOMER=...` |
+| Custom body/column field | **BARE uppercase field id** (a `Transaction_` prefix is silently ignored) | `CUSTBODY_EXAMPLE_FIELD=<internal id>` |
+| Standard field | `<Type>_<FIELD>` prefixed (bare is ignored) | `Transaction_NAME=<customer internal id>`, `Transaction_CLASS=<class internal id>`, `Time_CUSTOMER=...` |
 | Empty / none | `%40NONE%40` as the value, either form | `Transaction_NAME=%40NONE%40` |
 | **Date range** | base param **`=CUSTOM`** plus `from`/`to` — from/to alone are SILENTLY IGNORED in every spelling | `Transaction_TRANDATE=CUSTOM&Transaction_TRANDATEfrom=3%2F1%2F2026&Transaction_TRANDATEto=3%2F31%2F2026` |
 
