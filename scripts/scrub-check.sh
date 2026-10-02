@@ -22,7 +22,15 @@ compiled_code_dir='netsuite/restlets/FileCabinet/'
 strict_patterns="$(mktemp)"
 all_patterns="$(mktemp)"
 trap 'rm -f "$strict_patterns" "$all_patterns"' EXIT
-active_lines="$(grep -vE '^[[:space:]]*(#|$)' "$patterns_file" || true)"
+# Normalise before use: a CRLF or whitespace-padded line would otherwise never match (failing
+# open), and an empty pattern would match every line.
+active_lines="$(tr -d '\r' < "$patterns_file" \
+  | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^code-ok:[[:space:]]*/code-ok:/' \
+  | grep -vE '^(#|$|code-ok:$)' || true)"
+if [ -z "$active_lines" ]; then
+  echo "scrub-check: no active patterns in $patterns_file" >&2
+  exit 2
+fi
 { printf '%s\n' "$active_lines" | grep -v '^code-ok:' || true; echo "$email_pattern"; } > "$strict_patterns"
 { cat "$strict_patterns"; printf '%s\n' "$active_lines" | sed -n 's/^code-ok://p'; } > "$all_patterns"
 

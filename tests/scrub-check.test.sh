@@ -44,6 +44,24 @@ assert_eq "$(run_scrub)" 1 "other patterns still apply to compiled code"
 assert_contains "$(cat "$tmp/out.log")" "compiled.js:2:" "the compiled-code hit is named"
 rm -r "$repo/netsuite"
 
+echo 'see acct-9999999' > "$repo/secret.md"
+printf '# copied through a Windows clipboard\r\nacct-9999999\r\n' > "$tmp/crlf.txt"
+SCRUB_PATTERNS_FILE="$tmp/crlf.txt" bash "$repo/scripts/scrub-check.sh" > "$tmp/out.log" 2>&1
+assert_eq "$?" 1 "a CRLF patterns file still blocks"
+printf '   acct-9999999   \n' > "$tmp/padded.txt"
+SCRUB_PATTERNS_FILE="$tmp/padded.txt" bash "$repo/scripts/scrub-check.sh" > "$tmp/out.log" 2>&1
+assert_eq "$?" 1 "surrounding whitespace on a pattern is ignored"
+rm "$repo/secret.md"
+
+printf '# only comments\n\ncode-ok:\n   \n' > "$tmp/empty.txt"
+SCRUB_PATTERNS_FILE="$tmp/empty.txt" bash "$repo/scripts/scrub-check.sh" > "$tmp/out.log" 2>&1
+assert_eq "$?" 2 "a patterns file with no active patterns exits 2"
+assert_contains "$(cat "$tmp/out.log")" "no active patterns" "an empty patterns file is explained"
+
+printf 'acct-9999999\ncode-ok:\n' > "$tmp/bare-code-ok.txt"
+SCRUB_PATTERNS_FILE="$tmp/bare-code-ok.txt" bash "$repo/scripts/scrub-check.sh" > "$tmp/out.log" 2>&1
+assert_eq "$?" 0 "a bare code-ok: line does not match every line"
+
 SCRUB_PATTERNS_FILE="$tmp/missing.txt" bash "$repo/scripts/scrub-check.sh" > "$tmp/out.log" 2>&1
 assert_eq "$?" 2 "a missing patterns file exits 2"
 assert_contains "$(cat "$tmp/out.log")" "patterns file not found" "missing patterns file is explained"
