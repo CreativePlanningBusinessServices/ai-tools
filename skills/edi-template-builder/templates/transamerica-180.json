@@ -1,0 +1,435 @@
+{
+  "$schema": "https://storageukgreadyedi.blob.core.windows.net/schema-files/template.json",
+  "name": "Transamerica 180 / Payroll file (seed)",
+  "version": "0.0.1",
+  "elementSeparator": ",",
+  "segmentSeparator": "\n",
+  "componentSeparator": "::::::",
+  "repetitionSeparator": "!!!!!!",
+  "rules": [
+    {
+      "name": "Columns",
+      "container": false,
+      "elements": [
+        {
+          "name": "Account Number",
+          "value": "Account Number"
+        },
+        {
+          "name": "Social Security Number",
+          "value": "Social Security Number"
+        },
+        {
+          "name": "Employee Number",
+          "value": "Employee Number"
+        },
+        {
+          "name": "Employee Division/Location Code",
+          "value": "Employee Division/Location Code"
+        },
+        {
+          "name": "Class Code",
+          "value": "Class Code"
+        },
+        {
+          "name": "Employee Last Name",
+          "value": "Employee Last Name"
+        },
+        {
+          "name": "Employee Last Name Suffix",
+          "value": "Employee Last Name Suffix"
+        },
+        {
+          "name": "Employee First Name",
+          "value": "Employee First Name"
+        },
+        {
+          "name": "Employee Middle Initial",
+          "value": "Employee Middle Initial"
+        },
+        {
+          "name": "Birth Date",
+          "value": "Birth Date"
+        },
+        {
+          "name": "Hire Date",
+          "value": "Hire Date"
+        },
+        {
+          "name": "Adjusted Service Date",
+          "value": "Adjusted Service Date"
+        },
+        {
+          "name": "Termination Date",
+          "value": "Termination Date"
+        },
+        {
+          "name": "Rehire Date",
+          "value": "Rehire Date"
+        },
+        {
+          "name": "Street Address Line 1",
+          "value": "Street Address Line 1"
+        },
+        {
+          "name": "Street Address Line 2",
+          "value": "Street Address Line 2"
+        },
+        {
+          "name": "City Name",
+          "value": "City Name"
+        },
+        {
+          "name": "State Code",
+          "value": "State Code"
+        },
+        {
+          "name": "Zip Code",
+          "value": "Zip Code"
+        },
+        {
+          "name": "E-mail address",
+          "value": "E-mail address"
+        },
+        {
+          "name": "Daytime/Work Phone Number",
+          "value": "Daytime/Work Phone Number"
+        },
+        {
+          "name": "Evening/Home Phone Number",
+          "value": "Evening/Home Phone Number"
+        },
+        {
+          "name": "Mobile Phone Number",
+          "value": "Mobile Phone Number"
+        },
+        {
+          "name": "Single Sign On Eligibility Code",
+          "value": "Single Sign On Eligibility Code"
+        },
+        {
+          "name": "Single Sign On Id",
+          "value": "Single Sign On Id"
+        },
+        {
+          "name": "Marital Status Code",
+          "value": "Marital Status Code"
+        },
+        {
+          "name": "Employee Payroll Frequency",
+          "value": "Employee Payroll Frequency"
+        },
+        {
+          "name": "Gender",
+          "value": "Gender"
+        },
+        {
+          "name": "Employee Highly Comp Code",
+          "value": "Employee Highly Comp Code"
+        },
+        {
+          "name": "Insider Investor Code",
+          "value": "Insider Investor Code"
+        },
+        {
+          "name": "Language Code",
+          "value": "Language Code"
+        },
+        {
+          "name": "Termination Reason Code",
+          "value": "Termination Reason Code"
+        },
+        {
+          "name": "Current Hours Paid",
+          "value": "Current Hours Paid"
+        },
+        {
+          "name": "Employer Non-elective Contribution amount",
+          "value": "Employer Non-elective Contribution amount"
+        },
+        {
+          "name": "Employee After-tax Contribution amount",
+          "value": "Employee After-tax Contribution amount"
+        },
+        {
+          "name": "Employee Pre Tax contribution amount",
+          "value": "Employee Pre Tax contribution amount"
+        },
+        {
+          "name": "Employee Roth contribution amount",
+          "value": "Employee Roth contribution amount"
+        },
+        {
+          "name": "Employer Match contribution amount",
+          "value": "Employer Match contribution amount"
+        },
+        {
+          "name": "Employer Safe Harbor Match Contribution amount",
+          "value": "Employer Safe Harbor Match Contribution amount"
+        },
+        {
+          "name": "Employee Loan Repayment",
+          "value": "Employee Loan Repayment"
+        },
+        {
+          "name": "Additional Source 1 Contribution Amount",
+          "value": "Additional Source 1 Contribution Amount"
+        },
+        {
+          "name": "Additional Source 2 Contribution Amount",
+          "value": "Additional Source 2 Contribution Amount"
+        },
+        {
+          "name": "Current Gross Compensation",
+          "value": "Current Gross Compensation"
+        },
+        {
+          "name": "Current Plan Compensation",
+          "value": "Current Plan Compensation"
+        },
+        {
+          "name": "Additional Compensation_1",
+          "value": "Additional Compensation_1"
+        },
+        {
+          "name": "Additional Compensation_2",
+          "value": "Additional Compensation_2"
+        },
+        {
+          "name": "Payroll Period Start Date",
+          "value": "Payroll Period Start Date"
+        },
+        {
+          "name": "Payroll Period End Date",
+          "value": "Payroll Period End Date"
+        },
+        {
+          "name": "Paycheck Date",
+          "value": "Paycheck Date"
+        },
+        {
+          "name": "Department",
+          "value": "Department"
+        }
+      ],
+      "children": []
+    },
+    {
+      "name": "EmployeeRecord",
+      "container": false,
+      "repetition": {
+        "property": "members",
+        "filter": "1"
+      },
+      "elements": [
+        {
+          "name": "Account Number",
+          "value": "[TODO-ACCOUNT-NUMBER]"
+        },
+        {
+          "name": "Social Security Number",
+          "value": "{{[SSN of Individual]}}"
+        },
+        {
+          "name": "Employee Number",
+          "value": "{{[Employee ID]}}"
+        },
+        {
+          "name": "Employee Division/Location Code",
+          "value": ""
+        },
+        {
+          "name": "Class Code",
+          "value": "ALL"
+        },
+        {
+          "name": "Employee Last Name",
+          "value": "{{[Last Name of Member]}}"
+        },
+        {
+          "name": "Employee Last Name Suffix",
+          "value": "{{[Suffix of Member]}}"
+        },
+        {
+          "name": "Employee First Name",
+          "value": "{{[First Name of Member]}}"
+        },
+        {
+          "name": "Employee Middle Initial",
+          "value": "{{[Middle Initial of Member]}}"
+        },
+        {
+          "name": "Birth Date",
+          "value": "{{dateFormat 'yyyyMMdd' [Members Date of Birth]}}"
+        },
+        {
+          "name": "Hire Date",
+          "value": "{{dateFormat 'yyyyMMdd' [Member Hire Date]}}"
+        },
+        {
+          "name": "Adjusted Service Date",
+          "value": ""
+        },
+        {
+          "name": "Termination Date",
+          "value": "{{dateFormat 'yyyyMMdd' [Member Termination Date]}}"
+        },
+        {
+          "name": "Rehire Date",
+          "value": "{{dateFormat 'yyyyMMdd' [Member Rehire Date]}}"
+        },
+        {
+          "name": "Street Address Line 1",
+          "value": "{{#replaceAll ',' '' [Subscribers Address Line 1]}}{{/replaceAll}}"
+        },
+        {
+          "name": "Street Address Line 2",
+          "value": "{{#replaceAll ',' '' [Subscribers Address Line 2]}}{{/replaceAll}}"
+        },
+        {
+          "name": "City Name",
+          "value": "{{#replaceAll ',' '' [Subscribers City]}}{{/replaceAll}}"
+        },
+        {
+          "name": "State Code",
+          "value": "{{#replaceAll ',' '' [Subscribers State]}}{{/replaceAll}}"
+        },
+        {
+          "name": "Zip Code",
+          "value": "{{#replaceAll ',' '' [Subscribers Zip Code]}}{{/replaceAll}}"
+        },
+        {
+          "name": "E-mail address",
+          "value": "{{[Member Email Address]}}"
+        },
+        {
+          "name": "Daytime/Work Phone Number",
+          "value": "{{[Member Phone Work]}}"
+        },
+        {
+          "name": "Evening/Home Phone Number",
+          "value": "{{[Member Phone Home]}}"
+        },
+        {
+          "name": "Mobile Phone Number",
+          "value": "{{[Member Phone Cell]}}"
+        },
+        {
+          "name": "Single Sign On Eligibility Code",
+          "value": ""
+        },
+        {
+          "name": "Single Sign On Id",
+          "value": ""
+        },
+        {
+          "name": "Marital Status Code",
+          "value": "{{[Members Marital Status]}}",
+          "attributes": {
+            "length": {
+              "min": 0,
+              "max": 1
+            }
+          }
+        },
+        {
+          "name": "Employee Payroll Frequency",
+          "value": "{{#compare [Member Pay Frequency] '==' 'Bi-Weekly'}}26{{else compare [Member Pay Frequency] '==' 'Monthly'}}12{{else compare [Member Pay Frequency] '==' 'Semi-Monthly'}}24{{else compare [Member Pay Frequency] '==' 'Weekly'}}52{{/compare}}"
+        },
+        {
+          "name": "Gender",
+          "value": "{{#compare [Members Gender] '==' 'M'}}M{{else compare [Members Gender] '==' 'F'}}F{{else compare [Members Gender] '==' 'U'}}N{{/compare}}"
+        },
+        {
+          "name": "Employee Highly Comp Code",
+          "value": ""
+        },
+        {
+          "name": "Insider Investor Code",
+          "value": ""
+        },
+        {
+          "name": "Language Code",
+          "value": ""
+        },
+        {
+          "name": "Termination Reason Code",
+          "value": ""
+        },
+        {
+          "name": "Current Hours Paid",
+          "value": "{{[Member Hours Worked]}}"
+        },
+        {
+          "name": "Employer Non-elective Contribution amount",
+          "value": ""
+        },
+        {
+          "name": "Employee After-tax Contribution amount",
+          "value": ""
+        },
+        {
+          "name": "Employee Pre Tax contribution amount",
+          "value": "{{[Deductions].[401k].[Employee Amount]}}"
+        },
+        {
+          "name": "Employee Roth contribution amount",
+          "value": "{{[Deductions].[401k Roth].[Employee Amount]}}"
+        },
+        {
+          "name": "Employer Match contribution amount",
+          "value": ""
+        },
+        {
+          "name": "Employer Safe Harbor Match Contribution amount",
+          "value": ""
+        },
+        {
+          "name": "Employee Loan Repayment",
+          "value": "{{add [Deductions].[401k Loan].[Employee Amount] [Deductions].[401k Loan 2].[Employee Amount]}}"
+        },
+        {
+          "name": "Additional Source 1 Contribution Amount",
+          "value": ""
+        },
+        {
+          "name": "Additional Source 2 Contribution Amount",
+          "value": ""
+        },
+        {
+          "name": "Current Gross Compensation",
+          "value": "{{[Member Total Compensation]}}"
+        },
+        {
+          "name": "Current Plan Compensation",
+          "value": "{{[Member Total Compensation]}}"
+        },
+        {
+          "name": "Additional Compensation_1",
+          "value": ""
+        },
+        {
+          "name": "Additional Compensation_2",
+          "value": ""
+        },
+        {
+          "name": "Payroll Period Start Date",
+          "value": "{{dateFormat 'yyyyMMdd' [Payroll Start Date]}}"
+        },
+        {
+          "name": "Payroll Period End Date",
+          "value": "{{dateFormat 'yyyyMMdd' [Payroll End Date]}}"
+        },
+        {
+          "name": "Paycheck Date",
+          "value": "{{dateFormat 'yyyyMMdd' [Pay Date]}}"
+        },
+        {
+          "name": "Department",
+          "value": ""
+        }
+      ],
+      "children": []
+    }
+  ]
+}

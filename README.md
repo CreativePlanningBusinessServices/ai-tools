@@ -11,15 +11,18 @@ This repo is private: don't copy it anywhere public.
 | `skills/cp-file-cabinet` | Read, download, list, create, edit and delete File Cabinet files |
 | `skills/cp-mr-driver` | Trigger Map/Reduce scripts and poll their progress |
 | `netsuite/restlets` | The three RESTlets those skills call, ready to deploy into an account |
+| `skills/edi-template-builder` | Build and revise EDI benefits-feed templates (X12 834 and others) |
 
-The skills only work in an account where the RESTlets are installed.
+The `cp-*` skills only work in an account where the RESTlets are installed.
+`edi-template-builder` has its own setup notes, including how to upgrade from the old zip
+install, in [`skills/edi-template-builder/INSTALL.md`](skills/edi-template-builder/INSTALL.md).
 
 ## Prerequisites
 
 - Claude Code
-- [`netsuite-cli`](https://github.com/CreativePlanningBusinessServices/netsuite-cli), with an
-  account alias for each NetSuite account you work in. For `cp-mr-driver`, that alias must be an
-  Administrator-role integration.
+- For the `cp-*` skills: [`netsuite-cli`](https://github.com/CreativePlanningBusinessServices/netsuite-cli),
+  with an account alias for each NetSuite account you work in. For `cp-mr-driver`, that alias
+  must be an Administrator-role integration.
 - `jq`
 - To install the RESTlets: the SuiteCloud CLI (`npm install -g @oracle/suitecloud-cli`)
 

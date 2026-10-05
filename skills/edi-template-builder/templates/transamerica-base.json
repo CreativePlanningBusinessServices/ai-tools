@@ -1,0 +1,667 @@
+{
+  "$schema": "https://storageukgreadyedi.blob.core.windows.net/schema-files/template.json",
+  "name": "Transamerica Base file (seed)",
+  "version": "0.0.1",
+  "elementSeparator": ",",
+  "segmentSeparator": "\n",
+  "componentSeparator": "::::::",
+  "repetitionSeparator": "!!!!!!",
+  "rules": [
+    {
+      "name": "Columns",
+      "container": false,
+      "elements": [
+        {
+          "name": "Account Number",
+          "value": "Account Number"
+        },
+        {
+          "name": "Social Security Number",
+          "value": "Social Security Number"
+        },
+        {
+          "name": "Employee Number",
+          "value": "Employee Number"
+        },
+        {
+          "name": "Employee Division/Location Code",
+          "value": "Employee Division/Location Code"
+        },
+        {
+          "name": "Class Code",
+          "value": "Class Code"
+        },
+        {
+          "name": "Employee Last Name",
+          "value": "Employee Last Name"
+        },
+        {
+          "name": "Employee Last Name Suffix",
+          "value": "Employee Last Name Suffix"
+        },
+        {
+          "name": "Employee First Name",
+          "value": "Employee First Name"
+        },
+        {
+          "name": "Employee Middle Initial",
+          "value": "Employee Middle Initial"
+        },
+        {
+          "name": "Birth Date",
+          "value": "Birth Date"
+        },
+        {
+          "name": "Hire Date",
+          "value": "Hire Date"
+        },
+        {
+          "name": "Adjusted Service Date",
+          "value": "Adjusted Service Date"
+        },
+        {
+          "name": "Termination Date",
+          "value": "Termination Date"
+        },
+        {
+          "name": "Rehire Date",
+          "value": "Rehire Date"
+        },
+        {
+          "name": "Street Address Line 1",
+          "value": "Street Address Line 1"
+        },
+        {
+          "name": "Street Address Line 2",
+          "value": "Street Address Line 2"
+        },
+        {
+          "name": "City Name",
+          "value": "City Name"
+        },
+        {
+          "name": "State Code",
+          "value": "State Code"
+        },
+        {
+          "name": "Zip Code",
+          "value": "Zip Code"
+        },
+        {
+          "name": "E-mail address",
+          "value": "E-mail address"
+        },
+        {
+          "name": "Daytime/Work Phone Number",
+          "value": "Daytime/Work Phone Number"
+        },
+        {
+          "name": "Evening/Home Phone Number",
+          "value": "Evening/Home Phone Number"
+        },
+        {
+          "name": "Mobile Phone Number",
+          "value": "Mobile Phone Number"
+        },
+        {
+          "name": "Single Sign On Eligibility Code",
+          "value": "Single Sign On Eligibility Code"
+        },
+        {
+          "name": "Single Sign On Id",
+          "value": "Single Sign On Id"
+        },
+        {
+          "name": "Marital Status Code",
+          "value": "Marital Status Code"
+        },
+        {
+          "name": "Employee Payroll Frequency",
+          "value": "Employee Payroll Frequency"
+        },
+        {
+          "name": "Gender",
+          "value": "Gender"
+        },
+        {
+          "name": "Employee Highly Comp Code",
+          "value": "Employee Highly Comp Code"
+        },
+        {
+          "name": "Insider Investor Code",
+          "value": "Insider Investor Code"
+        },
+        {
+          "name": "Language Code",
+          "value": "Language Code"
+        },
+        {
+          "name": "Termination Reason Code",
+          "value": "Termination Reason Code"
+        },
+        {
+          "name": "YTD Non Elective Contribution",
+          "value": "YTD Non Elective Contribution"
+        },
+        {
+          "name": "YTD After Tax Contribution",
+          "value": "YTD After Tax Contribution"
+        },
+        {
+          "name": "YTD Pre-Tax Deferrals",
+          "value": "YTD Pre-Tax Deferrals"
+        },
+        {
+          "name": "YTD Roth Contribution",
+          "value": "YTD Roth Contribution"
+        },
+        {
+          "name": "YTD Match Contribution",
+          "value": "YTD Match Contribution"
+        },
+        {
+          "name": "YTD Safe Harbor Match Contribution",
+          "value": "YTD Safe Harbor Match Contribution"
+        },
+        {
+          "name": "YTD Additional Source 1 Contribution",
+          "value": "YTD Additional Source 1 Contribution"
+        },
+        {
+          "name": "YTD Additional Source 2 Contribution",
+          "value": "YTD Additional Source 2 Contribution"
+        },
+        {
+          "name": "YTD Hours Paid",
+          "value": "YTD Hours Paid"
+        },
+        {
+          "name": "Prior Year Hours Paid",
+          "value": "Prior Year Hours Paid"
+        },
+        {
+          "name": "Years of Service as of 12/31/2025",
+          "value": "Years of Service as of 12/31/2025"
+        },
+        {
+          "name": "YTD Gross Compensation",
+          "value": "YTD Gross Compensation"
+        },
+        {
+          "name": "YTD Plan Compensation",
+          "value": "YTD Plan Compensation"
+        },
+        {
+          "name": "YTD Gross Compensation While Eligible",
+          "value": "YTD Gross Compensation While Eligible"
+        },
+        {
+          "name": "YTD Plan Compensation While Eligible",
+          "value": "YTD Plan Compensation While Eligible"
+        },
+        {
+          "name": "Prior Year Gross Compensation",
+          "value": "Prior Year Gross Compensation"
+        },
+        {
+          "name": "Employee After-Tax Contribution Dollar Amt",
+          "value": "Employee After-Tax Contribution Dollar Amt"
+        },
+        {
+          "name": "Employee After-Tax Contribution Percent",
+          "value": "Employee After-Tax Contribution Percent"
+        },
+        {
+          "name": "Employee Pre-Tax Contribution Dollar Amt",
+          "value": "Employee Pre-Tax Contribution Dollar Amt"
+        },
+        {
+          "name": "Employee Pre-Tax Contribution Percent",
+          "value": "Employee Pre-Tax Contribution Percent"
+        },
+        {
+          "name": "Employee Roth Contribution Dollar Amt",
+          "value": "Employee Roth Contribution Dollar Amt"
+        },
+        {
+          "name": "Employee Roth Contribution Percent",
+          "value": "Employee Roth Contribution Percent"
+        },
+        {
+          "name": "Additional Source 1 Contribution Dollar Amt",
+          "value": "Additional Source 1 Contribution Dollar Amt"
+        },
+        {
+          "name": "Additional Source 1 Contribution Percent",
+          "value": "Additional Source 1 Contribution Percent"
+        },
+        {
+          "name": "Additional Source 2 Contribution Dollar Amt",
+          "value": "Additional Source 2 Contribution Dollar Amt"
+        },
+        {
+          "name": "Additional Source 2 Contribution Percent",
+          "value": "Additional Source 2 Contribution Percent"
+        },
+        {
+          "name": "Auto Enroll Indicator",
+          "value": "Auto Enroll Indicator"
+        },
+        {
+          "name": "Auto Enroll Date",
+          "value": "Auto Enroll Date"
+        },
+        {
+          "name": "Employer Non-elective Eligibility Status",
+          "value": "Employer Non-elective Eligibility Status"
+        },
+        {
+          "name": "Employer Non-elective Eligibility Date",
+          "value": "Employer Non-elective Eligibility Date"
+        },
+        {
+          "name": "Employer Non-elective Plan Entry Date",
+          "value": "Employer Non-elective Plan Entry Date"
+        },
+        {
+          "name": "Employee Pre-Tax Eligibility Status",
+          "value": "Employee Pre-Tax Eligibility Status"
+        },
+        {
+          "name": "Employee Pre-Tax Eligibility Date",
+          "value": "Employee Pre-Tax Eligibility Date"
+        },
+        {
+          "name": "Employee Pre-Tax Plan Entry Date",
+          "value": "Employee Pre-Tax Plan Entry Date"
+        },
+        {
+          "name": "Employer Match Eligibility Status",
+          "value": "Employer Match Eligibility Status"
+        },
+        {
+          "name": "Employer Match Eligibility Date",
+          "value": "Employer Match Eligibility Date"
+        },
+        {
+          "name": "Employer Match Plan Entry Date",
+          "value": "Employer Match Plan Entry Date"
+        },
+        {
+          "name": "Safe Harbor Match  Eligibility Status",
+          "value": "Safe Harbor Match  Eligibility Status"
+        },
+        {
+          "name": "Safe Harbor Match  Eligibility Date",
+          "value": "Safe Harbor Match  Eligibility Date"
+        },
+        {
+          "name": "Safe Harbor Match  Eligibility Plan Entry Date",
+          "value": "Safe Harbor Match  Eligibility Plan Entry Date"
+        },
+        {
+          "name": "Additional Source 1 Eligibility Status",
+          "value": "Additional Source 1 Eligibility Status"
+        },
+        {
+          "name": "Additional Source 1 Eligibility Date",
+          "value": "Additional Source 1 Eligibility Date"
+        },
+        {
+          "name": "Additional Source 1 Plan Entry Date",
+          "value": "Additional Source 1 Plan Entry Date"
+        },
+        {
+          "name": "Additional Source 2 Eligibility Status",
+          "value": "Additional Source 2 Eligibility Status"
+        },
+        {
+          "name": "Additional Source 2 Eligibility Date",
+          "value": "Additional Source 2 Eligibility Date"
+        },
+        {
+          "name": "Additional Source 2 Plan Entry Date",
+          "value": "Additional Source 2 Plan Entry Date"
+        },
+        {
+          "name": "Department Code",
+          "value": "Department Code"
+        }
+      ],
+      "children": []
+    },
+    {
+      "name": "EmployeeRecord",
+      "container": false,
+      "repetition": {
+        "property": "members",
+        "filter": "1"
+      },
+      "elements": [
+        {
+          "name": "Account Number",
+          "value": "[TODO-ACCOUNT-NUMBER]"
+        },
+        {
+          "name": "Social Security Number",
+          "value": "{{[SSN of Individual]}}"
+        },
+        {
+          "name": "Employee Number",
+          "value": "{{[Employee ID]}}"
+        },
+        {
+          "name": "Employee Division/Location Code",
+          "value": ""
+        },
+        {
+          "name": "Class Code",
+          "value": "ALL"
+        },
+        {
+          "name": "Employee Last Name",
+          "value": "{{[Last Name of Member]}}"
+        },
+        {
+          "name": "Employee Last Name Suffix",
+          "value": "{{[Suffix of Member]}}"
+        },
+        {
+          "name": "Employee First Name",
+          "value": "{{[First Name of Member]}}"
+        },
+        {
+          "name": "Employee Middle Initial",
+          "value": "{{[Middle Initial of Member]}}"
+        },
+        {
+          "name": "Birth Date",
+          "value": "{{dateFormat 'yyyyMMdd' [Members Date of Birth]}}"
+        },
+        {
+          "name": "Hire Date",
+          "value": "{{dateFormat 'yyyyMMdd' [Member Hire Date]}}"
+        },
+        {
+          "name": "Adjusted Service Date",
+          "value": ""
+        },
+        {
+          "name": "Termination Date",
+          "value": "{{dateFormat 'yyyyMMdd' [Member Termination Date]}}"
+        },
+        {
+          "name": "Rehire Date",
+          "value": "{{dateFormat 'yyyyMMdd' [Member Rehire Date]}}"
+        },
+        {
+          "name": "Street Address Line 1",
+          "value": "{{#replaceAll ',' '' [Subscribers Address Line 1]}}{{/replaceAll}}"
+        },
+        {
+          "name": "Street Address Line 2",
+          "value": "{{#replaceAll ',' '' [Subscribers Address Line 2]}}{{/replaceAll}}"
+        },
+        {
+          "name": "City Name",
+          "value": "{{#replaceAll ',' '' [Subscribers City]}}{{/replaceAll}}"
+        },
+        {
+          "name": "State Code",
+          "value": "{{#replaceAll ',' '' [Subscribers State]}}{{/replaceAll}}"
+        },
+        {
+          "name": "Zip Code",
+          "value": "{{#replaceAll ',' '' [Subscribers Zip Code]}}{{/replaceAll}}"
+        },
+        {
+          "name": "E-mail address",
+          "value": "{{[Member Email Address]}}"
+        },
+        {
+          "name": "Daytime/Work Phone Number",
+          "value": "{{[Member Phone Work]}}"
+        },
+        {
+          "name": "Evening/Home Phone Number",
+          "value": "{{[Member Phone Home]}}"
+        },
+        {
+          "name": "Mobile Phone Number",
+          "value": "{{[Member Phone Cell]}}"
+        },
+        {
+          "name": "Single Sign On Eligibility Code",
+          "value": ""
+        },
+        {
+          "name": "Single Sign On Id",
+          "value": ""
+        },
+        {
+          "name": "Marital Status Code",
+          "value": "{{[Members Marital Status]}}",
+          "attributes": {
+            "length": {
+              "min": 0,
+              "max": 1
+            }
+          }
+        },
+        {
+          "name": "Employee Payroll Frequency",
+          "value": "{{#compare [Member Pay Frequency] '==' 'Bi-Weekly'}}26{{else compare [Member Pay Frequency] '==' 'Monthly'}}12{{else compare [Member Pay Frequency] '==' 'Semi-Monthly'}}24{{else compare [Member Pay Frequency] '==' 'Weekly'}}52{{/compare}}"
+        },
+        {
+          "name": "Gender",
+          "value": "{{#compare [Members Gender] '==' 'M'}}M{{else compare [Members Gender] '==' 'F'}}F{{else compare [Members Gender] '==' 'U'}}N{{/compare}}"
+        },
+        {
+          "name": "Employee Highly Comp Code",
+          "value": ""
+        },
+        {
+          "name": "Insider Investor Code",
+          "value": ""
+        },
+        {
+          "name": "Language Code",
+          "value": ""
+        },
+        {
+          "name": "Termination Reason Code",
+          "value": ""
+        },
+        {
+          "name": "YTD Non Elective Contribution",
+          "value": "{{[Deductions].[401k].[YTD Employee Amount]}}"
+        },
+        {
+          "name": "YTD After Tax Contribution",
+          "value": ""
+        },
+        {
+          "name": "YTD Pre-Tax Deferrals",
+          "value": "{{[Deductions].[401k].[YTD Employee Amount]}}"
+        },
+        {
+          "name": "YTD Roth Contribution",
+          "value": "{{[Deductions].[401k Roth].[YTD Employee Amount]}}"
+        },
+        {
+          "name": "YTD Match Contribution",
+          "value": "{{[Deductions].[401k].[YTD Employer Amount]}}"
+        },
+        {
+          "name": "YTD Safe Harbor Match Contribution",
+          "value": ""
+        },
+        {
+          "name": "YTD Additional Source 1 Contribution",
+          "value": ""
+        },
+        {
+          "name": "YTD Additional Source 2 Contribution",
+          "value": ""
+        },
+        {
+          "name": "YTD Hours Paid",
+          "value": "{{[Deductions].[401k].[YTD Hours]}}"
+        },
+        {
+          "name": "Prior Year Hours Paid",
+          "value": "{{[YTD].[Prior Year Hours]}}"
+        },
+        {
+          "name": "Years of Service as of 12/31/2025",
+          "value": "{{[Member Years of Service]}}"
+        },
+        {
+          "name": "YTD Gross Compensation",
+          "value": "{{[YTD].[YTD Earnings]}}"
+        },
+        {
+          "name": "YTD Plan Compensation",
+          "value": ""
+        },
+        {
+          "name": "YTD Gross Compensation While Eligible",
+          "value": "{{[YTD].[YTD Earnings]}}"
+        },
+        {
+          "name": "YTD Plan Compensation While Eligible",
+          "value": ""
+        },
+        {
+          "name": "Prior Year Gross Compensation",
+          "value": "{{[YTD].[Prior Year Earnings]}}"
+        },
+        {
+          "name": "Employee After-Tax Contribution Dollar Amt",
+          "value": ""
+        },
+        {
+          "name": "Employee After-Tax Contribution Percent",
+          "value": ""
+        },
+        {
+          "name": "Employee Pre-Tax Contribution Dollar Amt",
+          "value": "{{[Deductions].[401k].[Employee Amount]}}"
+        },
+        {
+          "name": "Employee Pre-Tax Contribution Percent",
+          "value": "{{[Deductions].[401k].[Rate]}}"
+        },
+        {
+          "name": "Employee Roth Contribution Dollar Amt",
+          "value": "{{[Deductions].[401k Roth].[Employee Amount]}}"
+        },
+        {
+          "name": "Employee Roth Contribution Percent",
+          "value": "{{[Deductions].[401k Roth].[Rate]}}"
+        },
+        {
+          "name": "Additional Source 1 Contribution Dollar Amt",
+          "value": ""
+        },
+        {
+          "name": "Additional Source 1 Contribution Percent",
+          "value": ""
+        },
+        {
+          "name": "Additional Source 2 Contribution Dollar Amt",
+          "value": ""
+        },
+        {
+          "name": "Additional Source 2 Contribution Percent",
+          "value": ""
+        },
+        {
+          "name": "Auto Enroll Indicator",
+          "value": "N"
+        },
+        {
+          "name": "Auto Enroll Date",
+          "value": ""
+        },
+        {
+          "name": "Employer Non-elective Eligibility Status",
+          "value": ""
+        },
+        {
+          "name": "Employer Non-elective Eligibility Date",
+          "value": ""
+        },
+        {
+          "name": "Employer Non-elective Plan Entry Date",
+          "value": ""
+        },
+        {
+          "name": "Employee Pre-Tax Eligibility Status",
+          "value": ""
+        },
+        {
+          "name": "Employee Pre-Tax Eligibility Date",
+          "value": "{{dateFormat 'yyyyMMdd' [Member Hire Date]}}"
+        },
+        {
+          "name": "Employee Pre-Tax Plan Entry Date",
+          "value": "{{[Deductions].[401k].[Effective From]}}"
+        },
+        {
+          "name": "Employer Match Eligibility Status",
+          "value": ""
+        },
+        {
+          "name": "Employer Match Eligibility Date",
+          "value": ""
+        },
+        {
+          "name": "Employer Match Plan Entry Date",
+          "value": ""
+        },
+        {
+          "name": "Safe Harbor Match  Eligibility Status",
+          "value": ""
+        },
+        {
+          "name": "Safe Harbor Match  Eligibility Date",
+          "value": ""
+        },
+        {
+          "name": "Safe Harbor Match  Eligibility Plan Entry Date",
+          "value": ""
+        },
+        {
+          "name": "Additional Source 1 Eligibility Status",
+          "value": ""
+        },
+        {
+          "name": "Additional Source 1 Eligibility Date",
+          "value": ""
+        },
+        {
+          "name": "Additional Source 1 Plan Entry Date",
+          "value": ""
+        },
+        {
+          "name": "Additional Source 2 Eligibility Status",
+          "value": ""
+        },
+        {
+          "name": "Additional Source 2 Eligibility Date",
+          "value": ""
+        },
+        {
+          "name": "Additional Source 2 Plan Entry Date",
+          "value": ""
+        },
+        {
+          "name": "Department Code",
+          "value": ""
+        }
+      ],
+      "children": []
+    }
+  ]
+}
