@@ -6,7 +6,8 @@ export default function InvoiceEmail() {
   return (
     <Html lang="en">
       <Head />
-      <Preview>Invoice <NS expr="transaction.tranid" /> is ready</Preview>
+      {/* Preview accepts string children only, so use ns() rather than <NS /> here. */}
+      <Preview>{`Invoice ${ns('transaction.tranid')} is ready`}</Preview>
       <Body style={{ fontFamily: 'Arial, Helvetica, sans-serif', backgroundColor: '#f4f4f5', margin: 0 }}>
         <Container style={{ maxWidth: 560, margin: '0 auto', padding: 24, backgroundColor: '#ffffff' }}>
           <Img src={ns('companyInformation.logoUrl')} alt={ns('companyInformation.companyName')} width="180" />
