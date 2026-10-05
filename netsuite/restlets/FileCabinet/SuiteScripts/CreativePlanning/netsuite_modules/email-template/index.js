@@ -177,13 +177,16 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "../fi
         if (!SAVE_EDITABLE_KEYS.some((key) => request[key] !== undefined)) {
             throw new index_js_1.ValidationError(`nothing to save — pass at least one of ${SAVE_EDITABLE_KEYS.join(', ')}`);
         }
+        // Validate every field before any write, so a bad subject can never leave a changed body behind.
+        const nextBody = request.body !== undefined ? requireBody(request.body) : undefined;
+        const nextSubject = request.subject !== undefined ? requireString(request.subject, 'subject') : undefined;
+        const nextName = request.name !== undefined ? requireNonEmptyString(request.name, 'name') : undefined;
         const loaded = loadTemplate(templateId);
         const current = describeLoaded(templateId, loaded);
         const warnings = [];
         let backup = null;
         let recordChanged = false;
-        if (request.body !== undefined) {
-            const nextBody = requireBody(request.body);
+        if (nextBody !== undefined) {
             if (nextBody === current.body) {
                 warnings.push('body is identical to the saved body — nothing written, no backup taken');
             }
@@ -204,12 +207,12 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "../fi
                 }
             }
         }
-        if (request.subject !== undefined) {
-            loaded.setValue({ fieldId: FIELD.subject, value: requireString(request.subject, 'subject') });
+        if (nextSubject !== undefined) {
+            loaded.setValue({ fieldId: FIELD.subject, value: nextSubject });
             recordChanged = true;
         }
-        if (request.name !== undefined) {
-            loaded.setValue({ fieldId: FIELD.name, value: requireNonEmptyString(request.name, 'name') });
+        if (nextName !== undefined) {
+            loaded.setValue({ fieldId: FIELD.name, value: nextName });
             recordChanged = true;
         }
         if (recordChanged)
