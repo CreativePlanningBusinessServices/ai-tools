@@ -6,9 +6,9 @@ source "$here/lib.sh"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 pkg="$tmp/pkg"
 js_root="$pkg/FileCabinet/SuiteScripts/CreativePlanning"
-for file in RESTlet/cp_saved_search_rl.js RESTlet/cp_file_cabinet_rl.js RESTlet/cp_mr_driver_rl.js \
+for file in RESTlet/cp_saved_search_rl.js RESTlet/cp_file_cabinet_rl.js RESTlet/cp_mr_driver_rl.js RESTlet/cp_email_template_rl.js \
             netsuite_modules/saved-search-serializer/index.js netsuite_modules/file-cabinet/index.js \
-            netsuite_modules/extra/index.js; do
+            netsuite_modules/email-template/index.js netsuite_modules/extra/index.js; do
   mkdir -p "$js_root/$(dirname "$file")"
   printf 'define([], function () {});\n// %s\n' "$file" > "$js_root/$file"
 done
@@ -24,9 +24,10 @@ assert_eq "$(run_verify ok)" 0 "healthy install exits 0"
 assert_contains "$(cat "$tmp/out.log")" "all checks passed" "healthy install says so"
 assert_not_contains "$(cat "$tmp/out.log")" "FAIL" "healthy install has no FAIL lines"
 assert_contains "$(cat "$tmp/out.log")" "PASS deployed netsuite_modules/extra/index.js matches package" "every file in deploy.xml is checked"
+assert_contains "$(cat "$tmp/out.log")" "PASS email template: describe template 7" "the email template RESTlet is exercised"
 
 assert_eq "$(run_verify missing-script)" 1 "missing script exits 1"
-assert_contains "$(cat "$tmp/out.log")" "FAIL all three scripts installed" "missing script is named"
+assert_contains "$(cat "$tmp/out.log")" "FAIL all four scripts installed" "missing script is named"
 
 assert_eq "$(run_verify mismatch)" 1 "changed deployed file exits 1"
 assert_contains "$(cat "$tmp/out.log")" "FAIL deployed RESTlet/cp_saved_search_rl.js matches package" "mismatched file is named"
