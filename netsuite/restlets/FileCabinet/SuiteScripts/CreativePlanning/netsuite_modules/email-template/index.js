@@ -150,7 +150,23 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "../fi
             created.setValue({ fieldId: FIELD.usesMedia, value: 'F' });
             created.setValue({ fieldId: FIELD.content, value: template.content ?? '' });
         }
-        return created.save();
+        try {
+            return created.save();
+        }
+        catch (err) {
+            throw explainTemplateSaveError(err);
+        }
+    };
+    // NetSuite validates the template's FreeMarker when the record is saved, against a model that has
+    // the record-type hashes, companyInformation and preferences but no recipient or sender. The raw
+    // error only says "evaluated to null or missing: ==> recipient"; name the fix.
+    const explainTemplateSaveError = (err) => {
+        const message = errorMessage(err);
+        const missingRoot = /evaluated to null or missing[^=]*==>\s*(\w+)/.exec(message);
+        if (!missingRoot)
+            return err;
+        return new index_js_1.ValidationError(`NetSuite could not save the template because its FreeMarker references "${missingRoot[1]}", which is not in scope when a template record is validated on save. ` +
+            `Reference it null-safe — e.g. \${(recipient.firstName)!""} (the parentheses matter) — then retry. NetSuite said: ${message}`);
     };
     // ============ Save ============
     const SAVE_KEYS = ['id', 'body', 'subject', 'name', 'allowNoFields'];
