@@ -180,11 +180,12 @@ fails. Returns the GET shape.
    open(path, 'w').write(html)
    EOF
    ```
-   Open it for the user without waiting for a click: in the Claude desktop app, write the final
-   preview HTML with the Write tool (not a shell redirect); the app then renders it in its Browser
-   pane, where the user can select and annotate elements to ask for changes. The file pane
-   (`show_pane`) shows the same file without those tools, so don't use it for previews. Elsewhere
-   send the file with SendUserFile (render display) or give the path. Previews hold
+   Show it with SendUserFile (render display), and make that the **last** action of the turn, after
+   the explanatory text, so the card sits at the bottom of the chat where the user sees it without
+   scrolling. Clicking the card opens the Browser pane, where the user can select and annotate
+   elements to ask for changes. Nothing opens that pane automatically: writing the file with the
+   Write tool, the file pane (`show_pane`), and a preview server all fail to, so don't try them.
+   Where SendUserFile is unavailable, give the path. Previews hold
    real customer data: they live only in the scratchpad and are never committed, attached, or
    published.
 4. **Edit loop.** Keep the working copy at `$SP/email-draft-<templateId>.html`. After each edit:
