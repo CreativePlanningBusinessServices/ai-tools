@@ -1,0 +1,376 @@
+{
+    "$schema": "https://storageukgreadyedi.blob.core.windows.net/schema-files/v0.0.1/template.json",
+    "name": "Surency - PT",
+    "version": "0.0.1",
+    "elementSeparator": "|",
+    "segmentSeparator": "\n",
+    "componentSeparator": "",
+    "repetitionSeparator": "",
+    "rules": [
+        {
+            "name": "Header",
+            "container": false,
+            "children": [],
+            "elements": [
+                {
+                    "name": "Record Type",
+                    "value": "FH"
+                },
+                {
+                    "name": "Admin Code",
+                    "value": "SUR"
+                },
+                {
+                    "name": "Employer Code",
+                    "value": "[TODO]"
+                },
+                {
+                    "name": "Synchronize Flag",
+                    "value": "N"
+                },
+                {
+                    "name": "Created Date",
+                    "value": "{{dateFormat 'MMddyyyy'}}"
+                },
+                {
+                    "name": "Created Time",
+                    "value": "{{dateFormat 'HHmmss'}}"
+                },
+                {
+                    "name": "File Version",
+                    "value": "3.5"
+                }
+            ]
+        },
+        {
+            "name": "EmployeeRecords",
+            "container": true,
+            "repetition": {
+                "property": "members",
+                "filter": "{{#each [Benefit Plans]}}{{#compare [Coverage Name] '!=' 'Waived'}}1{{/compare}}{{/each}}"
+            },
+            "children": [
+                {
+                    "name": "EnrollmentRecords",
+                    "container": false,
+                    "repetition": {
+                        "property": "Benefit Plans",
+                        "filter": "{{#compare [Coverage Name] '!=' 'Waived'}}{{#dateCompare 'lastweek' '<' [Member Benefit End Date]}}true{{/dateCompare}}{{/compare}}"
+                    },
+                    "elements": [
+                        {
+                            "name": "Record Type",
+                            "value": "PT"
+                        },
+                        {
+                            "name": "Participant File Import ID",
+                            "value": "{{#if _PARENT.[SSN of Individual]}}{{ssnFormat 'nodash' _PARENT.[SSN of Individual]}}{{else}}{{ssnFormat 'nodash' _PARENT.[SSN of Member]}}{{/if}}"
+                        },
+                        {
+                            "name": "Employer Employee ID",
+                            "value": "{{_PARENT.[Employee ID]}}"
+                        },
+                        {
+                            "name": "Employee Number",
+                            "value": "{{_PARENT.[Employee ID]}}"
+                        },
+                        {
+                            "name": "Last Name",
+                            "value": "{{_PARENT.[Last Name of Member]}}"
+                        },
+                        {
+                            "name": "First Name",
+                            "value": "{{_PARENT.[First Name of Member]}}"
+                        },
+                        {
+                            "name": "Middle Initial",
+                            "value": "{{_PARENT.[Middle Initial of Member]}}",
+                            "attributes": {
+                                "length": {
+                                    "min": 0,
+                                    "max": 1
+                                }
+                            }
+                        },
+                        {
+                            "name": "Gender",
+                            "value": "{{#compare _PARENT.[Members Gender] '==' 'F'}}F{{else compare _PARENT.[Members Gender] '==' 'M'}}M{{else}}{{/compare}}",
+                            "attributes": {
+                                "length": {
+                                    "min": 0,
+                                    "max": 1
+                                }
+                            }
+                        },
+                        {
+                            "name": "Marital Status",
+                            "value": "{{#if (match _PARENT.[Members Marital Status] 'Married')}}M{{else}}S{{/if}}",
+                            "attributes": {
+                                "length": {
+                                    "min": 0,
+                                    "max": 1
+                                }
+                            }
+                        },
+                        {
+                            "name": "Mothers Maiden Name",
+                            "value": ""
+                        },
+                        {
+                            "name": "Date of Birth",
+                            "value": "{{dateFormat 'MMddyyyy' _PARENT.[Members Date of Birth]}}"
+                        },
+                        {
+                            "name": "SSN",
+                            "value": "{{#if _PARENT.[SSN of Individual]}}{{ssnFormat 'nodash' _PARENT.[SSN of Individual]}}{{else}}{{ssnFormat 'nodash' _PARENT.[SSN of Member]}}{{/if}}"
+                        },
+                        {
+                            "name": "Address Line 1",
+                            "value": "{{_PARENT.[Subscribers Address Line 1]}}"
+                        },
+                        {
+                            "name": "Address Line 2",
+                            "value": "{{_PARENT.[Subscribers Address Line 2]}}"
+                        },
+                        {
+                            "name": "Address Line 3",
+                            "value": ""
+                        },
+                        {
+                            "name": "Address Line 4",
+                            "value": ""
+                        },
+                        {
+                            "name": "City",
+                            "value": "{{_PARENT.[Subscribers City]}}"
+                        },
+                        {
+                            "name": "State",
+                            "value": "{{_PARENT.[Subscribers State]}}"
+                        },
+                        {
+                            "name": "Zip Code",
+                            "value": "{{_PARENT.[Subscribers Zip Code]}}"
+                        },
+                        {
+                            "name": "Country",
+                            "value": "{{_PARENT.[Subscribers Country Code]}}"
+                        },
+                        {
+                            "name": "Home Phone",
+                            "value": "{{replaceAll '\\(|\\'|\\+1| |-|\\)' '' _PARENT.[Member Phone Primary]}}",
+                            "attributes": {
+                                "length": {
+                                    "min": 0,
+                                    "max": 10
+                                }
+                            }
+                        },
+                        {
+                            "name": "Work Phone",
+                            "value": "{{replaceAll '\\(|\\'|\\+1| |-|\\)' '' _PARENT.[Member Phone Work]}}",
+                            "attributes": {
+                                "length": {
+                                    "min": 0,
+                                    "max": 10
+                                }
+                            }
+                        },
+                        {
+                            "name": "Work Phone Extension",
+                            "value": ""
+                        },
+                        {
+                            "name": "Email Address",
+                            "value": "{{_PARENT.[Member Email Address]}}"
+                        },
+                        {
+                            "name": "Username",
+                            "value": ""
+                        },
+                        {
+                            "name": "Password",
+                            "value": ""
+                        },
+                        {
+                            "name": "Hire Date",
+                            "value": "{{dateFormat 'MMddyyyy' _PARENT.[Member Hire Date]}}"
+                        },
+                        {
+                            "name": "Division",
+                            "value": "All Employees"
+                        },
+                        {
+                            "name": "Hours Per Week",
+                            "value": "{{_PARENT.[Average Hours Worked Weekly]}}"
+                        },
+                        {
+                            "name": "Employee Class",
+                            "value": "All Employees"
+                        },
+                        {
+                            "name": "Payroll Frequency",
+                            "value": "Monthly"
+                        },
+                        {
+                            "name": "Payroll Frequency Effective Date",
+                            "value": ""
+                        },
+                        {
+                            "name": "Participant Status",
+                            "value": "{{#if _PARENT.[Member Termination Date]}}Terminated{{else}}Active{{/if}}"
+                        },
+                        {
+                            "name": "Status Effective Date",
+                            "value": "{{#if _PARENT.[Member Termination Date]}}{{dateFormat 'MMddyyyy' (getDate 'start' 'next' 'day' _PARENT.[Member Termination Date]) 'MM/dd/yyyy'}}{{else}}{{#if _PARENT.[Member Rehire Date]}}{{dateFormat 'MMddyyyy' _PARENT.[Member Rehire Date]}}{{else}}{{dateFormat 'MMddyyyy' _PARENT.[Member Hire Date]}}{{/if}}{{/if}}"
+                        },
+                        {
+                            "name": "Hold Payroll Deductions",
+                            "value": ""
+                        },
+                        {
+                            "name": "Hold Employer Contributions",
+                            "value": ""
+                        },
+                        {
+                            "name": "Incur Services",
+                            "value": ""
+                        },
+                        {
+                            "name": "Final Payroll Process Date",
+                            "value": ""
+                        },
+                        {
+                            "name": "Final Contribution Process Date",
+                            "value": ""
+                        },
+                        {
+                            "name": "HSA Custodian",
+                            "value": ""
+                        },
+                        {
+                            "name": "Medicare Beneficiary",
+                            "value": ""
+                        },
+                        {
+                            "name": "Medicare ID",
+                            "value": ""
+                        },
+                        {
+                            "name": "Exchange Integration ID",
+                            "value": ""
+                        },
+                        {
+                            "name": "Reporting Hierarchy Level1",
+                            "value": ""
+                        },
+                        {
+                            "name": "Reporting Hierarchy Level2",
+                            "value": ""
+                        },
+                        {
+                            "name": "Reporting Hierarchy Level3",
+                            "value": ""
+                        },
+                        {
+                            "name": "Reporting Hierarchy Level4",
+                            "value": ""
+                        },
+                        {
+                            "name": "CDD_Citizenship",
+                            "value": ""
+                        },
+                        {
+                            "name": "CDD_Country",
+                            "value": ""
+                        },
+                        {
+                            "name": "CDD_Employment Status",
+                            "value": ""
+                        },
+                        {
+                            "name": "CDD_Employer",
+                            "value": ""
+                        },
+                        {
+                            "name": "CDD_Job Title",
+                            "value": ""
+                        },
+                        {
+                            "name": "Class Effective Date",
+                            "value": ""
+                        },
+                        {
+                            "name": "ID Identification Type",
+                            "value": ""
+                        },
+                        {
+                            "name": "ID Identification Number",
+                            "value": ""
+                        },
+                        {
+                            "name": "ID Issuing State",
+                            "value": ""
+                        },
+                        {
+                            "name": "ID Issuer",
+                            "value": ""
+                        },
+                        {
+                            "name": "ID Issue Date",
+                            "value": ""
+                        },
+                        {
+                            "name": "ID Expiration Date",
+                            "value": ""
+                        },
+                        {
+                            "name": "Mobile Carrier",
+                            "value": ""
+                        },
+                        {
+                            "name": "Mobile Number",
+                            "value": "{{phoneFormat 'nodash' _PARENT.[Member Phone Cell]}}"
+                        },
+                        {
+                            "name": "Time Zone",
+                            "value": "Central Time"
+                        }
+                    ],
+                    "children": []
+                }
+            ]
+        },
+        {
+            "name": "Footer",
+            "container": false,
+            "children": [],
+            "elements": [
+                {
+                    "name": "Record Type",
+                    "value": "FF"
+                },
+                {
+                    "name": "Record Count",
+                    "value": "{{_segment_count}}"
+                },
+                {
+                    "name": "Admin Code",
+                    "value": "SUR"
+                },
+                {
+                    "name": "Employer Code",
+                    "value": "[TODO]"
+                },
+                {
+                    "name": "Created Date",
+                    "value": "{{dateFormat 'MMddyyyy'}}"
+                },
+                {
+                    "name": "Created Time",
+                    "value": "{{dateFormat 'HHmmss'}}"
+                }
+            ]
+        }
+    ]
+}

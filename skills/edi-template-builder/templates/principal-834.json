@@ -1,0 +1,945 @@
+{
+  "$schema": "https://storageukgreadyedi.blob.core.windows.net/schema-files/v0.0.1/template.json",
+  "name": "Principal 834 (seed template — replace [TODO] values per client)",
+  "version": "0.0.1",
+  "elementSeparator": "*",
+  "segmentSeparator": "~\n",
+  "componentSeparator": ":",
+  "repetitionSeparator": "^",
+  "rules": [
+    {
+      "name": "ISA_SEGMENT",
+      "container": false,
+      "trim": true,
+      "elements": [
+        {
+          "name": "ISA",
+          "value": "ISA"
+        },
+        {
+          "name": "Authorization_Information_Qualifier",
+          "value": "00",
+          "attributes": {
+            "length": {
+              "min": 2,
+              "max": 2
+            }
+          }
+        },
+        {
+          "name": "Authorization_Information",
+          "value": "",
+          "attributes": {
+            "length": {
+              "min": 10,
+              "max": 10
+            }
+          }
+        },
+        {
+          "name": "Security_Information_Qualifier",
+          "value": "00",
+          "attributes": {
+            "length": {
+              "min": 2,
+              "max": 2
+            }
+          }
+        },
+        {
+          "name": "Security_Information",
+          "value": "",
+          "attributes": {
+            "length": {
+              "min": 10,
+              "max": 10
+            }
+          }
+        },
+        {
+          "name": "Interchange_ID_Qualfier",
+          "value": "30",
+          "attributes": {
+            "length": {
+              "min": 2,
+              "max": 2
+            }
+          }
+        },
+        {
+          "name": "Interchange_Sender_ID",
+          "value": "[TODO]",
+          "attributes": {
+            "length": {
+              "min": 15,
+              "max": 15
+            }
+          }
+        },
+        {
+          "name": "Interchange_ID_Qualfier",
+          "value": "30",
+          "attributes": {
+            "length": {
+              "min": 2,
+              "max": 2
+            }
+          }
+        },
+        {
+          "name": "Interchange_Receiver_ID",
+          "value": "[TODO]",
+          "attributes": {
+            "length": {
+              "min": 15,
+              "max": 15
+            }
+          }
+        },
+        {
+          "name": "Interchange_Date",
+          "value": "{{dateFormat 'yyMMdd'}}",
+          "attributes": {
+            "length": {
+              "min": 6,
+              "max": 6
+            }
+          }
+        },
+        {
+          "name": "Interchange_Time",
+          "value": "{{dateFormat 'HHmm'}}",
+          "attributes": {
+            "length": {
+              "min": 4,
+              "max": 4
+            }
+          }
+        },
+        {
+          "name": "Repetition_Separator",
+          "value": "^",
+          "attributes": {
+            "length": {
+              "min": 1,
+              "max": 1
+            }
+          }
+        },
+        {
+          "name": "Interchange_Control_Version_Number",
+          "value": "00501",
+          "attributes": {
+            "length": {
+              "min": 5,
+              "max": 5
+            }
+          }
+        },
+        {
+          "name": "Interchange_Control_Number",
+          "value": "{{referenceIdentifier}}",
+          "attributes": {
+            "length": {
+              "min": 9,
+              "max": 9,
+              "align": "right",
+              "padding": "0"
+            }
+          }
+        },
+        {
+          "name": "Acknowledgement_Requested_Code",
+          "value": "0",
+          "attributes": {
+            "length": {
+              "min": 1,
+              "max": 1
+            }
+          }
+        },
+        {
+          "name": "Interchange_Usage_Indicator",
+          "value": "T",
+          "attributes": {
+            "length": {
+              "min": 1,
+              "max": 1
+            }
+          }
+        },
+        {
+          "name": "Component_Element_Separator",
+          "value": ":",
+          "attributes": {
+            "length": {
+              "min": 1,
+              "max": 1
+            }
+          }
+        }
+      ],
+      "children": [
+        {
+          "name": "GS_Segment",
+          "container": false,
+          "trim": true,
+          "elements": [
+            {
+              "name": "GS",
+              "value": "GS"
+            },
+            {
+              "name": "Functional_Identifier_Code",
+              "value": "BE"
+            },
+            {
+              "name": "Application_Senders_Code",
+              "value": "[TODO]"
+            },
+            {
+              "name": "Application_Receivers_Code",
+              "value": "[TODO]"
+            },
+            {
+              "name": "Date",
+              "value": "{{dateFormat 'yyyyMMdd'}}"
+            },
+            {
+              "name": "Time",
+              "value": "{{dateFormat 'HHmm'}}"
+            },
+            {
+              "name": "Group_Control_Number",
+              "value": "{{referenceIdentifier}}"
+            },
+            {
+              "name": "Responsible_Agency_Code",
+              "value": "X"
+            },
+            {
+              "name": "Version_Release_Industry_Identification",
+              "value": "005010X220A1"
+            }
+          ],
+          "children": [
+            {
+              "name": "ST_Loop",
+              "container": true,
+              "children": [
+                {
+                  "name": "ST_Segment",
+                  "container": false,
+                  "trim": true,
+                  "elements": [
+                    {
+                      "name": "ST",
+                      "value": "ST"
+                    },
+                    {
+                      "name": "Transaction_Set_Identifier_Code",
+                      "value": "834"
+                    },
+                    {
+                      "name": "Transaction_Set_Control_Number",
+                      "value": "{{referenceIdentifier}}",
+                      "attributes": {
+                        "length": {
+                          "min": 4,
+                          "max": 4,
+                          "align": "right",
+                          "padding": "0"
+                        }
+                      }
+                    },
+                    {
+                      "name": "Version_Release_Industry_Identification",
+                      "value": "005010X220A1"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "name": "BGN",
+                      "container": false,
+                      "trim": true,
+                      "elements": [
+                        {
+                          "name": "BGN",
+                          "value": "BGN"
+                        },
+                        {
+                          "name": "Transaction_Set_Purpose_Code",
+                          "value": "00"
+                        },
+                        {
+                          "name": "Reference_Identification",
+                          "value": "0001"
+                        },
+                        {
+                          "name": "Date",
+                          "value": "{{dateFormat 'yyyyMMdd'}}"
+                        },
+                        {
+                          "name": "Time",
+                          "value": "{{dateFormat 'HHmm'}}"
+                        },
+                        {
+                          "name": "Time_Code",
+                          "value": "ET"
+                        },
+                        {
+                          "name": "Reference_Identification01",
+                          "value": ""
+                        },
+                        {
+                          "name": "Transaction_Type_Code",
+                          "value": ""
+                        },
+                        {
+                          "name": "Action_Code",
+                          "value": "4"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "name": "N1_Segment_Sponsor",
+                          "container": false,
+                          "trim": true,
+                          "elements": [
+                            {
+                              "name": "N1",
+                              "value": "N1"
+                            },
+                            {
+                              "name": "Entity_Identifier_Code",
+                              "value": "P5"
+                            },
+                            {
+                              "name": "Name",
+                              "value": "[TODO]"
+                            },
+                            {
+                              "name": "Identification_Code_Qualifier",
+                              "value": "FI"
+                            },
+                            {
+                              "name": "Identification_Code",
+                              "value": "[TODO]"
+                            }
+                          ],
+                          "children": []
+                        },
+                        {
+                          "name": "N1_Segment_Insurer",
+                          "container": false,
+                          "trim": true,
+                          "elements": [
+                            {
+                              "name": "N1",
+                              "value": "N1"
+                            },
+                            {
+                              "name": "Entity_Identifier_Code",
+                              "value": "IN"
+                            },
+                            {
+                              "name": "Name",
+                              "value": "PRINCIPAL"
+                            },
+                            {
+                              "name": "Identification_Code_Qualifier",
+                              "value": "FI"
+                            },
+                            {
+                              "name": "Identification_Code",
+                              "value": "[TODO]"
+                            }
+                          ],
+                          "children": [
+                            {
+                              "name": "INS_Loop",
+                              "container": true,
+                              "repetition": {
+                                "property": "members",
+                                "filter": "{{#dateCompare 'today' '>' [Member Termination Date]}}{{else}}{{#each [Benefit Plans]}}{{#compare [Coverage Name] '!=' 'Waived'}}{{#dateCompare 'today' '<=' [Member Benefit End Date]}}{{#if (match [Relationship Code] 'Self')}}true{{else if (match [Benefit Plan ID] 688012630 688012634 688031564 688037056)}}true{{/if}}{{/dateCompare}}{{/compare}}{{/each}}{{/dateCompare}}"
+                              },
+                              "children": [
+                                {
+                                  "name": "INS_Segment",
+                                  "container": false,
+                                  "trim": true,
+                                  "ignore": "{{#if [Beneficiary]}}{{#if [Dependent]}}true{{/if}}{{else}}true{{/if}}",
+                                  "elements": [
+                                    {
+                                      "name": "INS",
+                                      "value": "INS"
+                                    },
+                                    {
+                                      "name": "Yes_No_Condition_Response_Code",
+                                      "value": "{{#compare [Subscriber Type] '==' 'Subscriber'}}Y{{else}}N{{/compare}}"
+                                    },
+                                    {
+                                      "name": "Individual_Relationship_Code",
+                                      "value": "{{#if (match [Relationship Code] 'Self')}}18{{else if (match [Relationship Code] 'Spouse')}}01{{else if (match [Relationship Code] 'Child')}}19{{else if (match [Relationship Code] 'Significant Other' 'Partner')}}53{{/if}}"
+                                    },
+                                    {
+                                      "name": "Maintenance_Type_Code",
+                                      "value": "030"
+                                    },
+                                    {
+                                      "name": "Maintenance_Reason_Code",
+                                      "value": ""
+                                    },
+                                    {
+                                      "name": "Benefit_Status_Code",
+                                      "value": "A"
+                                    }
+                                  ],
+                                  "children": [
+                                    {
+                                      "name": "REF_Segment_Subscriber_Number",
+                                      "container": false,
+                                      "trim": true,
+                                      "elements": [
+                                        {
+                                          "name": "REF",
+                                          "value": "REF"
+                                        },
+                                        {
+                                          "name": "Reference_Identification_Qualifier",
+                                          "value": "0F"
+                                        },
+                                        {
+                                          "name": "Reference_Identification",
+                                          "value": "{{replaceAll '-' '' [SSN of Member]}}"
+                                        }
+                                      ],
+                                      "children": []
+                                    },
+                                    {
+                                      "name": "REF_Segment_Member_Policy_Number",
+                                      "container": false,
+                                      "trim": true,
+                                      "filter": {
+                                        "property": "Benefit Plans",
+                                        "expression": "{{#compare [Coverage Name] '!=' 'Waived'}}1{{/compare}}"
+                                      },
+                                      "elements": [
+                                        {
+                                          "name": "REF",
+                                          "value": "REF"
+                                        },
+                                        {
+                                          "name": "Reference_Identification_Qualifier",
+                                          "value": "1L"
+                                        },
+                                        {
+                                          "name": "Reference_Identification",
+                                          "value": "[TODO]"
+                                        }
+                                      ],
+                                      "children": []
+                                    },
+                                    {
+                                      "name": "DTP_Maintenance_Effective",
+                                      "container": false,
+                                      "trim": true,
+                                      "elements": [
+                                        {
+                                          "name": "DTP",
+                                          "value": "DTP"
+                                        },
+                                        {
+                                          "name": "DTP01",
+                                          "value": "303"
+                                        },
+                                        {
+                                          "name": "DTP02",
+                                          "value": "D8"
+                                        },
+                                        {
+                                          "name": "DTP03",
+                                          "value": "{{dateFormat 'yyyyMMdd'}}"
+                                        }
+                                      ],
+                                      "children": []
+                                    },
+                                    {
+                                      "name": "DTP_Eligibility_Begin",
+                                      "container": false,
+                                      "trim": true,
+                                      "elements": [
+                                        {
+                                          "name": "DTP",
+                                          "value": "DTP"
+                                        },
+                                        {
+                                          "name": "DTP01",
+                                          "value": "356"
+                                        },
+                                        {
+                                          "name": "DTP02",
+                                          "value": "D8"
+                                        },
+                                        {
+                                          "name": "DTP03",
+                                          "value": "{{dateFormat 'yyyyMMdd' [Member Start Date]}}"
+                                        }
+                                      ],
+                                      "children": []
+                                    },
+                                    {
+                                      "name": "NM1_Segment_Member_Residence",
+                                      "container": false,
+                                      "trim": true,
+                                      "elements": [
+                                        {
+                                          "name": "NM1",
+                                          "value": "NM1"
+                                        },
+                                        {
+                                          "name": "Entity_Identifier_Code",
+                                          "value": "IL"
+                                        },
+                                        {
+                                          "name": "Entity_Type_Qualifier",
+                                          "value": "1"
+                                        },
+                                        {
+                                          "name": "Name_Last_Or_Organization_Name",
+                                          "value": "{{[Last Name of Member]}}"
+                                        },
+                                        {
+                                          "name": "Name_First",
+                                          "value": "{{[First Name of Member]}}"
+                                        },
+                                        {
+                                          "name": "Name_Middle",
+                                          "value": "{{[Middle Initial of Member]}}"
+                                        },
+                                        {
+                                          "name": "Name_Prefix",
+                                          "value": ""
+                                        },
+                                        {
+                                          "name": "Name_Suffix",
+                                          "value": ""
+                                        },
+                                        {
+                                          "name": "Identification_Code_Qualifier",
+                                          "value": "34"
+                                        },
+                                        {
+                                          "name": "Identification_Code",
+                                          "value": "{{replaceAll '-' '' [SSN of Individual]}}"
+                                        }
+                                      ],
+                                      "children": []
+                                    },
+                                    {
+                                      "name": "PER",
+                                      "container": false,
+                                      "trim": true,
+                                      "elements": [
+                                        {
+                                          "name": "PER",
+                                          "value": "PER"
+                                        },
+                                        {
+                                          "name": "PER01",
+                                          "value": "IP"
+                                        },
+                                        {
+                                          "name": "PER02",
+                                          "value": ""
+                                        },
+                                        {
+                                          "name": "PER03",
+                                          "value": "{{#if [Insured Party Telephone Number]}}HP{{else}}EM{{/if}}"
+                                        },
+                                        {
+                                          "name": "PER04",
+                                          "value": "{{#if [Insured Party Telephone Number]}}{{phoneFormat 'nodash' [Insured Party Telephone Number]}}{{else}}{{[Member Email Address]}}{{/if}}"
+                                        },
+                                        {
+                                          "name": "PER05",
+                                          "value": "{{#if [Insured Party Telephone Number]}}EM{{/if}}"
+                                        },
+                                        {
+                                          "name": "PER06",
+                                          "value": "{{#if [Insured Party Telephone Number]}}{{[Member Email Address]}}{{/if}}"
+                                        }
+                                      ],
+                                      "children": []
+                                    },
+                                    {
+                                      "name": "N3_Segment_Member_Residence",
+                                      "container": false,
+                                      "trim": true,
+                                      "elements": [
+                                        {
+                                          "name": "N3",
+                                          "value": "N3"
+                                        },
+                                        {
+                                          "name": "Address_Information",
+                                          "value": "{{[Subscribers Address Line 1]}}"
+                                        },
+                                        {
+                                          "name": "Address_Information01",
+                                          "value": "{{[Subscribers Address Line 2]}}"
+                                        }
+                                      ],
+                                      "children": []
+                                    },
+                                    {
+                                      "name": "N4_Segment_Member_Residence",
+                                      "container": false,
+                                      "trim": true,
+                                      "elements": [
+                                        {
+                                          "name": "N4",
+                                          "value": "N4"
+                                        },
+                                        {
+                                          "name": "City_Name",
+                                          "value": "{{[Subscribers City]}}"
+                                        },
+                                        {
+                                          "name": "State_Or_Province_Code",
+                                          "value": "{{[Subscribers State]}}"
+                                        },
+                                        {
+                                          "name": "Postal_Code",
+                                          "value": "{{[Subscribers Zip Code]}}"
+                                        },
+                                        {
+                                          "name": "Country_Code",
+                                          "value": "{{[Subscribers Country Code]}}"
+                                        }
+                                      ],
+                                      "children": []
+                                    },
+                                    {
+                                      "name": "DMG",
+                                      "container": false,
+                                      "trim": true,
+                                      "elements": [
+                                        {
+                                          "name": "DMG",
+                                          "value": "DMG"
+                                        },
+                                        {
+                                          "name": "Date_Time_Period_Format_Qualifier",
+                                          "value": "D8"
+                                        },
+                                        {
+                                          "name": "Date_Time_Period",
+                                          "value": "{{dateFormat 'yyyyMMdd' [Members Date of Birth]}}"
+                                        },
+                                        {
+                                          "name": "Gender_Code",
+                                          "value": "{{#if [Members Gender]}}{{[Members Gender]}}{{else}}U{{/if}}"
+                                        },
+                                        {
+                                          "name": "Marital_Status",
+                                          "value": "{{#if (match [Members Marital Status] 'Married')}}M{{else if (match [Members Marital Status] 'Single')}}I{{else}}U{{/if}}"
+                                        }
+                                      ],
+                                      "children": []
+                                    },
+                                    {
+                                      "name": "HD_Segment",
+                                      "container": false,
+                                      "repetition": {
+                                        "property": "Benefit Plans",
+                                        "filter": "{{#compare [Coverage Name] '!=' 'Waived'}}{{#dateCompare 'yesterday' '<' [Member Benefit End Date]}}{{#if (match [Relationship Code] 'Self')}}true{{else if (match [Benefit Plan ID] 688012630 688012634 688031564 688037056)}}true{{/if}}{{/dateCompare}}{{/compare}}"
+                                      },
+                                      "trim": true,
+                                      "elements": [
+                                        {
+                                          "name": "HD",
+                                          "value": "HD"
+                                        },
+                                        {
+                                          "name": "Maintenance_Type_Code",
+                                          "value": "030"
+                                        },
+                                        {
+                                          "name": "Maintenance_Reason_Code",
+                                          "value": ""
+                                        },
+                                        {
+                                          "name": "Insurance_Line_Code",
+                                          "value": "{{#if (match [Benefit Plan ID] 688012631)}}BLF{{else if (match [Benefit Plan ID] 688031562)}}EVL{{else if (match [Benefit Plan ID] 688031564)}}SVL{{else if (match [Benefit Plan ID] 688037056)}}CVL{{else if (match [Benefit Plan ID] 688012632)}}LTD{{else if (match [Benefit Plan ID] 688012630)}}DEN{{else if (match [Benefit Plan ID] 688012634)}}VIS{{/if}}"
+                                        },
+                                        {
+                                          "name": "Plan_Coverage_Description",
+                                          "value": "00001"
+                                        }
+                                      ],
+                                      "children": [
+                                        {
+                                          "name": "DTP_Segemnt_Health_Coverage_Benefit_Begin",
+                                          "container": false,
+                                          "trim": true,
+                                          "elements": [
+                                            {
+                                              "name": "DTP",
+                                              "value": "DTP"
+                                            },
+                                            {
+                                              "name": "Date_Time_Qualifier",
+                                              "value": "348"
+                                            },
+                                            {
+                                              "name": "Date_Time_Period_Format_Qualifier",
+                                              "value": "D8"
+                                            },
+                                            {
+                                              "name": "Date_Time_Period",
+                                              "value": "{{dateFormat 'yyyyMMdd' [Member Benefit Begin Date]}}"
+                                            }
+                                          ],
+                                          "children": []
+                                        },
+                                        {
+                                          "name": "DTP_Segemnt_Health_Coverage_Benefit_End",
+                                          "container": false,
+                                          "trim": true,
+                                          "ignore": "{{#if _PARENT.[Member Termination Date]}}true{{/if}}",
+                                          "elements": [
+                                            {
+                                              "name": "DTP",
+                                              "value": "DTP"
+                                            },
+                                            {
+                                              "name": "Date_Time_Qualifier",
+                                              "value": "349"
+                                            },
+                                            {
+                                              "name": "Date_Time_Period_Format_Qualifier",
+                                              "value": "D8"
+                                            },
+                                            {
+                                              "name": "Date_Time_Period",
+                                              "value": "{{dateFormat 'yyyyMMdd' _PARENT.[Member Termination Date]}}"
+                                            }
+                                          ],
+                                          "children": []
+                                        },
+                                        {
+                                          "name": "AMT_Segemnt_Health_Coverage_Amount",
+                                          "container": false,
+                                          "trim": true,
+                                          "ignore": "{{#if (match [Benefit Plan ID] 688012631 688031562 688031564 688037056)}}true{{/if}}",
+                                          "elements": [
+                                            {
+                                              "name": "AMT",
+                                              "value": "AMT"
+                                            },
+                                            {
+                                              "name": "Amount_Qualifier_Code",
+                                              "value": "L1"
+                                            },
+                                            {
+                                              "name": "Monetary_Amount",
+                                              "value": "{{[Coverage Amount]}}"
+                                            }
+                                          ],
+                                          "children": [
+                                            {
+                                              "name": "AMT_Segemnt_Health_Coverage_Amount",
+                                              "container": false,
+                                              "trim": true,
+                                              "elements": [
+                                                {
+                                                  "name": "AMT",
+                                                  "value": "AMT"
+                                                },
+                                                {
+                                                  "name": "Amount_Qualifier_Code",
+                                                  "value": "A2"
+                                                },
+                                                {
+                                                  "name": "Monetary_Amount",
+                                                  "value": "{{[Coverage Amount]}}"
+                                                }
+                                              ],
+                                              "children": []
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "name": "HD_Segment",
+                                          "container": false,
+                                          "ignore": "{{#if (match [Benefit Plan ID] 688012631 688031562 688031564)}}true{{/if}}",
+                                          "trim": true,
+                                          "elements": [
+                                            {
+                                              "name": "HD",
+                                              "value": "HD"
+                                            },
+                                            {
+                                              "name": "Maintenance_Type_Code",
+                                              "value": "030"
+                                            },
+                                            {
+                                              "name": "Maintenance_Reason_Code",
+                                              "value": ""
+                                            },
+                                            {
+                                              "name": "Insurance_Line_Code",
+                                              "value": "{{#if (match [Benefit Plan ID] 688012631)}}ADD{{else if (match [Benefit Plan ID] 688031562)}}EVA{{else if (match [Benefit Plan ID] 688031564)}}SVA{{/if}}"
+                                            },
+                                            {
+                                              "name": "Plan_Coverage_Description",
+                                              "value": "00001"
+                                            }
+                                          ],
+                                          "children": [
+                                            {
+                                              "name": "DTP_Segemnt_Health_Coverage_Benefit_Begin",
+                                              "container": false,
+                                              "trim": true,
+                                              "elements": [
+                                                {
+                                                  "name": "DTP",
+                                                  "value": "DTP"
+                                                },
+                                                {
+                                                  "name": "Date_Time_Qualifier",
+                                                  "value": "348"
+                                                },
+                                                {
+                                                  "name": "Date_Time_Period_Format_Qualifier",
+                                                  "value": "D8"
+                                                },
+                                                {
+                                                  "name": "Date_Time_Period",
+                                                  "value": "{{dateFormat 'yyyyMMdd' [Member Benefit Begin Date]}}"
+                                                }
+                                              ],
+                                              "children": []
+                                            },
+                                            {
+                                              "name": "DTP_Segemnt_Health_Coverage_Benefit_End",
+                                              "container": false,
+                                              "trim": true,
+                                              "ignore": "{{#if _PARENT.[Member Termination Date]}}true{{/if}}",
+                                              "elements": [
+                                                {
+                                                  "name": "DTP",
+                                                  "value": "DTP"
+                                                },
+                                                {
+                                                  "name": "Date_Time_Qualifier",
+                                                  "value": "349"
+                                                },
+                                                {
+                                                  "name": "Date_Time_Period_Format_Qualifier",
+                                                  "value": "D8"
+                                                },
+                                                {
+                                                  "name": "Date_Time_Period",
+                                                  "value": "{{dateFormat 'yyyyMMdd' _PARENT.[Member Termination Date]}}"
+                                                }
+                                              ],
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ],
+                  "closeRule": {
+                    "name": "SE_Segment",
+                    "trim": true,
+                    "elements": [
+                      {
+                        "name": "SE",
+                        "value": "SE"
+                      },
+                      {
+                        "name": "Number_Of_Included_Segments",
+                        "value": "{{_segment_count}}"
+                      },
+                      {
+                        "name": "Transaction_Set_Control_Number",
+                        "value": "{{referenceIdentifier}}",
+                        "attributes": {
+                          "length": {
+                            "min": 4,
+                            "max": 4,
+                            "align": "right",
+                            "padding": "0"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "GE_Segment",
+              "container": false,
+              "trim": true,
+              "elements": [
+                {
+                  "name": "GE",
+                  "value": "GE"
+                },
+                {
+                  "name": "Number_Of_Included_Transactions",
+                  "value": "1"
+                },
+                {
+                  "name": "Group_Control_Number",
+                  "value": "{{referenceIdentifier}}"
+                }
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "name": "IEA_SEGMENT",
+          "container": false,
+          "trim": true,
+          "elements": [
+            {
+              "name": "IEA",
+              "value": "IEA"
+            },
+            {
+              "name": "Number_Of_Included_Functional_Groups",
+              "value": "1"
+            },
+            {
+              "name": "Interchange_Control_Number",
+              "value": "{{referenceIdentifier}}",
+              "attributes": {
+                "length": {
+                  "min": 9,
+                  "max": 9,
+                  "align": "right",
+                  "padding": "0"
+                }
+              }
+            }
+          ],
+          "children": []
+        }
+      ]
+    }
+  ]
+}
