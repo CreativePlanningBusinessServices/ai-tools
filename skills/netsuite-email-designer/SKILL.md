@@ -206,13 +206,21 @@ fails. Returns the GET shape.
 5. **Save.** Only after an explicit yes that names the account ("save to <alias>"). Build the PUT
    body from the draft file the same way, `PUT`, then report `backup.id` and `backup.path` and how
    to restore. Finish with one saved-mode `POST` as the confirmation preview.
-6. **New templates with react.email.** Copy `react-email-starter/` (next to this file) to the
+6. **Which template gets the result.** When the user hands you an existing Email Template record
+   (a URL, an id or a name) and asks to change, redo or rebuild its email, the finished HTML goes
+   back onto **that record** with `PUT {id, body, subject}`, even when it was rewritten from scratch
+   in react.email. Its storage stays as it was: an inline template keeps its body on the record,
+   a file-backed one gets its media file overwritten, and the automatic backup covers both. Do
+   not create a new template or drop a file into the File Cabinet instead; the record is what
+   workflows, saved searches and scripts reference. Create a new template only when the user
+   asks for a new one, or when no record exists yet.
+7. **New templates with react.email.** Copy `react-email-starter/` (next to this file) to the
    destination the user names (for Creative Planning: `sdf-creative-planning/email-templates/<slug>/`),
    `npm install`, author `emails/<slug>.tsx` with `<NS expr>`, `ns('…')` and `<FreeMarker>` (its
    README has the one rule), `npm run export`, preview `out/<slug>.html` in draft mode with a sample
    record, iterate in the TSX only, then `PUT` without `id` (`storage: "file"` for CP) to create.
    When a TSX source exists, later tweaks go there, not in the exported HTML.
-7. **Compliance.** Email templates are client-facing communications: remind the user that their
+8. **Compliance.** Email templates are client-facing communications: remind the user that their
    firm's review process applies before use (for Creative Planning, Compliance review).
 
 ## Gotchas
