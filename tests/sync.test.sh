@@ -18,11 +18,12 @@ snapshot() { (cd "$1" && find . -type f -exec shasum {} + | sort); }
 
 mkdir -p "$tmp/pkg"
 assert_eq "$(run_sync main "$tmp/pkg")" 0 "good ref exits 0"
-for file in RESTlet/cp_saved_search_rl.js RESTlet/cp_file_cabinet_rl.js RESTlet/cp_mr_driver_rl.js \
-            netsuite_modules/saved-search-serializer/index.js netsuite_modules/file-cabinet/index.js; do
+for file in RESTlet/cp_saved_search_rl.js RESTlet/cp_file_cabinet_rl.js RESTlet/cp_mr_driver_rl.js RESTlet/cp_email_template_rl.js \
+            netsuite_modules/saved-search-serializer/index.js netsuite_modules/file-cabinet/index.js \
+            netsuite_modules/email-template/index.js; do
   if [ -f "$tmp/pkg/$js_root/$file" ]; then pass "copied $file"; else fail "copied $file"; fi
 done
-for name in saved_search file_cabinet mr_driver; do
+for name in saved_search file_cabinet mr_driver email_template; do
   file="Objects/Scripts/RESTlet/customscript_cp_${name}_rl.xml"
   if [ -f "$tmp/pkg/$file" ]; then pass "copied $file"; else fail "copied $file"; fi
 done

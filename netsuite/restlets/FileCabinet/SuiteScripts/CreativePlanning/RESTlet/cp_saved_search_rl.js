@@ -2,15 +2,14 @@
  * @NApiVersion 2.1
  * @NScriptType Restlet
  * @NModuleScope SameAccount
- * Author: Jon Lamb
+ * Author: Creative Planning Business Services
  * Date: 08/01/2026
  * Version: 1.0
  * Description: Create, edit, describe and run saved searches over JSON — NetSuite has no REST API
  *   for saved-search definitions and its SOAP runner is being sunset. Primarily called by
  *   netsuite-cli via `restlet call`. Contract: GET ?id= describes; GET ?id=&run=T&pageIndex=&pageSize=
  *   runs one page; POST creates; POST {"run":true,...} runs a definition without saving it;
- *   PUT updates (full-definition replace); DELETE ?id= removes a saved search. See the design spec
- *   in docs/superpowers/specs/2026-07-31-saved-search-restlet-design.html.
+ *   PUT updates (full-definition replace); DELETE ?id= removes a saved search.
  */
 define(["require", "exports", "N/log", "N/query", "N/search", "../netsuite_modules/saved-search-serializer/index.js"], function (require, exports, log, query, search, index_js_1) {
     "use strict";
@@ -46,7 +45,7 @@ define(["require", "exports", "N/log", "N/query", "N/search", "../netsuite_modul
         log.audit('saved search deleted', { internalId, id: loaded.id, title });
         return { deleted: true, internalId, ...(loaded.id ? { id: loaded.id } : {}), title };
     }));
-    // The run-time additional filter (Basecamp 519344750): ANDed onto the stored criteria for this
+    // The run-time additional filter: ANDed onto the stored criteria for this
     // run only. Empty string counts as absent, like every other query param. Sending it on a
     // describe call is rejected rather than silently ignored — it would mask a forgotten run=T.
     const additionalFilter = (filter, runRequested) => {
@@ -151,7 +150,7 @@ define(["require", "exports", "N/log", "N/query", "N/search", "../netsuite_modul
         log.audit('saved search updated', { internalId, title: definition.title });
         return serializeWithTitle(search.load({ id: internalId }), definition.title);
     });
-    // N/search.load() never returns a search's title — confirmed in sb2 against both just-saved
+    // N/search.load() never returns a search's title — confirmed in a sandbox against both just-saved
     // reloads and describes of long-existing, unrelated searches untouched this session, so it isn't
     // same-execution staleness — it's a permanent platform gap. savedsearch.name in SuiteQL reliably
     // holds the real title, so this is the one title-resolution mechanism used everywhere a search is

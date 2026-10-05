@@ -481,7 +481,7 @@ define(["require", "exports", "N/encode", "N/file", "N/query", "N/record"], func
         return file.Encoding[value];
     };
     // File.encoding reads back as a charset display string, not the enum key — every value below was
-    // captured live in sb2 (2026-08-11) by creating a file with each of the 8 supported encodings and
+    // captured live in a sandbox (2026-08-11) by creating a file with each of the 8 supported encodings and
     // describing it. MacRoman is why this is an explicit map and not a mechanical normalization:
     // "MacRoman".toUpperCase() is "MACROMAN", which is not an enum key, and the failed lookup would
     // silently reset the file to UTF-8 on content replace.

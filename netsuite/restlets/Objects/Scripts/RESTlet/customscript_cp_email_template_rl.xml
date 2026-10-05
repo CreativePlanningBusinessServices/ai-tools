@@ -1,0 +1,22 @@
+<restlet scriptid="customscript_cp_email_template_rl">
+  <description>Describe, preview, save and create scriptable email templates over JSON. GET ?id= returns the template record plus its body (File Cabinet file or inline content); POST renders a preview with render.mergeEmail against real records (a draft body is merged through a temporary private template that is deleted afterwards); PUT saves a template after backing its previous body up to /SuiteScripts/CreativePlanning/email-template-backups, or without id creates one. Called by netsuite-cli via `restlet call`; contract documented in the netsuite-email-designer skill.</description>
+  <isinactive>F</isinactive>
+  <name>CP | Email Template RESTlet</name>
+  <notifyadmins>F</notifyadmins>
+  <notifyemails></notifyemails>
+  <notifyowner>T</notifyowner>
+  <notifyuser>F</notifyuser>
+  <scriptfile>[/SuiteScripts/CreativePlanning/RESTlet/cp_email_template_rl.js]</scriptfile>
+  <scriptdeployments>
+    <scriptdeployment scriptid="customdeploy_cp_email_template_rl">
+      <allemployees>F</allemployees>
+      <allpartners>F</allpartners>
+      <allroles>T</allroles>
+      <audslctrole></audslctrole>
+      <isdeployed>T</isdeployed>
+      <loglevel>AUDIT</loglevel>
+      <status>RELEASED</status>
+      <title>CP | Email Template RESTlet</title>
+    </scriptdeployment>
+  </scriptdeployments>
+</restlet>

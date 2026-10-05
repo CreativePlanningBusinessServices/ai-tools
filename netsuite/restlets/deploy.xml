@@ -5,10 +5,13 @@
         <path>~/FileCabinet/SuiteScripts/CreativePlanning/RESTlet/cp_mr_driver_rl.js</path>
         <path>~/FileCabinet/SuiteScripts/CreativePlanning/netsuite_modules/saved-search-serializer/index.js</path>
         <path>~/FileCabinet/SuiteScripts/CreativePlanning/netsuite_modules/file-cabinet/index.js</path>
+        <path>~/FileCabinet/SuiteScripts/CreativePlanning/RESTlet/cp_email_template_rl.js</path>
+        <path>~/FileCabinet/SuiteScripts/CreativePlanning/netsuite_modules/email-template/index.js</path>
     </files>
     <objects>
         <path>~/Objects/Scripts/RESTlet/customscript_cp_saved_search_rl.xml</path>
         <path>~/Objects/Scripts/RESTlet/customscript_cp_file_cabinet_rl.xml</path>
         <path>~/Objects/Scripts/RESTlet/customscript_cp_mr_driver_rl.xml</path>
+        <path>~/Objects/Scripts/RESTlet/customscript_cp_email_template_rl.xml</path>
     </objects>
 </deploy>

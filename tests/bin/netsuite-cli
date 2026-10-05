@@ -12,8 +12,12 @@ case "$args" in
     if [ "$mode" = missing-script ]; then
       echo '{"items":[{"scriptid":"customscript_cp_saved_search_rl"},{"scriptid":"customscript_cp_file_cabinet_rl"}]}'
     else
-      echo '{"items":[{"scriptid":"customscript_cp_saved_search_rl"},{"scriptid":"customscript_cp_file_cabinet_rl"},{"scriptid":"customscript_cp_mr_driver_rl"}]}'
+      echo '{"items":[{"scriptid":"customscript_cp_saved_search_rl"},{"scriptid":"customscript_cp_file_cabinet_rl"},{"scriptid":"customscript_cp_mr_driver_rl"},{"scriptid":"customscript_cp_email_template_rl"}]}'
     fi ;;
+  suiteql*"FROM emailtemplate"*)
+    echo '{"items":[{"id":"7"}]}' ;;
+  *customscript_cp_email_template_rl*"id=7"*)
+    echo '{"id":7,"name":"Example","storage":"inline","mediaItem":null,"subject":"Hi","body":"<p>Hi</p>"}' ;;
   suiteql*"FROM savedsearch"*)
     echo '{"items":[{"id":"42"}]}' ;;
   *customscript_cp_file_cabinet_rl*"folder=/"*)

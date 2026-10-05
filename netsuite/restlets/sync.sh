@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Rebuilds the three CP RESTlets from sdf-creative-planning and copies the deployable output
+# Rebuilds the CP RESTlets from sdf-creative-planning and copies the deployable output
 # into this package. Builds in a temporary worktree so the source checkout's branch and
 # uncommitted changes are never used or touched. Never commits.
 set -euo pipefail
@@ -10,9 +10,9 @@ package_dir="${SYNC_OUT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 
 js_root=FileCabinet/SuiteScripts/CreativePlanning
 xml_root=Objects/Scripts/RESTlet
-restlet_files=(RESTlet/cp_saved_search_rl.js RESTlet/cp_file_cabinet_rl.js RESTlet/cp_mr_driver_rl.js)
-js_files=("${restlet_files[@]}" netsuite_modules/saved-search-serializer/index.js netsuite_modules/file-cabinet/index.js)
-xml_files=(customscript_cp_saved_search_rl.xml customscript_cp_file_cabinet_rl.xml customscript_cp_mr_driver_rl.xml)
+restlet_files=(RESTlet/cp_saved_search_rl.js RESTlet/cp_file_cabinet_rl.js RESTlet/cp_mr_driver_rl.js RESTlet/cp_email_template_rl.js)
+js_files=("${restlet_files[@]}" netsuite_modules/saved-search-serializer/index.js netsuite_modules/file-cabinet/index.js netsuite_modules/email-template/index.js)
+xml_files=(customscript_cp_saved_search_rl.xml customscript_cp_file_cabinet_rl.xml customscript_cp_mr_driver_rl.xml customscript_cp_email_template_rl.xml)
 
 die() { echo "sync: $*" >&2; exit 1; }
 

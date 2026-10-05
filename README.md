@@ -10,17 +10,18 @@ This repo is private: don't copy it anywhere public.
 | `skills/cp-saved-search` | Run, create, edit, describe and delete saved searches |
 | `skills/cp-file-cabinet` | Read, download, list, create, edit and delete File Cabinet files |
 | `skills/cp-mr-driver` | Trigger Map/Reduce scripts and poll their progress |
-| `netsuite/restlets` | The three RESTlets those skills call, ready to deploy into an account |
+| `skills/netsuite-email-designer` | Preview, edit, save and create email templates, with a react.email starter |
+| `netsuite/restlets` | The four RESTlets those skills call, ready to deploy into an account |
 | `skills/edi-template-builder` | Build and revise EDI benefits-feed templates (X12 834 and others) |
 
-The `cp-*` skills only work in an account where the RESTlets are installed.
+The `cp-*` and `netsuite-email-designer` skills only work in an account where the RESTlets are installed.
 `edi-template-builder` has its own setup notes, including how to upgrade from the old zip
 install, in [`skills/edi-template-builder/INSTALL.md`](skills/edi-template-builder/INSTALL.md).
 
 ## Prerequisites
 
 - Claude Code
-- For the `cp-*` skills: [`netsuite-cli`](https://github.com/CreativePlanningBusinessServices/netsuite-cli),
+- For the `cp-*` and `netsuite-email-designer` skills: [`netsuite-cli`](https://github.com/CreativePlanningBusinessServices/netsuite-cli),
   with an account alias for each NetSuite account you work in. For `cp-mr-driver`, that alias
   must be an Administrator-role integration.
 - `jq`
@@ -73,9 +74,11 @@ follow whatever change process applies for that client before deploying.
 
 **Upgrade:** `git pull`, then deploy again. SDF updates the scripts in place.
 
-**Remove:** SDF can't delete objects. In NetSuite, delete the three script deployments, then the
-three scripts ("CP | Saved Search RESTlet", "CP | File Cabinet RESTlet", "CP | MR Driver
-RESTlet"), then the files under `/SuiteScripts/CreativePlanning/`.
+**Remove:** SDF can't delete objects. In NetSuite, delete the four script deployments, then the
+four scripts ("CP | Saved Search RESTlet", "CP | File Cabinet RESTlet", "CP | MR Driver
+RESTlet", "CP | Email Template RESTlet"), then the files under `/SuiteScripts/CreativePlanning/`.
+The email template RESTlet keeps backups of edited templates under
+`/SuiteScripts/CreativePlanning/email-template-backups/`; review those before deleting the folder.
 
 ## Maintainers
 
