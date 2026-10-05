@@ -186,7 +186,7 @@ fails. Returns the GET shape.
    published.
 4. **Edit loop.** Keep the working copy at `$SP/email-draft-<templateId>.html`. After each edit:
    ```bash
-   jq -n --arg body "$(cat "$SP/email-draft-123.html")" '{templateId: 123, body: $body, transactionId: 456}' > "$SP/draft.json"
+   jq -n --rawfile body "$SP/email-draft-123.html" '{templateId: 123, body: $body, transactionId: 456}' > "$SP/draft.json"
    rl --method POST --data @"$SP/draft.json" > "$SP/draft-out.json"
    jq -r .body "$SP/draft-out.json" > "$SP/email-preview-123.html"   # then banner + show
    ```
@@ -215,9 +215,10 @@ fails. Returns the GET shape.
 - **Never `echo "$json"` in zsh** — it expands `\r\n` escapes inside JSON strings and jq then
   fails with "control characters must be escaped". Write responses to files and read them with jq;
   use `printf '%s'` if a variable is unavoidable.
-- A `$(…)` that fails yields an empty string, and `jq -r .contents` on a non-object yields `null`.
-  Check the draft file has content and `${` fields before any PUT; the RESTlet refuses `"null"`
-  and field-stripping bodies, but a wrong-but-plausible body it cannot catch.
+- Build request bodies with `jq --rawfile body <file>`, never `--arg body "$(cat …)"`: a failed
+  `$(…)` yields an empty string (or `null` from `jq -r` on a non-object) and the capture is bounded
+  by ARG_MAX. Check the draft file has content and `${` fields before any PUT; the RESTlet refuses
+  `"null"` and field-stripping bodies, but a wrong-but-plausible body it cannot catch.
 - Images referenced by hashed `media.nl` URLs render in the preview only when public; a broken
   image is a template issue, not a preview artifact.
 - `preferences.message_signature` renders the calling integration user's signature, not the
