@@ -255,13 +255,17 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "../fi
             name: `${(0, exports.slugify)(name) || 'email-template'}.html`,
             contents: templateBody,
         });
+        // Only a failed record save orphans the file; once the record exists it owns the file, so a
+        // failure while describing the result must not delete it.
+        let templateId;
         try {
-            return (0, exports.describeTemplate)(saveNewTemplate({ name, recordType, subject, mediaItemId: created.id }));
+            templateId = saveNewTemplate({ name, recordType, subject, mediaItemId: created.id });
         }
         catch (err) {
             (0, index_js_1.deleteFile)(created.id, undefined);
             throw err;
         }
+        return (0, exports.describeTemplate)(templateId);
     };
     exports.createTemplate = createTemplate;
     // ============ Request parsing helpers ============
