@@ -180,8 +180,10 @@ fails. Returns the GET shape.
    open(path, 'w').write(html)
    EOF
    ```
-   Show the file in the Code tab's side panel (SendUserFile with render display) when that tool is
-   available; otherwise give the user the path. Previews hold
+   Open it for the user without waiting for a click: in the Claude desktop app, call the app's
+   show-pane tool (`mcp__ccd_view__show_pane` with `pane: "file"` and the preview path) right after
+   writing it, or write the HTML with the Write tool, which the app renders in its Browser pane on
+   its own; elsewhere send it with SendUserFile (render display) or give the path. Previews hold
    real customer data: they live only in the scratchpad and are never committed, attached, or
    published.
 4. **Edit loop.** Keep the working copy at `$SP/email-draft-<templateId>.html`. After each edit:
