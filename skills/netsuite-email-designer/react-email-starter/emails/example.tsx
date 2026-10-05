@@ -12,7 +12,8 @@ export default function InvoiceEmail() {
         <Container style={{ maxWidth: 560, margin: '0 auto', padding: 24, backgroundColor: '#ffffff' }}>
           <Img src={ns('companyInformation.logoUrl')} alt={ns('companyInformation.companyName')} width="180" />
           <Heading as="h2">Invoice <NS expr="transaction.tranid" /></Heading>
-          <Text>Hello <NS expr="recipient.firstName" />,</Text>
+          {/* recipient is absent when NetSuite validates the saved record, so it must be null-safe. */}
+          <Text>Hello <NS expr='(recipient.firstName)!"there"' />,</Text>
           <Text>Your invoice dated <NS expr='transaction.trandate?string("MM/dd/yyyy")' /> is attached.</Text>
           <FreeMarker>{'<#if transaction.memo?has_content>'}</FreeMarker>
           <Text><NS expr="transaction.memo" /></Text>

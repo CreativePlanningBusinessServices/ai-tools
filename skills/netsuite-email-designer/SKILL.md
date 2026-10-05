@@ -33,10 +33,12 @@ templates — call it with `netsuite-cli restlet call`.
 RESTlet is missing, undeployed, not released, or failing, report what you found and let the user
 fix it.
 
-Define a helper once per shell (zsh does not word-split `$VARS`, so a function, not a variable):
+Define a helper and a work folder once per shell (zsh does not word-split `$VARS`, so the helper
+is a function, not a variable; `$SP` below is the session scratchpad folder for this template):
 
 ```bash
 rl() { netsuite-cli restlet call --account <alias> --script customscript_cp_email_template_rl --deploy customdeploy_cp_email_template_rl "$@"; }
+SP=<session scratchpad directory>/email-designer; mkdir -p "$SP"
 ```
 
 ## How NetSuite renders email templates
@@ -53,6 +55,13 @@ rl() { netsuite-cli restlet call --account <alias> --script customscript_cp_emai
   UI field picker. At merge time NetSuite uses whichever records are passed.
 - The RESTlet renders with `render.mergeEmail`, the same call NetSuite scripts use to send, so a
   preview is byte-for-byte what a send would produce for that record.
+- **NetSuite validates a template's FreeMarker when the template record is saved**, against a model
+  that has the record-type hashes, `companyInformation` and `preferences` but **no `recipient` or
+  `sender`**. A body with `${recipient.firstName}` cannot be saved as a record (draft previews and
+  PUT create both save one) until the reference is null-safe: `${(recipient.firstName)!""}` — the
+  parentheses matter, `${recipient.firstName!""}` still fails. The RESTlet returns this explanation
+  when it hits the error. Existing file-backed templates are unaffected by body-only saves, which
+  write the file directly.
 
 ## RESTlet contract
 
@@ -142,15 +151,21 @@ fails. Returns the GET shape.
    `${transaction.…}` / `${customrecord.…}` / `${entity.…}` / `${case.…}`, list five recent
    candidates, and ask the user to choose:
    - transaction: `SELECT id, tranid, entity, trandate FROM transaction WHERE type = 'CustInvc' ORDER BY id DESC FETCH FIRST 5 ROWS ONLY` (ask which transaction type once if the template doesn't make it obvious)
-   - custom record: the type is named by the `custrecord_` fields' parent record; `SELECT id, name FROM <customrecord_type> ORDER BY id DESC FETCH FIRST 5 ROWS ONLY`
+   - custom record: find the type that owns a `custrecord_` field the body uses, then list its rows:
+     ```bash
+     netsuite-cli suiteql --account <alias> "SELECT recordtype FROM customfield WHERE LOWER(scriptid) = 'custrecord_client'"
+     netsuite-cli suiteql --account <alias> "SELECT id, name FROM <customrecord_type> ORDER BY id DESC FETCH FIRST 5 ROWS ONLY"
+     ```
+     (if `customfield` doesn't resolve it, `SELECT scriptid, name FROM customrecordtype WHERE LOWER(name) LIKE '%<word from the template name>%'`)
    - entity: `SELECT id, entityid, companyname FROM customer ORDER BY id DESC FETCH FIRST 5 ROWS ONLY`
    - case: `SELECT id, casenumber, title FROM supportcase ORDER BY id DESC FETCH FIRST 5 ROWS ONLY`
 
-   `recipient` defaults to the transaction's `entity` as `{"type": "customer", "id": …}`; omit it
-   when there is no obvious person. Fields the sample leaves blank render empty — say so in the
+   "Most recent" means highest internal id; ids are unique, dates tie. `recipient` is the person the
+   email goes to: for a transaction, a contact of its customer (`SELECT id, firstname, lastname FROM
+   contact WHERE company = <entityId>`) when the template uses `${recipient.…}`; a company customer
+   has no first name and renders it blank. Omit `recipient` when the template never references it. Fields the sample leaves blank render empty — say so in the
    preview message rather than "fixing" the template.
-3. **Preview.** `POST` in saved mode and write the body to the session scratchpad as
-   `email-preview-<templateId>.html`, with a banner inserted after the opening `<body…>` tag (or
+3. **Preview.** `POST` in saved mode and write the body to `$SP/email-preview-<templateId>.html`, with a banner inserted after the opening `<body…>` tag (or
    prepended when there is none):
    ```bash
    python3 - "$SP/email-preview-123.html" "<subject>" "<alias>" "<sample>" "saved" <<'EOF'
@@ -165,7 +180,8 @@ fails. Returns the GET shape.
    open(path, 'w').write(html)
    EOF
    ```
-   Show the file in the Code tab's side panel (SendUserFile with render display). Previews hold
+   Show the file in the Code tab's side panel (SendUserFile with render display) when that tool is
+   available; otherwise give the user the path. Previews hold
    real customer data: they live only in the scratchpad and are never committed, attached, or
    published.
 4. **Edit loop.** Keep the working copy at `$SP/email-draft-<templateId>.html`. After each edit:
@@ -189,6 +205,12 @@ fails. Returns the GET shape.
    firm's review process applies before use (for Creative Planning, Compliance review).
 
 ## Gotchas
+
+- `${recipient.…}` / `${sender.…}` in a draft or a new template must be written null-safe,
+  `${(recipient.firstName)!""}`, or the temporary/new template record cannot be saved (see "How
+  NetSuite renders"). The error names the missing root.
+- A RESTlet call occasionally takes over two minutes (NetSuite side). Give Bash calls a longer
+  timeout rather than killing them; macOS has no `timeout` command.
 
 - **Never `echo "$json"` in zsh** — it expands `\r\n` escapes inside JSON strings and jq then
   fails with "control characters must be escaped". Write responses to files and read them with jq;

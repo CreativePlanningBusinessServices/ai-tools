@@ -33,6 +33,10 @@ Field names follow NetSuite's SuiteScript ids under the root hash the template i
 `transaction`, `entity`, `customrecord`, `case`, `recipient`, `companyInformation`,
 `preferences`. Joins are dot paths (`transaction.entity.email`).
 
+`recipient` and `sender` are not in scope when NetSuite validates the template record on save, so
+reference them null-safely or the template cannot be created: `<NS expr='(recipient.firstName)!""' />`
+(the parentheses matter). The other roots can be referenced plainly.
+
 ## Verified with
 
 react-email 6.11.0, @react-email/components 1.0.12, react 19.3.0, Node 24 (2026-10-05).
