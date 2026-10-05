@@ -61,7 +61,10 @@ SP=<session scratchpad directory>/email-designer; mkdir -p "$SP"
   PUT create both save one) until the reference is null-safe: `${(recipient.firstName)!""}` — the
   parentheses matter, `${recipient.firstName!""}` still fails. The RESTlet returns this explanation
   when it hits the error. Existing file-backed templates are unaffected by body-only saves, which
-  write the file directly.
+  write the file directly. The parenthesised form also works in conditions, which gives a cleaner
+  greeting than a blank name: `<#if (recipient.firstName)?has_content>Hello ${recipient.firstName},<#else>Hello,</#if>`.
+- A template with an empty subject merges with its **name** as the subject (NetSuite's fallback);
+  say so in the preview banner rather than showing an empty subject.
 
 ## RESTlet contract
 
@@ -160,7 +163,11 @@ fails. Returns the GET shape.
    - entity: `SELECT id, entityid, companyname FROM customer ORDER BY id DESC FETCH FIRST 5 ROWS ONLY`
    - case: `SELECT id, casenumber, title FROM supportcase ORDER BY id DESC FETCH FIRST 5 ROWS ONLY`
 
-   "Most recent" means highest internal id; ids are unique, dates tie. `recipient` is the person the
+   "Most recent" means highest internal id; ids are unique, dates tie. Prefer a sample whose fields
+   have values: a record with zero hours or no contact renders a convincing but empty email. A join
+   onto the referenced child record finds a better one, e.g.
+   `SELECT agreement.id, agreement.name, cycle.custrecord_used_hours AS used FROM customrecord_erp_agreement agreement JOIN customrecord_cp_erp_billing_cycle cycle ON cycle.id = agreement.custrecord_active_billing_cycle WHERE cycle.custrecord_used_hours > 0 ORDER BY agreement.id DESC FETCH FIRST 5 ROWS ONLY`
+   (record and field names vary by account; read them off the template's `${…}` paths). `recipient` is the person the
    email goes to: for a transaction, a contact of its customer (`SELECT id, firstname, lastname FROM
    contact WHERE company = <entityId>`) when the template uses `${recipient.…}`; a company customer
    has no first name and renders it blank. Omit `recipient` when the template never references it. Fields the sample leaves blank render empty — say so in the
@@ -225,6 +232,13 @@ fails. Returns the GET shape.
   `"null"` and field-stripping bodies, but a wrong-but-plausible body it cannot catch.
 - Images referenced by hashed `media.nl` URLs render in the preview only when public; a broken
   image is a template issue, not a preview artifact.
+- Email HTML: an empty `<td>` still claims width, so a table-based progress bar whose fill cell is
+  `width="0%"` renders half full. Give every cell an explicit width and wrap the zero-width cell in
+  `<#if percent gt 0>…</#if>`.
+- When the user is describing changes against the preview, keep the FreeMarker out of the
+  conversation: name what changed in plain words and show the re-rendered preview. Point out
+  anything in the preview that comes from the sample record (blank name, zero hours) rather than
+  from the template, so it isn't "fixed" in the wrong place.
 - `preferences.message_signature` renders the calling integration user's signature, not the
   eventual sender's.
 - Template files must live in `/Templates/Marketing Templates`; NetSuite rejects `mediaitem` for

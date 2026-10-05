@@ -29,6 +29,11 @@ purpose when it finds a literal `${`. Use the helpers in `emails/_components/net
 They emit base64 tokens that survive rendering; `scripts/export-netsuite.mjs` swaps them back
 after `email export`.
 
+Two react.email details: `<Preview>` accepts string children only, so write
+``<Preview>{`Invoice ${ns('transaction.tranid')} is ready`}</Preview>`` rather than `<NS />` inside
+it; and the export puts `<!-- -->` separators between adjacent text nodes (`Hello <!-- -->${…}`),
+which is harmless in email clients and must not be "cleaned up" by hand.
+
 Field names follow NetSuite's SuiteScript ids under the root hash the template is merged with:
 `transaction`, `entity`, `customrecord`, `case`, `recipient`, `companyInformation`,
 `preferences`. Joins are dot paths (`transaction.entity.email`).
