@@ -186,26 +186,20 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "../fi
         const warnings = [];
         let backup = null;
         let recordChanged = false;
-        if (nextBody !== undefined) {
-            if (nextBody === current.body) {
-                warnings.push('body is identical to the saved body — nothing written, no backup taken');
+        const bodyChanged = nextBody !== undefined && nextBody !== current.body;
+        if (nextBody !== undefined && !bodyChanged) {
+            warnings.push('body is identical to the saved body — nothing written, no backup taken');
+        }
+        if (bodyChanged && !nextBody.includes('${')) {
+            if (current.body.includes('${') && request.allowNoFields !== true) {
+                throw new index_js_1.ValidationError('body removes every ${…} field the saved template has — pass "allowNoFields": true if that is intended');
             }
-            else {
-                if (!nextBody.includes('${')) {
-                    if (current.body.includes('${') && request.allowNoFields !== true) {
-                        throw new index_js_1.ValidationError('body removes every ${…} field the saved template has — pass "allowNoFields": true if that is intended');
-                    }
-                    warnings.push('body contains no ${…} fields — it will render the same for every record');
-                }
-                backup = writeBackup(current);
-                if (current.mediaItem !== null) {
-                    (0, index_js_1.editFile)({ id: current.mediaItem.id, contents: nextBody });
-                }
-                else {
-                    loaded.setValue({ fieldId: FIELD.content, value: nextBody });
-                    recordChanged = true;
-                }
-            }
+            warnings.push('body contains no ${…} fields — it will render the same for every record');
+        }
+        const inlineBodyChanged = bodyChanged && current.mediaItem === null;
+        if (inlineBodyChanged) {
+            loaded.setValue({ fieldId: FIELD.content, value: nextBody });
+            recordChanged = true;
         }
         if (nextSubject !== undefined) {
             loaded.setValue({ fieldId: FIELD.subject, value: nextSubject });
@@ -215,8 +209,17 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "../fi
             loaded.setValue({ fieldId: FIELD.name, value: nextName });
             recordChanged = true;
         }
+        // The record saves first: NetSuite validates the subject's FreeMarker there, and a rejected save
+        // must leave a file-backed body untouched. An inline body travels inside that same save, so its
+        // backup is taken just before it.
+        if (inlineBodyChanged)
+            backup = writeBackup(current);
         if (recordChanged)
             loaded.save();
+        if (bodyChanged && current.mediaItem !== null) {
+            backup = writeBackup(current);
+            (0, index_js_1.editFile)({ id: current.mediaItem.id, contents: nextBody });
+        }
         return { ...(0, exports.describeTemplate)(templateId), backup, ...(warnings.length > 0 ? { warning: warnings.join('; ') } : {}) };
     };
     exports.saveTemplate = saveTemplate;
