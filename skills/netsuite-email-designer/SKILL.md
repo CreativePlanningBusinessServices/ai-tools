@@ -1,6 +1,6 @@
 ---
 name: netsuite-email-designer
-description: Use when a task needs to view, preview, edit, redesign, or create a NetSuite email template — a template URL (emailtemplate.nl?id=…), id or name, "what does this email look like", "change the wording of the invoice email", "build a new email for X" — in any account where Creative Planning's cp_email_template_rl RESTlet is installed. Covers the RESTlet's JSON contract (called via netsuite-cli restlet call), how NetSuite renders FreeMarker templates, previewing in the Code tab against a real record, and a react.email starter for templates built from scratch.
+description: Use when a task needs to view, preview, edit, redesign, or create a NetSuite email template — a template URL (emailtemplate.nl?id=…), id or name, "what does this email look like", "change the wording of the invoice email", "build a new email for X", "will this email work in Outlook?" — in any account where Creative Planning's cp_email_template_rl RESTlet is installed. Covers the RESTlet's JSON contract (called via netsuite-cli restlet call), how NetSuite renders FreeMarker templates, previewing in the Code tab against a real record, an email-client compatibility check against caniemail data (bash + jq, no Python or Node), and a react.email starter for templates built from scratch.
 ---
 
 # Email templates via the cp_email_template_rl RESTlet
@@ -175,17 +175,7 @@ fails. Returns the GET shape.
 3. **Preview.** `POST` in saved mode and write the body to `$SP/email-preview-<templateId>.html`, with a banner inserted after the opening `<body…>` tag (or
    prepended when there is none):
    ```bash
-   python3 - "$SP/email-preview-123.html" "<subject>" "<alias>" "<sample>" "saved" <<'EOF'
-   import re, sys
-   path, subject, account, sample, mode = sys.argv[1:6]
-   banner = (f'<div style="font:13px/1.4 -apple-system,sans-serif;background:#fff7e6;border-bottom:1px solid #e6c576;padding:8px 12px">'
-             f'<b>Subject:</b> {subject} &nbsp;·&nbsp; <b>Account:</b> {account} &nbsp;·&nbsp; <b>Sample:</b> {sample} &nbsp;·&nbsp; '
-             f'<b>Mode:</b> {mode} &nbsp;·&nbsp; Preview only — contains live record data, do not share</div>')
-   html = open(path).read()
-   m = re.search(r'<body[^>]*>', html, re.I)
-   html = html[:m.end()] + banner + html[m.end():] if m else banner + html
-   open(path, 'w').write(html)
-   EOF
+   bash ~/.claude/skills/netsuite-email-designer/scripts/preview-banner.sh "$SP/email-preview-123.html" "<subject>" "<alias>" "<sample>" "saved"
    ```
    Show it with SendUserFile (render display), and make that the **last** action of the turn, after
    the explanatory text, so the card sits at the bottom of the chat where the user sees it without
@@ -203,10 +193,38 @@ fails. Returns the GET shape.
    ```
    Say in one line what changed. Never turn a `${…}` field into literal text, or literal text into
    a field, without saying so.
-5. **Save.** Only after an explicit yes that names the account ("save to <alias>"). Build the PUT
+5. **Check client compatibility** before every save or create, and whenever the user asks whether
+   an email will work in Outlook or Gmail. `scripts/email-compat.sh` (next to this file; needs
+   only bash, awk, jq and curl, so no Python or Node) looks up every HTML element, attribute, CSS
+   property, unit, at-rule and image format the email uses in caniemail.com's public support
+   data, and reports each one that the latest tested version of a mainstream client doesn't
+   support (or only partly supports), with caniemail's footnotes:
+   ```bash
+   bash ~/.claude/skills/netsuite-email-designer/scripts/email-compat.sh "$SP/email-draft-123.html"
+   ```
+   It downloads `https://www.caniemail.com/api/data.json` with curl once a day into the temp dir.
+   Where curl can't reach it, fetch that URL however you can and pass `--data <file>`.
+   `--clients all` widens the default list (Outlook on every platform, Gmail, Apple Mail, Yahoo,
+   Samsung) to every client caniemail tracks. Run it on the draft or exported HTML, not on a
+   preview: the preview banner adds markup of its own.
+
+   The report is raw data, and you do the triage. Every table-based email hits the same baseline
+   entries, which only matter if the template relies on the part that's missing: `<body>`
+   replaced by a `<div>`, the HTML5 doctype ignored, `padding`/`margin`/`width`/`max-width` only
+   partly supported in Outlook for Windows, and `role` ignored. For each entry, check how the
+   template uses the feature and whether it already has a fallback (a `width` attribute next to
+   `max-width`, `bgcolor` next to `background-color`, a solid colour behind a background image).
+   Then tell the user in plain words what will look different and where, for example "Outlook
+   desktop shows square corners on the card". Real problems are features the layout or the
+   legibility depends on with no fallback: flex or grid layout, `rem` font sizes, background
+   images that carry text, SVG or WebP images, `height` on a `<div>`, layout that only exists
+   inside `@media`. Propose a fix for each one and apply it only once the user agrees. The check
+   reads code, it doesn't render anything. For a broad client send, also suggest a test send to
+   Outlook desktop and Gmail, or a Litmus / Email on Acid run.
+6. **Save.** Only after an explicit yes that names the account ("save to <alias>"). Build the PUT
    body from the draft file the same way, `PUT`, then report `backup.id` and `backup.path` and how
    to restore. Finish with one saved-mode `POST` as the confirmation preview.
-6. **Which template gets the result.** When the user hands you an existing Email Template record
+7. **Which template gets the result.** When the user hands you an existing Email Template record
    (a URL, an id or a name) and asks to change, redo or rebuild its email, the finished HTML goes
    back onto **that record** with `PUT {id, body, subject}`, even when it was rewritten from scratch
    in react.email. Its storage stays as it was: an inline template keeps its body on the record,
@@ -214,13 +232,13 @@ fails. Returns the GET shape.
    not create a new template or drop a file into the File Cabinet instead; the record is what
    workflows, saved searches and scripts reference. Create a new template only when the user
    asks for a new one, or when no record exists yet.
-7. **New templates with react.email.** Copy `react-email-starter/` (next to this file) to the
+8. **New templates with react.email.** Copy `react-email-starter/` (next to this file) to the
    destination the user names (for Creative Planning: `sdf-creative-planning/email-templates/<slug>/`),
    `npm install`, author `emails/<slug>.tsx` with `<NS expr>`, `ns('…')` and `<FreeMarker>` (its
    README has the one rule), `npm run export`, preview `out/<slug>.html` in draft mode with a sample
-   record, iterate in the TSX only, then `PUT` without `id` (`storage: "file"` for CP) to create.
+   record, iterate in the TSX only, run the compatibility check on the export, then `PUT` without `id` (`storage: "file"` for CP) to create.
    When a TSX source exists, later tweaks go there, not in the exported HTML.
-8. **Compliance.** Email templates are client-facing communications: remind the user that their
+9. **Compliance.** Email templates are client-facing communications: remind the user that their
    firm's review process applies before use (for Creative Planning, Compliance review).
 
 ## Gotchas
