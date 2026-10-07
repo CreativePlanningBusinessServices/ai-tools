@@ -1,6 +1,6 @@
 ---
 name: netsuite-email-designer
-description: Use when a task needs to view, preview, edit, redesign, or create a NetSuite email template — a template URL (emailtemplate.nl?id=…), id or name, "what does this email look like", "change the wording of the invoice email", "build a new email for X", "will this email work in Outlook?" — in any account where Creative Planning's cp_email_template_rl RESTlet is installed. Covers the RESTlet's JSON contract (called via netsuite-cli restlet call), how NetSuite renders FreeMarker templates, previewing in the Code tab against a real record, an email-client compatibility check against caniemail data (bash + jq, no Python or Node), and a react.email starter for templates built from scratch.
+description: Use when a task needs to view, preview, edit, redesign, or create a NetSuite email template — a template URL (emailtemplate.nl?id=…), id or name, "what does this email look like", "change the wording of the invoice email", "build a new email for X", "will this email work in Outlook?" — in any account where Creative Planning's cp_email_template_rl RESTlet is installed. Covers the RESTlet's JSON contract (called via netsuite-cli restlet call), how NetSuite renders FreeMarker templates, previewing in the Code tab against a real record, building new templates as hand-written email HTML, and an email-client compatibility check against caniemail data (bash + jq, no Python or Node).
 ---
 
 # Email templates via the cp_email_template_rl RESTlet
@@ -226,18 +226,23 @@ fails. Returns the GET shape.
    to restore. Finish with one saved-mode `POST` as the confirmation preview.
 7. **Which template gets the result.** When the user hands you an existing Email Template record
    (a URL, an id or a name) and asks to change, redo or rebuild its email, the finished HTML goes
-   back onto **that record** with `PUT {id, body, subject}`, even when it was rewritten from scratch
-   in react.email. Its storage stays as it was: an inline template keeps its body on the record,
+   back onto **that record** with `PUT {id, body, subject}`, even when it was rewritten from
+   scratch. Its storage stays as it was: an inline template keeps its body on the record,
    a file-backed one gets its media file overwritten, and the automatic backup covers both. Do
    not create a new template or drop a file into the File Cabinet instead; the record is what
    workflows, saved searches and scripts reference. Create a new template only when the user
    asks for a new one, or when no record exists yet.
-8. **New templates with react.email.** Copy `react-email-starter/` (next to this file) to the
-   destination the user names (for Creative Planning: `sdf-creative-planning/email-templates/<slug>/`),
-   `npm install`, author `emails/<slug>.tsx` with `<NS expr>`, `ns('…')` and `<FreeMarker>` (its
-   README has the one rule), `npm run export`, preview `out/<slug>.html` in draft mode with a sample
-   record, iterate in the TSX only, run the compatibility check on the export, then `PUT` without `id` (`storage: "file"` for CP) to create.
-   When a TSX source exists, later tweaks go there, not in the exported HTML.
+8. **New templates.** Write the HTML by hand in `$SP/email-draft-new.html`, following the email
+   conventions the compatibility check expects: a table layout (an outer full-width table
+   centring a fixed-width inner table of about 600–640px, every table with `role="presentation"`,
+   `cellpadding="0"`, `cellspacing="0"` and `border="0"`), styles inline on each element, a `width`
+   attribute on every image and table alongside any CSS width, web-safe font stacks, and real text
+   rather than text baked into images. A `<style>` block is only for optional extras such as
+   mobile or dark-mode tweaks, because several clients drop it. Type FreeMarker fields straight
+   into the HTML (`${transaction.tranid}`), with `recipient` and `sender` written null-safe. Then
+   preview in draft mode with a sample record, run the compatibility check, and `PUT` without `id`
+   (`storage: "file"` for CP) to create. From then on the template record is the source: later
+   edits start from a `GET` of its body, and every `PUT` backs up the previous version.
 9. **Compliance.** Email templates are client-facing communications: remind the user that their
    firm's review process applies before use (for Creative Planning, Compliance review).
 
