@@ -1,0 +1,39 @@
+{
+  "api_version": "1.0.4",
+  "last_update_date": "2026-09-16 13:05:00 +0000",
+  "nicenames": {
+    "family": { "outlook": "Outlook", "gmail": "Gmail" },
+    "platform": { "windows": "Windows", "outlook-com": "Outlook.com", "desktop-webmail": "Desktop Webmail" },
+    "support": {}, "category": {}
+  },
+  "data": [
+    { "slug": "css-border-radius", "title": "border-radius", "url": "https://www.caniemail.com/features/css-border-radius/",
+      "stats": { "outlook": { "windows": { "2016": "n #1", "2019": "n #1" }, "outlook-com": { "2019-08": "y" } },
+                 "gmail": { "desktop-webmail": { "2019-08": "y" } } },
+      "notes_by_num": { "1": "Use VML RoundRect." } },
+    { "slug": "css-padding", "title": "padding", "url": "https://www.caniemail.com/features/css-padding/",
+      "stats": { "outlook": { "windows": { "2019": "a #1" }, "outlook-com": { "2019-08": "y" } },
+                 "gmail": { "desktop-webmail": { "2019-08": "y" } } },
+      "notes_by_num": { "1": "Only supported on table cells." } },
+    { "slug": "css-display-flex", "title": "display:flex", "url": "https://www.caniemail.com/features/css-display-flex/",
+      "stats": { "outlook": { "windows": { "2019": "n" } }, "gmail": { "desktop-webmail": { "2019-08": "y" } } },
+      "notes_by_num": null },
+    { "slug": "css-background-color", "title": "background-color", "url": "https://www.caniemail.com/features/css-background-color/",
+      "stats": { "outlook": { "windows": { "2019": "y" } }, "gmail": { "desktop-webmail": { "2019-08": "y" } } },
+      "notes_by_num": null },
+    { "slug": "css-at-media-prefers-color-scheme", "title": "@media (prefers-color-scheme)", "url": "https://www.caniemail.com/features/css-at-media-prefers-color-scheme/",
+      "stats": { "gmail": { "desktop-webmail": { "2019-08": "n" } } }, "notes_by_num": null },
+    { "slug": "css-pseudo-class-hover", "title": ":hover", "url": "https://www.caniemail.com/features/css-pseudo-class-hover/",
+      "stats": { "outlook": { "windows": { "2019": "n" } } }, "notes_by_num": null },
+    { "slug": "html-mailto-links", "title": "mailto: links", "url": "https://www.caniemail.com/features/html-mailto-links/",
+      "stats": { "outlook": { "windows": { "2019": "y" } } }, "notes_by_num": null },
+    { "slug": "css-pseudo-element-before", "title": "::before", "url": "https://www.caniemail.com/features/css-pseudo-element-before/",
+      "stats": { "outlook": { "windows": { "2019": "n" } } }, "notes_by_num": null },
+    { "slug": "css-display-grid", "title": "display:grid", "url": "https://www.caniemail.com/features/css-display-grid/",
+      "stats": { "outlook": { "windows": { "2019": "n" } } }, "notes_by_num": null },
+    { "slug": "css-linear-gradient", "title": "linear-gradient()", "url": "https://www.caniemail.com/features/css-linear-gradient/",
+      "stats": { "outlook": { "windows": { "2019": "n" } } }, "notes_by_num": null },
+    { "slug": "image-webp", "title": "WebP image format", "url": "https://www.caniemail.com/features/image-webp/",
+      "stats": { "outlook": { "windows": { "2019": "n" } } }, "notes_by_num": null }
+  ]
+}

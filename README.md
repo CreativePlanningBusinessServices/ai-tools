@@ -10,7 +10,7 @@ This repo is private: don't copy it anywhere public.
 | `skills/cp-saved-search` | Run, create, edit, describe and delete saved searches |
 | `skills/cp-file-cabinet` | Read, download, list, create, edit and delete File Cabinet files |
 | `skills/cp-mr-driver` | Trigger Map/Reduce scripts and poll their progress |
-| `skills/netsuite-email-designer` | Preview, edit, save and create email templates, with a react.email starter |
+| `skills/netsuite-email-designer` | Preview, edit, save and create email templates, with an email-client compatibility check |
 | `netsuite/restlets` | The four RESTlets those skills call, ready to deploy into an account |
 | `skills/edi-template-builder` | Build and revise EDI benefits-feed templates (X12 834 and others) |
 
