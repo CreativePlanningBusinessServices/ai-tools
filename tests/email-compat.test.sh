@@ -10,6 +10,8 @@ cat > "$tmp/email.html" <<'HTML'
 <html><head><style>
 @media (prefers-color-scheme: dark) { .card { background-color: #000; } }
 a:hover { color: red; }
+p:before { content: ""; }
+.grid { display: inline-grid; background: repeating-linear-gradient(red, blue); }
 </style></head>
 <body>
 <table style="border-radius: 8px; background-color: #fff;"><tr>
@@ -30,10 +32,13 @@ assert_contains "$unsupported" "note 1: Use VML RoundRect." "caniemail's footnot
 assert_contains "$unsupported" "[css-display-flex]" "display:flex maps to its own feature"
 assert_contains "$unsupported" "[css-at-media-prefers-color-scheme]" "media features in a style block are found"
 assert_contains "$unsupported" "[css-pseudo-class-hover]" "pseudo-classes in a style block are found"
+assert_contains "$unsupported" "[css-pseudo-element-before]" "single-colon :before counts as the ::before pseudo-element"
+assert_contains "$unsupported" "[css-display-grid]" "display:inline-grid maps to display:grid"
+assert_contains "$unsupported" "[css-linear-gradient]" "repeating-linear-gradient() counts as a linear gradient"
 assert_contains "$unsupported" "[image-webp]" "a media.nl _xt extension identifies the image format"
 assert_contains "$partial" "[css-padding]" "partial support lands in the PARTIAL group"
 assert_contains "$output" "Supported everywhere checked (2): background-color, mailto: links" "fully supported features are summarised"
-assert_contains "$output" "No caniemail data for: color, font-family" "properties without data are listed, not dropped"
+assert_contains "$output" "No caniemail data for: background, color, content, font-family" "properties without data are listed, not dropped"
 assert_not_contains "$output" "Outlook Outlook.com" "client labels don't repeat the family name"
 
 output="$(bash "$scripts/email-compat.sh" "$tmp/missing.html" --data "$data" 2>&1)"; status=$?

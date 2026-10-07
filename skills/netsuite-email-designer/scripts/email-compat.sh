@@ -216,8 +216,11 @@ function scan_selector(selector,    rest, pseudo) {
     rest = substr(rest, 1, RSTART - 1) " " substr(rest, RSTART + RLENGTH)
   }
   while (match(rest, /:[a-z-]+/)) {
-    emit("css-pseudo-class-" substr(rest, RSTART + 1, RLENGTH - 1), selector)
+    pseudo = substr(rest, RSTART + 1, RLENGTH - 1)
     rest = substr(rest, RSTART + RLENGTH)
+    # CSS2's single-colon spelling of the four original pseudo-elements, still common in email CSS
+    if (pseudo ~ /^(before|after|first-letter|first-line)$/) emit("css-pseudo-element-" pseudo, selector)
+    else emit("css-pseudo-class-" pseudo, selector)
   }
   if (selector ~ /\.[A-Za-z_-]/) emit("css-selector-class", selector)
   if (selector ~ /#[A-Za-z_-]/) emit("css-selector-id", selector)
@@ -236,17 +239,17 @@ function scan_declarations(declarations, where,    parts, count, i, colon_at, na
     slug = property_slug(name, value)
     if (slug != "") emit(slug, found_at); else unknown[name] = 1
     if (index(value, "!important") > 0) emit("css-important", found_at)
-    if (value ~ /(^|[^a-z-])linear-gradient\(/) emit("css-linear-gradient", found_at)
-    if (value ~ /(^|[^a-z-])radial-gradient\(/) emit("css-radial-gradient", found_at)
-    if (value ~ /(^|[^a-z-])conic-gradient\(/) emit("css-conic-gradient", found_at)
-    if (value ~ /(^|[^a-z-])rgba\(/) emit("css-rgba", found_at)
-    if (value ~ /(^|[^a-z-])rgb\(/) emit("css-rgb", found_at)
-    if (value ~ /(^|[^a-z-])calc\(/) emit("css-unit-calc", found_at)
-    if (value ~ /(^|[^a-z-])var\(/) emit("css-variables", found_at)
-    if (value ~ /(^|[^a-z-])clamp\(/) emit("css-function-clamp", found_at)
-    if (value ~ /(^|[^a-z-])min\(/) emit("css-function-min", found_at)
-    if (value ~ /(^|[^a-z-])max\(/) emit("css-function-max", found_at)
-    if (value ~ /(^|[^a-z-])light-dark\(/) emit("css-function-light-dark", found_at)
+    if (value ~ /(^|[^a-z])linear-gradient\(/) emit("css-linear-gradient", found_at)
+    if (value ~ /(^|[^a-z])radial-gradient\(/) emit("css-radial-gradient", found_at)
+    if (value ~ /(^|[^a-z])conic-gradient\(/) emit("css-conic-gradient", found_at)
+    if (value ~ /(^|[^a-z])rgba\(/) emit("css-rgba", found_at)
+    if (value ~ /(^|[^a-z])rgb\(/) emit("css-rgb", found_at)
+    if (value ~ /(^|[^a-z])calc\(/) emit("css-unit-calc", found_at)
+    if (value ~ /(^|[^a-z])var\(/) emit("css-variables", found_at)
+    if (value ~ /(^|[^a-z])clamp\(/) emit("css-function-clamp", found_at)
+    if (value ~ /(^|[^a-z])min\(/) emit("css-function-min", found_at)
+    if (value ~ /(^|[^a-z])max\(/) emit("css-function-max", found_at)
+    if (value ~ /(^|[^a-z])light-dark\(/) emit("css-function-light-dark", found_at)
     unit_count = split("px em rem vh vw vmin vmax pt pc cm mm in ch ex", units, " ")
     for (j = 1; j <= unit_count; j++) {
       if (value ~ ("[0-9]" units[j] "([^a-z]|$)")) emit("css-unit-" units[j], found_at)
@@ -264,9 +267,9 @@ function scan_declarations(declarations, where,    parts, count, i, colon_at, na
 
 function property_slug(name, value,    without_side) {
   if (name == "display") {
-    if (value ~ /(^|[^a-z-])flex([^a-z-]|$)/) return "css-display-flex"
-    if (value ~ /(^|[^a-z-])grid([^a-z-]|$)/) return "css-display-grid"
-    if (value ~ /(^|[^a-z-])none([^a-z-]|$)/) return "css-display-none"
+    if (value ~ /(^|[^a-z])flex([^a-z-]|$)/) return "css-display-flex"
+    if (value ~ /(^|[^a-z])grid([^a-z-]|$)/) return "css-display-grid"
+    if (value ~ /(^|[^a-z])none([^a-z-]|$)/) return "css-display-none"
     return "css-display"
   }
   if (name ~ /^(top|right|bottom|left)$/) return "css-left-right-top-bottom"

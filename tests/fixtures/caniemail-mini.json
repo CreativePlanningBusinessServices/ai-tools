@@ -27,6 +27,12 @@
       "stats": { "outlook": { "windows": { "2019": "n" } } }, "notes_by_num": null },
     { "slug": "html-mailto-links", "title": "mailto: links", "url": "https://www.caniemail.com/features/html-mailto-links/",
       "stats": { "outlook": { "windows": { "2019": "y" } } }, "notes_by_num": null },
+    { "slug": "css-pseudo-element-before", "title": "::before", "url": "https://www.caniemail.com/features/css-pseudo-element-before/",
+      "stats": { "outlook": { "windows": { "2019": "n" } } }, "notes_by_num": null },
+    { "slug": "css-display-grid", "title": "display:grid", "url": "https://www.caniemail.com/features/css-display-grid/",
+      "stats": { "outlook": { "windows": { "2019": "n" } } }, "notes_by_num": null },
+    { "slug": "css-linear-gradient", "title": "linear-gradient()", "url": "https://www.caniemail.com/features/css-linear-gradient/",
+      "stats": { "outlook": { "windows": { "2019": "n" } } }, "notes_by_num": null },
     { "slug": "image-webp", "title": "WebP image format", "url": "https://www.caniemail.com/features/image-webp/",
       "stats": { "outlook": { "windows": { "2019": "n" } } }, "notes_by_num": null }
   ]
