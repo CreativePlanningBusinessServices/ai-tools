@@ -39,7 +39,12 @@ is a function, not a variable; `$SP` below is the session scratchpad folder for 
 ```bash
 rl() { netsuite-cli restlet call --account <alias> --script customscript_cp_email_template_rl --deploy customdeploy_cp_email_template_rl "$@"; }
 SP=<session scratchpad directory>/email-designer; mkdir -p "$SP"
+NS_HOST=$(netsuite-cli account list | jq -r --arg alias <alias> '.accounts[] | select(.alias == $alias) | .accountId | ascii_downcase | gsub("_"; "-")')
 ```
+
+`NS_HOST` is the account's UI host prefix (`6967599_SB2` → `6967599-sb2`), used to link records
+in the NetSuite UI: `https://$NS_HOST.app.netsuite.com/…`. If it comes back empty, the alias is
+wrong; stop and check it rather than linking a guessed host.
 
 ## How NetSuite renders email templates
 
@@ -223,7 +228,8 @@ fails. Returns the GET shape.
    Outlook desktop and Gmail, or a Litmus / Email on Acid run.
 6. **Save.** Only after an explicit yes that names the account ("save to <alias>"). Build the PUT
    body from the draft file the same way, `PUT`, then report `backup.id` and `backup.path` and how
-   to restore. Finish with one saved-mode `POST` as the confirmation preview.
+   to restore, plus the record link (step 9). Finish with one saved-mode `POST` as the
+   confirmation preview.
 7. **Which template gets the result.** When the user hands you an existing Email Template record
    (a URL, an id or a name) and asks to change, redo or rebuild its email, the finished HTML goes
    back onto **that record** with `PUT {id, body, subject}`, even when it was rewritten from
@@ -241,8 +247,18 @@ fails. Returns the GET shape.
    mobile or dark-mode tweaks, because several clients drop it. Type FreeMarker fields straight
    into the HTML (`${transaction.tranid}`), with `recipient` and `sender` written null-safe. Then
    preview in draft mode with a sample record, run the compatibility check, and `PUT` without `id`
-   (`storage: "file"` for CP) to create. From then on the template record is the source: later
-   edits start from a `GET` of its body, and every `PUT` backs up the previous version.
+   (`storage: "file"` for CP) to create, then give the user the new record's link (step 9). From
+   then on the template record is the source: later edits start from a `GET` of its body, and
+   every `PUT` backs up the previous version.
+9. **Link the record.** Every successful `PUT`, whether it creates a template or updates one
+   (body, subject or name), ends with a clickable link to that Email Template record in the
+   account it was written to, built from the `id` in the `PUT` response:
+   ```bash
+   jq -r --arg host "$NS_HOST" '"https://\($host).app.netsuite.com/app/crm/common/merge/emailtemplate.nl?id=\(.id)"' "$SP/save-out.json"
+   ```
+   Put it in the reply as a markdown link named after the template and the account, e.g.
+   `[CP ES Contract Notification (sb2)](https://6967599-sb2.app.netsuite.com/app/crm/common/merge/emailtemplate.nl?id=320)`.
+   A refused or failed `PUT` gets no link; report the error instead.
 
 ## Gotchas
 
