@@ -43,6 +43,11 @@ clone to update; the links pick up changes automatically. Restart Claude Code to
 This installs CP-maintained scripts, named "CP | …", into the account. In a client's account,
 follow whatever change process applies for that client before deploying.
 
+The skills offer to do this for you: when one finds its RESTlet missing from an account, it asks
+whether you'd like it installed and, on a yes, runs the steps below itself, following
+[`netsuite/restlets/INSTALL.md`](netsuite/restlets/INSTALL.md). Adding a SuiteCloud auth ID for a
+new account is still yours to do, since it needs a browser login.
+
 1. Make sure SuiteScript (server-side scripting) is enabled in the account.
 2. **Point the project at this account, every time you deploy.** The SuiteCloud CLI deploys to
    whichever account was set up last for this folder, and there's no flag to choose one at

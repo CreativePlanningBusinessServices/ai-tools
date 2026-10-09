@@ -27,15 +27,20 @@ gets a permission error by design.
    ```
 
    - One row: go ahead.
-   - No rows: it isn't installed. Tell the user it can be installed from the `ai-tools` repo
-     (`netsuite/restlets/`, see its README) and stop. Never deploy it yourself; installing
-     scripts into an account is the user's decision.
+   - No rows: it isn't installed. Don't call the RESTlet; ask the user whether they'd like you
+     to install it, following "Installing the RESTlet" below.
    - The query itself errors (unknown alias, auth failure): report that error. It says nothing
      about whether the RESTlet is installed.
 
-**Never deploy, install, or edit script or deployment records yourself**, in any account. If the
-RESTlet is missing, undeployed, not released, or failing, report what you found and let the user
-fix it. Changing scripts in an account, especially a client's, is the user's decision.
+**Install or redeploy only after the user says yes for that account.** If the RESTlet is missing,
+ask whether they'd like you to install it. If it's there but a call fails because the deployment is
+undeployed or not released, report what you found and ask whether to redeploy the package. Either
+way, the question to ask and the steps are in "Installing the RESTlet" below. An `{error}` the
+RESTlet itself returns, or a permission error on the calling role, isn't an install problem and a
+redeploy won't fix it. A request to trigger a Map/Reduce isn't a yes, neither is a "do whatever it
+takes" said before the user knew an install was needed, and a yes for one account isn't a yes for
+another. Deploying the package is the only change you make to scripts: never edit a script or
+deployment record by hand (UI or API), in any account.
 
 ## Trigger — POST `{ script, deployment?, params? }`
 
@@ -102,6 +107,20 @@ netsuite-cli suiteql --account <alias> "SELECT script.id, script.scriptid, dep.s
   deployment/params) in its own script log — useful when reconstructing who started what.
 - Scheduled deployments also fire on their own schedule; when verifying "my run happened", match
   the taskId or the deployment id (`_adhoc`) rather than assuming the latest run is yours.
+
+## Installing the RESTlet — only after the user says yes
+
+The RESTlet ships in an SDF package in the `ai-tools` repo, `netsuite/restlets/`, together with
+the other CP RESTlets. This skill is a symlink into that clone, so the package is two levels up
+from the skill's real path:
+
+```bash
+cd "$(cd "<this skill's base directory>" && pwd -P)/../../netsuite/restlets" && pwd -P && ls INSTALL.md
+```
+
+Read `INSTALL.md` there before you ask the user about installing, then follow it step by step. It
+gives the question to ask, then the SuiteCloud CLI steps that install, upgrade or repair the package
+and verify the result. No `INSTALL.md` there: ask the user where their `ai-tools` clone is.
 
 ## Maintaining this skill
 
