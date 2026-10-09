@@ -23,15 +23,20 @@ with `netsuite-cli restlet call`.
    ```
 
    - One row: go ahead.
-   - No rows: it isn't installed. Tell the user it can be installed from the `ai-tools` repo
-     (`netsuite/restlets/`, see its README) and stop. Never deploy it yourself; installing
-     scripts into an account is the user's decision.
+   - No rows: it isn't installed. Don't call the RESTlet; ask the user whether they'd like you
+     to install it, following "Installing the RESTlet" below.
    - The query itself errors (unknown alias, auth failure): report that error. It says nothing
      about whether the RESTlet is installed.
 
-**Never deploy, install, or edit script or deployment records yourself**, in any account. If the
-RESTlet is missing, undeployed, not released, or failing, report what you found and let the user
-fix it. Changing scripts in an account, especially a client's, is the user's decision.
+**Install or redeploy only after the user says yes for that account.** If the RESTlet is missing,
+ask whether they'd like you to install it. If it's there but a call fails because the deployment is
+undeployed or not released, report what you found and ask whether to redeploy the package. Either
+way, the question to ask and the steps are in "Installing the RESTlet" below. An `{error}` the
+RESTlet itself returns, or a permission error on the calling role, isn't an install problem and a
+redeploy won't fix it. A request to run or build a search isn't a yes, neither is a "do whatever it
+takes" said before the user knew an install was needed, and a yes for one account isn't a yes for
+another. Deploying the package is the only change you make to scripts: never edit a script or
+deployment record by hand (UI or API), in any account.
 
 This is the go-forward saved-search path here: NetSuite has no native REST API for saved-search
 definitions, and the CLI's `saved-search run` command rides SuiteTalk SOAP, which NetSuite is
@@ -147,7 +152,7 @@ mints an anonymous `customsearchNNNN`, and the id is unfixable
 afterward — it's API-immutable, and the UI's scriptid field on `search.nl?cu=T` *looks*
 editable but silently discards the change on save (verified: form redisplays the typed value
 while `N/search.load` still resolves only the old id). The only remedy is retitle-old →
-recreate-with-proper-id → migrate flags/references → delete old via UI (no RESTlet delete),
+recreate-with-proper-id → migrate flags/references → delete the old one (Delete section below),
 so get it right at create time. `internalId` is rejected on create — it has no meaning until
 the search is saved. Afterwards, give the user the search link (section below):
 
@@ -295,6 +300,20 @@ wrong param spelling does). Verified live on a transaction search and a timebill
 - Ignored params are harmless — the page renders unfiltered instead of erroring. So test
   discriminatively: filter to a certainly-empty range and confirm zero data before trusting it,
   and beware summarized searches where "TOTAL: 1" is one summary row either way.
+
+## Installing the RESTlet — only after the user says yes
+
+The RESTlet ships in an SDF package in the `ai-tools` repo, `netsuite/restlets/`, together with
+the other CP RESTlets. This skill is a symlink into that clone, so the package is two levels up
+from the skill's real path:
+
+```bash
+cd "$(cd "<this skill's base directory>" && pwd -P)/../../netsuite/restlets" && pwd -P && ls INSTALL.md
+```
+
+Read `INSTALL.md` there before you ask the user about installing, then follow it step by step. It
+gives the question to ask, then the SuiteCloud CLI steps that install, upgrade or repair the package
+and verify the result. No `INSTALL.md` there: ask the user where their `ai-tools` clone is.
 
 ## Maintaining this skill
 
