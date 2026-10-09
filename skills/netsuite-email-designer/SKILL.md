@@ -243,8 +243,6 @@ fails. Returns the GET shape.
    preview in draft mode with a sample record, run the compatibility check, and `PUT` without `id`
    (`storage: "file"` for CP) to create. From then on the template record is the source: later
    edits start from a `GET` of its body, and every `PUT` backs up the previous version.
-9. **Compliance.** Email templates are client-facing communications: remind the user that their
-   firm's review process applies before use (for Creative Planning, Compliance review).
 
 ## Gotchas
 
