@@ -149,7 +149,7 @@ editable but silently discards the change on save (verified: form redisplays the
 while `N/search.load` still resolves only the old id). The only remedy is retitle-old →
 recreate-with-proper-id → migrate flags/references → delete old via UI (no RESTlet delete),
 so get it right at create time. `internalId` is rejected on create — it has no meaning until
-the search is saved:
+the search is saved. Afterwards, give the user the search link (section below):
 
 ```bash
 netsuite-cli restlet call --account <alias> --script customscript_cp_saved_search_rl --deploy customdeploy_cp_saved_search_rl \
@@ -164,7 +164,8 @@ netsuite-cli restlet call --account <alias> --script customscript_cp_saved_searc
 
 Target with `id` or `internalId`. `title`, `filterExpression` and `columns` are all **required
 keys** on PUT — omitting either array wipes it (send back the array describe gave you, even
-unchanged); `isPublic` is the only field that's still optional and preserved when omitted:
+unchanged); `isPublic` is the only field that's still optional and preserved when omitted.
+Afterwards, give the user the search link (section below):
 
 ```bash
 netsuite-cli restlet call --account <alias> --script customscript_cp_saved_search_rl --deploy customdeploy_cp_saved_search_rl \
@@ -178,6 +179,20 @@ netsuite-cli restlet call --account <alias> --script customscript_cp_saved_searc
 Describe output is round-trippable straight into PUT with zero edits — every field describe
 returns is one PUT accepts — unless a rare title-lookup failure left describe's `title` null (see
 below), in which case supply your own.
+
+## After every create or update — give the user the search link
+
+A POST that saved a search (no `"run": true`) and every PUT return the search's `internalId`.
+The message that reports the change to the user includes the search's results link, one per
+search created or updated:
+
+```
+https://<account-host>.app.netsuite.com/app/common/search/searchresults.nl?searchid=<internalId>
+```
+
+`<account-host>` is the alias's `accountId` from `netsuite-cli account list`, lowercased with `_`
+replaced by `-`: `1234567` stays `1234567`, `1234567_SB1` becomes `1234567-sb1`. Use the numeric
+`internalId`, not the script id. Ad-hoc runs and deletes leave no search to link to.
 
 ## Delete — DELETE with `id`, and it MUST carry `--data '{}'`
 
