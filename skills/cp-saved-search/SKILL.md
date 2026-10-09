@@ -59,7 +59,7 @@ via a saved search, or when you need to create/edit a definition. Otherwise pref
   "type": "transaction",
   "isPublic": true,
   "filterExpression": [["field", "operator", "value"], "AND", [...]],
-  "columns": [{"name": "entity", "join": "...", "summary": "SUM", "formula": "...", "sort": "ASC", "label": "..."}]
+  "columns": [{"name": "tranid"}, {"name": "email", "join": "customer"}, {"name": "formulanumeric", "formula": "...", "summary": "SUM", "sort": "ASC", "label": "..."}]
 }
 ```
 
@@ -69,6 +69,14 @@ private UI-created one); target those with `internalId` instead. `title` is alwa
 `name` is required per column. `filterExpression` is always an array of term-arrays and
 `"AND"`/`"OR"`/`"NOT"` strings — **a bare single term must be wrapped**: `[["isinactive","is","F"]]`,
 not `["isinactive","is","F"]` (the RESTlet returns a pointed `{error}` if you forget).
+
+**Leave `label` off a column unless the field's own label would be ambiguous in this search.** A
+column with no `label` shows the field's label from NetSuite and keeps following it if someone
+renames the field, which is usually what you want. Set one only when the default doesn't say how
+the column is being used here: a formula column (NetSuite would show "Formula (Numeric)"), or a
+field whose name is too generic for its role in the search. The user calling a column something
+else in their request ("the customer" for `entity`) isn't a reason to label it. Describe returns
+`label` only for columns that have a custom one, so a round trip keeps the rest unlabelled.
 
 ## Describe — GET with `id` (script id or numeric internal id), no `run`
 
@@ -177,7 +185,7 @@ netsuite-cli restlet call --account <alias> --script customscript_cp_saved_searc
   --method PUT --data '{
     "id": "customsearch_cp_example", "title": "CP Example (renamed)", "type": "customer",
     "filterExpression": [["isinactive", "is", "F"], "AND", ["email", "isnotempty", ""]],
-    "columns": [{"name": "entityid", "sort": "DESC"}, {"name": "email", "label": "Mail"}]
+    "columns": [{"name": "entityid", "sort": "DESC"}, {"name": "email"}]
   }'
 ```
 
