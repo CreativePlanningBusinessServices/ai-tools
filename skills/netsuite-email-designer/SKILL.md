@@ -140,13 +140,13 @@ Response: the GET shape plus `backup: {id, path} | null` and an optional `warnin
 ### PUT without `id` — create
 
 ```bash
-rl --method PUT --data '{"name": "Welcome", "recordType": "TRANSACTION", "subject": "…", "body": "<html>", "storage": "file"}'
+rl --method PUT --data '{"name": "Welcome", "recordType": "TRANSACTION", "subject": "…", "body": "<html>"}'
 ```
 
-`recordType`: `ENTITY | TRANSACTION | CUSTOM | CASE | EVENT`. `storage` defaults to `inline`;
-`file` creates the HTML file first (default folder `/Templates/Marketing Templates`, the only
-folder NetSuite accepts for template files; `folder` overrides) and deletes it if the record save
-fails. Returns the GET shape.
+`recordType`: `ENTITY | TRANSACTION | CUSTOM | CASE | EVENT`. `storage` defaults to `inline`
+(leave it out; see workflow step 8); `file` creates the HTML file first (default folder
+`/Templates/Marketing Templates`, the only folder NetSuite accepts for template files; `folder`
+overrides) and deletes it if the record save fails. Returns the GET shape.
 
 ## Workflow
 
@@ -247,9 +247,15 @@ fails. Returns the GET shape.
    mobile or dark-mode tweaks, because several clients drop it. Type FreeMarker fields straight
    into the HTML (`${transaction.tranid}`), with `recipient` and `sender` written null-safe. Then
    preview in draft mode with a sample record, run the compatibility check, and `PUT` without `id`
-   (`storage: "file"` for CP) to create, then give the user the new record's link (step 9). From
-   then on the template record is the source: later edits start from a `GET` of its body, and
-   every `PUT` backs up the previous version.
+   to create, then give the user the new record's link (step 9). From then on the template record
+   is the source: later edits start from a `GET` of its body, and every `PUT` backs up the
+   previous version.
+
+   **Create new templates inline**: leave `storage` out so the HTML lives in the record's content
+   field. NetSuite can preview an inline template from the record itself, which makes it easier
+   to work with than a file-backed one. Use `storage: "file"` only when the user asks for the
+   body to be a File Cabinet file. This applies only to new templates; an existing template keeps
+   its storage (step 7) and is never converted from file to inline or back.
 9. **Link the record.** Every successful `PUT`, whether it creates a template or updates one
    (body, subject or name), ends with a clickable link to that Email Template record in the
    account it was written to, built from the `id` in the `PUT` response:
