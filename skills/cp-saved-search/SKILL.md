@@ -147,7 +147,7 @@ mints an anonymous `customsearchNNNN`, and the id is unfixable
 afterward — it's API-immutable, and the UI's scriptid field on `search.nl?cu=T` *looks*
 editable but silently discards the change on save (verified: form redisplays the typed value
 while `N/search.load` still resolves only the old id). The only remedy is retitle-old →
-recreate-with-proper-id → migrate flags/references → delete old via UI (no RESTlet delete),
+recreate-with-proper-id → migrate flags/references → delete the old one (Delete section below),
 so get it right at create time. `internalId` is rejected on create — it has no meaning until
 the search is saved. Afterwards, give the user the search link (section below):
 
