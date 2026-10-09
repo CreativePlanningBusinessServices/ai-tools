@@ -47,7 +47,7 @@ SP=<session scratchpad directory>/email-designer; mkdir -p "$SP"
 NS_HOST=$(netsuite-cli account list | jq -r --arg alias <alias> '.accounts[] | select(.alias == $alias) | .accountId | ascii_downcase | gsub("_"; "-")')
 ```
 
-`NS_HOST` is the account's UI host prefix (`6967599_SB2` → `6967599-sb2`), used to link records
+`NS_HOST` is the account's UI host prefix (`1234567_SB1` → `1234567-sb1`), used to link records
 in the NetSuite UI: `https://$NS_HOST.app.netsuite.com/…`. If it comes back empty, the alias is
 wrong; stop and check it rather than linking a guessed host.
 
@@ -268,7 +268,7 @@ overrides) and deletes it if the record save fails. Returns the GET shape.
    jq -r --arg host "$NS_HOST" '"https://\($host).app.netsuite.com/app/crm/common/merge/emailtemplate.nl?id=\(.id)"' "$SP/save-out.json"
    ```
    Put it in the reply as a markdown link named after the template and the account, e.g.
-   `[CP ES Contract Notification (sb2)](https://6967599-sb2.app.netsuite.com/app/crm/common/merge/emailtemplate.nl?id=320)`.
+   `[Example Invoice Email (sb1)](https://1234567-sb1.app.netsuite.com/app/crm/common/merge/emailtemplate.nl?id=123)`.
    A refused or failed `PUT` gets no link; report the error instead.
 
 ## Gotchas
