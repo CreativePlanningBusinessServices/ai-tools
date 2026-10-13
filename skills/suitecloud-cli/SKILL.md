@@ -62,11 +62,18 @@ Object types are case-sensitive; the three form types are camelCase (`entryForm`
 suitecloud object:list --type transactionForm              # prints type:scriptid lines, e.g. transactionForm:custform_12_1234567_345
 suitecloud object:list --type customrecordtype --scriptid erp   # substring filter
 ```
-Form ids carry no name and there is no SuiteQL table for forms. Narrow first: for a standard
+Form ids carry no name and there is no SuiteQL table for forms. **The number inside
+`custform_<n>_<account>_<m>` is not the internal id** (form 132 can be `custform_135_…` while
+`custform_132_…` is another record type's form), so never pick a script id by matching it to the
+`id=` in a `custform.nl` URL. Narrow first: for a standard
 record type, `netsuite-cli record select-options <type> --fields customForm` lists form names with
-internal ids, and the form's page in the UI (`custform.nl?id=<internal id>`) shows the script id;
+internal ids (a transaction type needs an existing record id, e.g. from `SELECT MAX(id) FROM
+transaction WHERE type = '<type code>'`: `select-options <type> <record id> …`),
+and the form's page in the UI (`custform.nl?id=<internal id>`) shows the script id;
 for custom record forms, `object:list --type entryForm --scriptid <account id or prefix>` then import
-the few candidates and read `<name>`. Never `--scriptid ALL` on forms: hundreds of forms time out.
+the few candidates and read `<name>`. For transaction forms, import every listed id in batches of
+about 12 (`--scriptid id1 id2 …`) into a scan folder, grep `<recordType>` and `<name>`, then delete
+the scan folder. Never `--scriptid ALL` on forms: hundreds of forms time out.
 Scripts and record types do have tables: `SELECT scriptid, name FROM script` / `FROM customrecordtype`.
 
 ### View / export an object
@@ -102,8 +109,14 @@ complete definition (fields, tabs, labels, display types, scripts).
    not have (the deploy then fails with "the X feature must be enabled"). Flip such a feature to
    `required="false"` unless the object genuinely needs it.
 6. `suitecloud project:validate` → `suitecloud project:deploy --dryrun` (expect
-   `Create object -- custform_<new_id> (entryform)`) → `suitecloud project:deploy`.
-7. Confirm: `suitecloud object:list --type entryForm --scriptid custform_<new_id>`.
+   `Create object -- custform_<new_id> (entryform)`, or `(transactionform)`) → `suitecloud project:deploy`.
+   A copied **transaction form** often fails validation with "cannot be modified", "sublist id
+   value … is either invalid" or "cannot move the … sublist/subtab": a new form is built from the
+   standard form plus your XML, and SDF rejects settings the UI could make. Fixes, one row per
+   message: `references/errors.md` → "Copied transaction forms".
+7. Confirm: `suitecloud object:list --type <form type> --scriptid custform_<new_id>`. For a form,
+   also re-import the new object and `diff` it against the source XML: every line that differs
+   beyond your intended edits is a difference the user must hear about.
 
 ### Edit an existing object
 Import it fresh (`object:import`, or `object:update --scriptid <id>` if it is already in the
@@ -171,6 +184,10 @@ Summary (full recipe with Windows and macOS/Linux variants, edge cases and clean
   diff after each run and set it back to `required="false"`.
 - `-i` cannot be combined with other options.
 - Renaming a form and deploying creates a new form instead of updating the old one.
+- A manifest feature error stops `project:validate` before the object is checked against the
+  account: a run that fails only on "feature must be enabled" proves nothing about the XML.
+- A deploy that fails at `CUSTOM_OBJECT_CREATION` with no detail may still have created the object:
+  run `object:list --scriptid <new id>` before retrying.
 - Form names max 60 characters; every field label needs a value (use a single space).
 - Standard forms are not objects; a custom form points at its base via `standard="STANDARD…"`.
 - 3.x prints local "object referenced in id is missing" errors that the server does not; upgrade.

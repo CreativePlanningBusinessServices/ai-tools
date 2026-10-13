@@ -31,3 +31,22 @@ Messages are quoted as the 4.x CLI prints them (placeholders in `<…>`).
 | `The "--validate" option has no effect…` / `The "--server" option has no effect…` | Flags from 3.x. | Remove them; 4.x always validates on the server. |
 | `ERROR: SDK exited with code <n>` followed by text | The Java SDK failed; the real message follows. | Read the lines after it; usually a Java version or server validation error. |
 | 3.x only: `The object referenced in "id" is missing in the project and is not included in the dependencies list.` on `project:validate` | Local validation false positive. | Upgrade to 4.x (`npm install -g @oracle/suitecloud-cli`). |
+
+## Copied transaction forms
+
+A new form is created from the standard form plus the XML, so `project:validate` rejects settings
+that exist on the source form but that SDF cannot apply. These appear only once any manifest
+feature error is cleared. Each fix changes the copy, so after deploying re-import the new form,
+`diff` it against the source, and tell the user what differs.
+
+| Message | Cause | Fix |
+|---|---|---|
+| `The mandatory value of the [scriptid=<field>] field object cannot be modified.` | The field is mandatory on its own definition; a form that hides it exports `<mandatory>F</mandatory>`. | Set `<mandatory>T</mandatory>` on that field in the copy. Confirm the cause with `SELECT scriptid, ismandatory FROM customfield WHERE scriptid = '<FIELD ID IN UPPERCASE>'`. The rendered form is unchanged. |
+| `The columnBreak value of the <field> field object cannot be modified.` | A layout setting on a standard field that SDF cannot set. | Set `<columnBreak>F</columnBreak>` on that field. Cosmetic difference: the field no longer starts a new column. |
+| `The sublist id value, <sublist>, is either invalid or does not exist in the account.` | The export lists a standard sublist the account does not have (seen with `PROMOTIONS`). | Delete that `<subList>` block; if it was the only one, delete its empty `<subItems>` wrapper too. No visible difference: the account never rendered that sublist. |
+| `You cannot move the <sublist> sublist/subtab from the <tab A> tab to the <tab B> tab in a transaction form. Moving sublists and subtabs is not supported.` | The export shows the sublist directly under tab B; the standard form keeps it inside subtab A (seen with `MESSAGES`, `TRANSACTIONOUTPUTOPTIONS`, `TRANSACTIONCOMMUNICATION`). | Delete that `<subList>` block from tab B; the deploy restores it inside subtab A. Visible difference: one subtab where the source showed two, with the list still present. |
+| `ERROR: An error occurred during custom object creation.` at `CUSTOM_OBJECT_CREATION`, no detail | The server failed part-way; the object may exist anyway. | `suitecloud object:list --type <type> --scriptid <new id>` first. If it is listed, the rerun's step reads `CUSTOM_OBJECT_UPDATE`; then re-import and diff as above. If not, rerun the deploy. |
+
+Sublists that the source export omits can come back from the re-import as extra `<subList>`
+blocks (custom child-record sublists). Check they render the same by opening one record under each
+form (`<record url>&cf=<form internal id>`) and comparing the tabs.
