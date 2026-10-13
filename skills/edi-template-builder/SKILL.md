@@ -160,6 +160,8 @@ Read the spec. Spot-check each requirement against `output.edi` using `grep` / `
 
 If validation finds gaps, `Edit` the template JSON, re-run editester, re-validate. Loop until clean. After three failed iterations, stop and surface what's blocking — don't churn silently.
 
+If the template has been uploaded and a job has run with it, also check the file the pipeline actually wrote — see [Checking a real run's generated file](#checking-a-real-runs-generated-file).
+
 ### 10. Deliver
 
 Print:
@@ -206,6 +208,8 @@ Spot-check each feedback item against the new EDI output (e.g. if the feedback w
 
 If a feedback item targets a condition that no record in the sample data exercises (e.g. terminated employees when no test record has a termination date), construct a synthetic record to validate it: clone a real record with `jq`, set the triggering field, serialize that, and confirm the changed branch renders correctly. Note in the delivery summary that this branch was checked synthetically rather than against the live feed.
 
+If the revised template has been uploaded and a job has run with it, also check the file the pipeline actually wrote — see [Checking a real run's generated file](#checking-a-real-runs-generated-file).
+
 ### 8. Deliver
 
 Print:
@@ -213,6 +217,17 @@ Print:
 - Diff-style summary: one line per change item, with the segment, what changed, and which helper / attribute now drives it
 - A short excerpt of the affected segments from the new `output.edi`
 - If the revision added or changed any Benefit Plan ID list, a plain-English decode of the affected list(s) — follow the **ID list reference** section below. If no ID lists were touched, skip this.
+
+## Checking a real run's generated file
+
+Local `editester` output only proves what the local template and the local binary produce. Once a job has run through translation, read the file the pipeline actually wrote instead of assuming it matches. A safe test run is `mcp__claude_ai_EDI_Cosmos_DB__edi_start_job` (translation-only, always `doNotSendToProvider`) after the template is uploaded with `mcp__claude_ai_EDI_Cosmos_DB__edi_upload_schedule_template`.
+
+1. **Find the job** — `mcp__claude_ai_EDI_Cosmos_DB__edi_list_jobs` (`organizationId`, `scheduleId`, `limit: 1`). It has a generated file only when `generatedFileURL` is non-empty (status stage `translation` or later, name `complete`/`completed`). A job that failed at extraction or translation has none — read its `status.errorMessage` instead.
+2. **Fetch the file** — `mcp__claude_ai_EDI_Blob_Storage__edi_get_generated_file` with `job_id_or_url` set to the job's `generatedFileURL` (the job `id` also works for outbound jobs). The result has two content blocks: a header line (`Generated file <name>: 13,577 characters (complete).`) and the file itself, verbatim. Save the second block to `<working-dir>/<job_id>.generated.txt`. It is real, unanonymized data, same as job data.
+3. **Page large files** — one call returns at most `max_chars` characters (default 50,000, max 500,000). When the header says `TRUNCATED`, call again with the `offset` it gives and append each part in order until the header says `(end of file)`. Inspect the saved file with `grep` / `awk`, as with `output.edi` — don't pull a large file into context to read it.
+4. **Compare like with like** — serialize locally against *that same job's* data (`edi_get_job_data` with the same job ID) and `diff` the two files. Differences limited to run-date/time stamps and the interchange control number are expected: the pipeline ran with its own `today` and the job's `documentNumber`. To remove them, set `today` (the run date) and `documentNumber` in the wrapped data file to the job's values. Any other difference is real — either the deployed template is not the local one (re-fetch the job's `translationTemplateURL` with `edi_get_template_data` and diff it), or the pipeline's serializer behaves differently from the local binary. Report it rather than explaining it away.
+
+A `No generated file found` error means the blob does not exist under that name; a `Could not decrypt` error means the tool cannot read that file, which is expected for generated files from early 2025 and older — the error text gives the cause. For inbound (360) jobs the blob names are different — see [docs/inbound-360.md](docs/inbound-360.md).
 
 ## ID list reference (include at delivery)
 

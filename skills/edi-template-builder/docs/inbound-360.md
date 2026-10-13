@@ -79,9 +79,10 @@ Validate every branch: confirm real %/$ changes survive, zero-filler is dropped,
 
 ## Deploy & run
 
-All three tools below are on the `mcp__claude_ai_EDI_Cosmos_DB__` server and take `organizationId`.
+The first three tools below are on the `mcp__claude_ai_EDI_Cosmos_DB__` server and take `organizationId`.
 
 - `mcp__claude_ai_EDI_Cosmos_DB__edi_upload_schedule_template` uploads to `<shortname>/<name>.json` **and repoints the schedule's `translationTemplateURL`**. Uploading to an existing path overwrites — check you're not clobbering a different deployed template.
 - **`mcp__claude_ai_EDI_Cosmos_DB__edi_start_job`** runs **translation-only** (always `doNotSendToProvider`) and never uploads to UKG — safe for testing.
 - **`mcp__claude_ai_EDI_Cosmos_DB__edi_rerun_job` stage `upload` ACTUALLY UPLOADS to UKG Ready** (inbound's "send" stage). Use `stage: translation` to re-test safely; never `upload` unless you intend to write to UKG.
+- **`mcp__claude_ai_EDI_Blob_Storage__edi_get_generated_file`** (Blob Storage server) reads back what a translation run wrote, to compare against local `editester deserialize` output for the same change file. Inbound runs are not stored under the bare job ID — passing it returns `No generated file found`. They are stored per record type as `<job-id>-deductions` and `<job-id>-addresses`; pass the job's `generatedFileURL`, or that blob name, as `job_id_or_url`. The suffixed names were observed in storage on 2026-10-13; that they map to the converter's deferral and demographic records is inferred from the names, not confirmed against a job record. `-addresses` blobs are rare, consistent with demographic records being emitted only when `demographic.city` is set. Results over 50,000 characters come back `TRUNCATED` with the `offset` for the next call.
 - Inbound jobs fetch `<filenameTemplate>` from the SFTP and **fail at file-retrieval** (`... does not exist`) if the carrier hasn't dropped that exact file yet. That's a missing-file issue, not a template bug — the filename filter is date-stamped (e.g. `ABC{{dateFormat 'MMddyyyy'}}change.csv`), so the sample's name/date usually won't match a live run.
