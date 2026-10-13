@@ -52,16 +52,18 @@ new account: the `suitecloud-cli` skill walks through it, reusing the netsuite-c
 1. Make sure SuiteScript (server-side scripting) is enabled in the account.
 2. **Point the project at this account, every time you deploy.** The SuiteCloud CLI deploys to
    whichever account was set up last for this folder, and there's no flag to choose one at
-   deploy time. So before each deploy, run setup and pick (or add) the auth ID for the account
-   you're installing into:
+   deploy time. So before each deploy, select the auth ID for the account you're installing into
+   (the `suitecloud-cli` skill's auth recipe adds one for a new account without a browser):
 
    ```bash
    cd ai-tools/netsuite/restlets
-   suitecloud account:setup
+   suitecloud account:manageauth --list
+   suitecloud account:setup:ci --select <authid>
    cat project.json        # defaultAuthId must be the account you mean to change
    ```
 
-   If `defaultAuthId` names any other account, stop and run setup again.
+   If `defaultAuthId` names any other account, stop and select again. (A browser login,
+   `suitecloud account:setup`, only works with the `SUITECLOUD_CI*` variables unset.)
 3. Validate, preview, then deploy:
 
    ```bash

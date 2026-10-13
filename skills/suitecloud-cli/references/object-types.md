@@ -27,7 +27,7 @@ with underscores.
 | Custom transaction form (sales order, invoice, deposit, journal…) | `transactionForm` | `custform_` |
 | Custom address form | `addressForm` | `custform_` |
 | Advanced PDF/HTML template | `advancedpdftemplate` | `custtmpl_` |
-| Email template | `emailtemplate` | `custemailtmpl_` |
+| Email template (to edit or create one, use the `netsuite-email-designer` skill; SDF for migrating whole templates) | `emailtemplate` | `custemailtmpl_` |
 | **UI** | | |
 | Subtab | `subtab` | `custtab_` |
 | Sublist | `sublist` | `custsublist_` |
@@ -50,7 +50,7 @@ with underscores.
 | **Plug-ins** | `plugintype`, `pluginimplementation`, `customglplugin`, `emailcaptureplugin`, `ficonnectivityplugin`, `bankstatementparserplugin`, `paymentgatewayplugin`, `promotionsplugin`, `shippingpartnersplugin`, `taxcalculationplugin`, `platformextensionplugin`, `advancedrevrecplugin`, `consolidatedrateadjustorplugin` | `customscript_` |
 | **Workflow, search, analytics** | | |
 | Workflow | `workflow` | `customworkflow_` |
-| Saved search | `savedsearch` | `customsearch_` |
+| Saved search (to run, create, edit or delete one, use the `cp-saved-search` skill; SDF only migrates whole searches) | `savedsearch` | `customsearch_` |
 | Saved CSV import | `savedcsvimport` | `custimport_` |
 | Dataset | `dataset` | `custdataset_` |
 | Workbook | `workbook` | `custworkbook_` |
@@ -66,7 +66,8 @@ with underscores.
 
 - Standard forms, standard roles, standard records: only `custform_*`, `customrole_*` and
   `customrecord_*` objects exist. A custom form names its base form in `standard="STANDARD…"`.
-- Transaction form **PDF and HTML layouts**, online lead/case forms, web-site customization objects.
+- Transaction form **legacy (non-advanced) PDF and HTML layouts**, online lead/case forms, web-site
+  customization objects. Advanced PDF/HTML templates *are* supported (`advancedpdftemplate`).
 - **Deleting** any object. SDF only creates and updates.
 - Bundles (install and update them in the UI; a bundle's objects can be imported if unlocked).
 - Custom segments that do not use unified ids.
@@ -78,7 +79,7 @@ with underscores.
 
 - Forms cannot be authored from scratch; import an existing form and modify the XML.
 - Script ids: `custform_<something>`; file name = script id. Imported ids look like
-  `custform_129_1234567_424` (number, account, number) and carry no name; the name is `<name>`.
+  `custform_12_1234567_345` (number, account, number) and carry no name; the name is `<name>`.
 - `<name>` ≤ 60 characters. Renaming an existing form and deploying creates a *new* form; keep the
   script id and name together when you mean "update".
 - Every `<field>` needs a `<label>` with a value (a single space works for "no label").

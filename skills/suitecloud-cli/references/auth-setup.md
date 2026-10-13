@@ -33,22 +33,23 @@ SuiteCloud keeps two separate credential stores and picks one from the environme
 So for unattended use, export **both** persistently and open a new shell before continuing:
 
 ```bash
-# macOS / Linux: ~/.zshrc or ~/.bashrc
-export SUITECLOUD_CI_PASSKEY=<your 32-100 alphanumeric passkey>
-export SUITECLOUD_CI=1
+# macOS / Linux: generate a 48-character passkey and append both exports to the profile without displaying it
+printf 'export SUITECLOUD_CI_PASSKEY=%s\nexport SUITECLOUD_CI=1\n' "$(openssl rand -hex 24)" >> ~/.zshrc
 # optional helper for the rare browser login
-nsbrowser() { env -u SUITECLOUD_CI -u SUITECLOUD_CI_PASSKEY "$@"; }   # usage: nsbrowser suitecloud account:setup
+printf 'nsbrowser() { env -u SUITECLOUD_CI -u SUITECLOUD_CI_PASSKEY "$@"; }\n' >> ~/.zshrc   # usage: nsbrowser suitecloud account:setup
 ```
 
 ```powershell
-# Windows (user environment variables; new terminals pick them up)
-[Environment]::SetEnvironmentVariable("SUITECLOUD_CI_PASSKEY", "<your passkey>", "User")
+# Windows: user environment variables; new terminals pick them up. The passkey is generated, never typed or shown.
+[Environment]::SetEnvironmentVariable("SUITECLOUD_CI_PASSKEY", (-join ((1..48) | ForEach-Object { '{0:x}' -f (Get-Random -Maximum 16) })), "User")
 [Environment]::SetEnvironmentVariable("SUITECLOUD_CI", "1", "User")
-# for a one-off browser login in the current window:
-Remove-Item Env:SUITECLOUD_CI, Env:SUITECLOUD_CI_PASSKEY; suitecloud account:setup
+# for a one-off browser login in the current window only:
+Remove-Item Env:SUITECLOUD_CI, Env:SUITECLOUD_CI_PASSKEY -ErrorAction SilentlyContinue; suitecloud account:setup
 ```
 
-Never print the passkey; it is the only thing protecting `credentials_ci.p12`.
+The passkey is the only thing protecting `credentials_ci.p12`, and it needs no human to know it:
+never `echo $SUITECLOUD_CI_PASSKEY`, `cat ~/.zshrc`, `Get-ChildItem Env:` or otherwise print it. If
+it is ever lost, delete `credentials_ci.p12`, generate a new one and redo step 5 for each auth id.
 
 ## Steps
 
@@ -148,6 +149,11 @@ with a `deploy.xml` (4.x reports "Invalid SuiteCloud project context" otherwise)
   was wiped by a sandbox refresh. Mappings are per account and are not copied to sandboxes;
   redo steps 3–5 after every refresh.
 - **"error with the private key"**: not an RSA key, or not the key of that certificate.
+- **The account has never had a SuiteCloud login** (no SuiteCloud Development Integration record):
+  the Setup page's Application list lacks *SuiteCloud Development Integration* (observed symptom), and
+  `cert upload` / `cert list --client-id <SuiteCloud id>` are expected to reject the client id (not
+  yet observed; report the exact error). One browser-based `suitecloud account:setup` by any user,
+  with the CI variables unset, creates the record; then redo step 4.
 - **"authentication ID is not available"** right after a successful setup: you are in the other
   execution context (variables unset). Certificate auth ids are invisible without them.
 - **Rotation**: upload the replacement first (step 4), run step 5 with the new certificate id and

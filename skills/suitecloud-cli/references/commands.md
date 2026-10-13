@@ -1,8 +1,9 @@
 # SuiteCloud CLI command reference (4.x)
 
 `suitecloud <command> [--option value ...]`. `-h` on any command prints its options. `-i` runs a
-command's interactive wizard and **cannot be combined with other options**. Every command except
-`project:create` must run inside a SuiteCloud project folder. Account targeting is never a flag:
+command's interactive wizard and **cannot be combined with other options**. Every `project:`, `object:`, `file:`
+and `config:` command, and `account:setup*`, must run inside a SuiteCloud project folder
+(`account:manageauth` works anywhere). Account targeting is never a flag:
 it is the `defaultAuthId` in the project's `project.json`.
 
 Option legend: `*` required when the command does its main job; `(multi)` takes several values
@@ -30,7 +31,7 @@ separated by spaces; `(flag)` takes no value.
 
 | Command | Purpose | Options | Notes |
 |---|---|---|---|
-| `object:list` | List custom objects in the account. | `--type <t1 t2 ...>` (multi; omit = all), `--scriptid <substring>`, `--appid <publisher.app>` | Prints `type:scriptid` lines only; names live inside the XML. |
+| `object:list` | List custom objects in the account. | `--type <t1 t2 ...>` (multi; omit = all), `--scriptid <substring>`, `--appid <publisher.app>` | Prints one `type:scriptid` line per object after "The following objects were found in your account:", e.g. `transactionForm:custform_12_1234567_345`; names live inside the XML. |
 | `object:import` | Pull objects into the project as XML; in an ACP, referenced SuiteScript files come too. | `--type <type\|ALL>*`, `--scriptid <id1 id2 ...\|ALL>*` (multi), `--destinationfolder /Objects[/sub]*`, `--appid`, `--excludefiles` (flag) | Overwrites project files silently. The destination folder is relative to the project folder, must start with `/Objects`, and **must already exist**. |
 | `object:update` | Overwrite objects already in the project with the account's current version. | `--scriptid <id1 id2 ...>*` (multi), `--includeinstances` (flag; custom record types only) | |
 

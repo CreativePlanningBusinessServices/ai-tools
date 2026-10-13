@@ -1,6 +1,6 @@
 ---
 name: suitecloud-cli
-description: Use when a task needs to view, export, duplicate, edit, deploy or migrate NetSuite custom objects (custom forms, record types, fields, lists, scripts, workflows, roles, templates, saved-search definitions), pull or upload SuiteScript files, or set up SuiteCloud CLI (SDF, `suitecloud`) authentication for an account netsuite-cli already knows — including when netsuite-cli has no endpoint for an object definition or the only alternative seems to be the NetSuite UI.
+description: Use when a task needs to view, export, duplicate, edit, deploy or migrate NetSuite custom objects (custom forms, record types, fields, lists, scripts, workflows, roles, PDF templates; whole saved searches or email templates when migrating them), pull or upload SuiteScript files, or set up SuiteCloud CLI (SDF, `suitecloud`) authentication for an account netsuite-cli already knows — including when netsuite-cli has no endpoint for an object definition or the only alternative seems to be the NetSuite UI.
 ---
 
 # SuiteCloud CLI (SDF) for object definitions
@@ -15,9 +15,9 @@ before any browser automation for objects.**
 
 | Need | Use |
 |---|---|
-| Record data: read, query, create, update, transform, schemas, RESTlets, saved-search *runs*, File Cabinet contents | `netsuite-cli` (and the cp-* skills) — always first |
-| An object's definition: see it, copy it, change a label/field/tab, add a script deployment, move it to another account, upload a SuiteScript file | **this skill** |
-| Delete an object, edit a saved-search definition, touch a standard form, PDF/HTML form layouts, Setup pages | browser (agent-browser) or a person — only after both CLIs are ruled out |
+| Record data: read, query, create, update, transform, schemas, RESTlets, File Cabinet contents; saved searches (run, create, edit, delete → `cp-saved-search`); email templates (preview, edit, create → `netsuite-email-designer`) | `netsuite-cli` and its sibling skills — always first |
+| An object's definition: see it, copy it, change a label/field/tab, add a script deployment, move it (including a whole saved search or template) to another account, upload a SuiteScript file | **this skill** |
+| Delete an object, touch a standard form, legacy (non-advanced) PDF/HTML form layouts, Setup pages | browser (agent-browser) or a person — only after both CLIs are ruled out |
 
 Symptoms that mean "object, not data": the user says *form, field, custom record type, list,
 script deployment, workflow, role, template, dashboard, segment, subtab*, or wants something
@@ -34,7 +34,7 @@ echo $SUITECLOUD_CI           # PowerShell: $env:SUITECLOUD_CI
 ```
 
 - Not installed: `npm install -g @oracle/suitecloud-cli`. Java missing: install OpenJDK 17, add its `bin` to PATH.
-- **Every command except `project:create` runs inside a SuiteCloud project** (a folder with
+- **Every `project:`, `object:`, `file:` and `config:` command, and `account:setup*` (they write `project.json`), runs inside a SuiteCloud project** (a folder with
   `suitecloud.config.js` and `manifest.xml`; objects go under the folder named by
   `defaultProjectFolder`, often `src/` or `.`). Not in one? Create a scratch project:
   `suitecloud project:create --type ACCOUNTCUSTOMIZATION --projectname scratch` then `cd scratch`.
@@ -59,7 +59,7 @@ Object types are case-sensitive; the three form types are camelCase (`entryForm`
 
 ### Find the object's script id
 ```
-suitecloud object:list --type transactionForm              # ids only, e.g. custform_129_1234567_424
+suitecloud object:list --type transactionForm              # prints type:scriptid lines, e.g. transactionForm:custform_12_1234567_345
 suitecloud object:list --type customrecordtype --scriptid erp   # substring filter
 ```
 Form ids carry no name and there is no SuiteQL table for forms. Narrow first: for a standard
@@ -72,7 +72,7 @@ Scripts and record types do have tables: `SELECT scriptid, name FROM script` / `
 ### View / export an object
 ```
 mkdir Objects/Forms                       # the destination folder must already exist
-suitecloud object:import --type transactionForm --scriptid custform_129_1234567_424 --destinationfolder /Objects/Forms --excludefiles
+suitecloud object:import --type transactionForm --scriptid custform_12_1234567_345 --destinationfolder /Objects/Forms --excludefiles
 ```
 `--destinationfolder` is relative to the project folder and must start with `/Objects`.
 Omit `--excludefiles` when you also want the SuiteScript files a script object references.
@@ -147,9 +147,9 @@ Summary (full recipe with Windows and macOS/Linux variants, edge cases and clean
    --client-id 6da57bf05a6247fc876c6d228184ff487760a382a43ac7e93eaff743803d22ac --entity <id> --role <id>`
    (that client id is SuiteCloud's public one, the same in every account). The response's
    `certificateId` is the **certificate id**.
-5. Choose a passkey (32–100 letters and digits), export `SUITECLOUD_CI_PASSKEY=<passkey>` and
-   `SUITECLOUD_CI=1` persistently (shell profile; Windows: user environment variables), open a new
-   shell, then `suitecloud account:setup:ci --account <ACCOUNT_ID> --authid <ACCOUNT_ID>_M2M --certificateid <id> --privatekeypath <absolute path to key.pem>`
+5. Generate a passkey into the environment without printing it (the reference has the one-line
+   bash and PowerShell forms that write `SUITECLOUD_CI_PASSKEY` and `SUITECLOUD_CI=1` persistently),
+   open a new shell, then `suitecloud account:setup:ci --account <ACCOUNT_ID> --authid <ACCOUNT_ID>_M2M --certificateid <id> --privatekeypath <absolute path to key.pem>`
 6. Verify: `suitecloud object:list --type customlist`, and
    `netsuite-cli suiteql --account <alias> "SELECT oauthappname, status FROM LoginAudit WHERE date >= SYSDATE - 0.01 ORDER BY date DESC"`
    shows a `SuiteCloud Development Integration` success.
