@@ -160,7 +160,8 @@ Summary (full recipe with Windows and macOS/Linux variants, edge cases and clean
 - `deploy.xml` lists only the files for this task.
 - Deploy to production only when the user named production for this change.
 - SuiteCloud cannot delete objects: say so and offer the UI path instead of retrying.
-- Never run `project:deploy` without reading `project.json` in the same session.
+- Never run `project:deploy` without reading `project.json` in the same session, and never run any
+  account-facing command (even `object:list`) while it names a different account than the task.
 
 ## Gotchas
 
