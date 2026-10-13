@@ -33,8 +33,7 @@ suitecloud account:manageauth --list
 echo $SUITECLOUD_CI           # PowerShell: $env:SUITECLOUD_CI
 ```
 
-- Not installed: `npm install -g @oracle/suitecloud-cli` (set `SUITECLOUD_CLI_ACCEPT_LICENSE=true`
-  to skip the prompt). Java missing: install Temurin/OpenJDK 17 and put its `bin` on PATH.
+- Not installed: `npm install -g @oracle/suitecloud-cli`. Java missing: install OpenJDK 17, add its `bin` to PATH.
 - **Every command except `project:create` runs inside a SuiteCloud project** (a folder with
   `suitecloud.config.js` and `manifest.xml`; objects go under the folder named by
   `defaultProjectFolder`, often `src/` or `.`). Not in one? Create a scratch project:
@@ -45,15 +44,13 @@ echo $SUITECLOUD_CI           # PowerShell: $env:SUITECLOUD_CI
   Do not build a separate rehearsal project to get around it.
 - **Certificate (M2M) auth ids are only visible while `SUITECLOUD_CI=1` and `SUITECLOUD_CI_PASSKEY`
   are set; browser auth ids only while they are unset.** "authentication ID is not available" usually
-  means the wrong context, not a missing login. Browser login with the variables set fails with
-  "Browser-based authentication is not allowed for the current execution context": run it as
-  `env -u SUITECLOUD_CI -u SUITECLOUD_CI_PASSKEY suitecloud account:setup` (PowerShell: clear
-  `$env:SUITECLOUD_CI` and `$env:SUITECLOUD_CI_PASSKEY` for that window).
-- **The project's account is whatever `project.json` says** (`defaultAuthId`). There is no
-  per-command account flag. Read it before every list/import/deploy:
-  `cat project.json` (PowerShell: `Get-Content project.json`). Wrong account?
-  `suitecloud account:setup:ci --select <authid>`. No auth id for that account yet? See
-  "Authenticate an account netsuite-cli already knows" below.
+  means the wrong context. A browser login with the variables set fails ("Browser-based authentication
+  is not allowed for the current execution context"): run it as
+  `env -u SUITECLOUD_CI -u SUITECLOUD_CI_PASSKEY suitecloud account:setup` (PowerShell: clear both `$env:` vars first).
+- **The project's account is whatever `project.json` says** (`defaultAuthId`); there is no
+  per-command account flag. Read it before every list/import/deploy (`cat project.json`;
+  PowerShell `Get-Content project.json`). Wrong account? `suitecloud account:setup:ci --select <authid>`.
+  No auth id for it yet? See "Authenticate an account netsuite-cli already knows" below.
 
 ## Workflows
 
@@ -168,8 +165,9 @@ Summary (full recipe with Windows and macOS/Linux variants, edge cases and clean
 ## Gotchas
 
 - `--destinationfolder` must exist → "…/Objects/Forms does not exist".
-- `project:adddependencies` can add a feature the account lacks as `required="true"`; the deploy
-  then fails with "the X feature must be enabled". Review the manifest diff every time.
+- `project:adddependencies` can add a feature the account lacks as `required="true"` (deploy then
+  fails with "the X feature must be enabled"), and it re-flips it on every run: review the manifest
+  diff after each run and set it back to `required="false"`.
 - `-i` cannot be combined with other options.
 - Renaming a form and deploying creates a new form instead of updating the old one.
 - Form names max 60 characters; every field label needs a value (use a single space).
