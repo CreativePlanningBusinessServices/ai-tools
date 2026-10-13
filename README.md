@@ -13,6 +13,7 @@ This repo is private: don't copy it anywhere public.
 | `skills/netsuite-email-designer` | Preview, edit, save and create email templates, with an email-client compatibility check |
 | `netsuite/restlets` | The four RESTlets those skills call, ready to deploy into an account |
 | `skills/edi-template-builder` | Build and revise EDI benefits-feed templates (X12 834 and others) |
+| `skills/suitecloud-cli` | When and how to use the SuiteCloud CLI for NetSuite object definitions (forms, records, fields, scripts…), and how to set up its machine-to-machine auth from an existing netsuite-cli account |
 
 The `cp-*` and `netsuite-email-designer` skills only work in an account where the RESTlets are installed.
 `edi-template-builder` has its own setup notes, including how to upgrade from the old zip
@@ -46,7 +47,7 @@ follow whatever change process applies for that client before deploying.
 The skills offer to do this for you: when one finds its RESTlet missing from an account, it asks
 whether you'd like it installed and, on a yes, runs the steps below itself, following
 [`netsuite/restlets/INSTALL.md`](netsuite/restlets/INSTALL.md). Adding a SuiteCloud auth ID for a
-new account is still yours to do, since it needs a browser login.
+new account: the `suitecloud-cli` skill walks through it, reusing the netsuite-cli alias.
 
 1. Make sure SuiteScript (server-side scripting) is enabled in the account.
 2. **Point the project at this account, every time you deploy.** The SuiteCloud CLI deploys to
@@ -64,7 +65,7 @@ new account is still yours to do, since it needs a browser login.
 3. Validate, preview, then deploy:
 
    ```bash
-   suitecloud project:validate --server
+   suitecloud project:validate          # 4.x always validates on the server; --server is a no-op
    suitecloud project:deploy --dryrun
    suitecloud project:deploy
    ```

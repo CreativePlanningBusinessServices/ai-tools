@@ -56,7 +56,7 @@ cat project.json                                  # defaultAuthId must be that a
 **4. Validate, preview, deploy.**
 
 ```bash
-suitecloud project:validate --server
+suitecloud project:validate
 suitecloud project:deploy --dryrun
 suitecloud project:deploy
 ```
