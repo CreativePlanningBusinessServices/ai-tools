@@ -1,7 +1,6 @@
 # ai-tools
 
-Claude Code skills and NetSuite scripts maintained by Creative Planning Business Services.
-This repo is private: don't copy it anywhere public.
+Claude Code skills and NetSuite scripts maintained by Creative Planning.
 
 ## What's here
 
