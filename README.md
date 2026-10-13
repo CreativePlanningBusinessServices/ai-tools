@@ -12,6 +12,7 @@ Claude Code skills and NetSuite scripts maintained by Creative Planning.
 | `skills/netsuite-email-designer` | Preview, edit, save and create email templates, with an email-client compatibility check |
 | `netsuite/restlets` | The four RESTlets those skills call, ready to deploy into an account |
 | `skills/edi-template-builder` | Build and revise EDI benefits-feed templates (X12 834 and others) |
+| `skills/suitecloud-cli` | When and how to use the SuiteCloud CLI for NetSuite object definitions (forms, records, fields, scripts…), and how to set up its machine-to-machine auth from an existing netsuite-cli account |
 
 The `cp-*` and `netsuite-email-designer` skills only work in an account where the RESTlets are installed.
 `edi-template-builder` has its own setup notes, including how to upgrade from the old zip
@@ -45,25 +46,27 @@ follow whatever change process applies for that client before deploying.
 The skills offer to do this for you: when one finds its RESTlet missing from an account, it asks
 whether you'd like it installed and, on a yes, runs the steps below itself, following
 [`netsuite/restlets/INSTALL.md`](netsuite/restlets/INSTALL.md). Adding a SuiteCloud auth ID for a
-new account is still yours to do, since it needs a browser login.
+new account: the `suitecloud-cli` skill walks through it, reusing the netsuite-cli alias.
 
 1. Make sure SuiteScript (server-side scripting) is enabled in the account.
 2. **Point the project at this account, every time you deploy.** The SuiteCloud CLI deploys to
    whichever account was set up last for this folder, and there's no flag to choose one at
-   deploy time. So before each deploy, run setup and pick (or add) the auth ID for the account
-   you're installing into:
+   deploy time. So before each deploy, select the auth ID for the account you're installing into
+   (the `suitecloud-cli` skill's auth recipe adds one for a new account without a browser):
 
    ```bash
    cd ai-tools/netsuite/restlets
-   suitecloud account:setup
+   suitecloud account:manageauth --list
+   suitecloud account:setup:ci --select <authid>
    cat project.json        # defaultAuthId must be the account you mean to change
    ```
 
-   If `defaultAuthId` names any other account, stop and run setup again.
+   If `defaultAuthId` names any other account, stop and select again. (A browser login,
+   `suitecloud account:setup`, only works with the `SUITECLOUD_CI*` variables unset.)
 3. Validate, preview, then deploy:
 
    ```bash
-   suitecloud project:validate --server
+   suitecloud project:validate          # 4.x always validates on the server; --server is a no-op
    suitecloud project:deploy --dryrun
    suitecloud project:deploy
    ```

@@ -49,14 +49,16 @@ cat project.json                                  # defaultAuthId must be that a
 - Auth IDs are SuiteCloud's own names, unrelated to `netsuite-cli` aliases. Run `--info` on each
   one listed and match on the account id it prints, never on a similar-looking name. Several
   match: ask which.
-- None match: the user has to add one. `suitecloud account:setup` is an interactive browser login
-  you can't drive, so ask them to run it in their own terminal from this folder, with a role that
-  can deploy SDF projects (Administrator works), then continue from here.
+- None match: add one with the `suitecloud-cli` skill's "Authenticate an account netsuite-cli
+  already knows" recipe (no browser; it reuses the netsuite-cli alias and needs a role that can
+  deploy SDF projects, Administrator works). If netsuite-cli does not know the account either, ask
+  the user to run `suitecloud account:setup` (a browser login, with the `SUITECLOUD_CI*` variables
+  unset) in their own terminal from this folder, then continue from here.
 
 **4. Validate, preview, deploy.**
 
 ```bash
-suitecloud project:validate --server
+suitecloud project:validate
 suitecloud project:deploy --dryrun
 suitecloud project:deploy
 ```
