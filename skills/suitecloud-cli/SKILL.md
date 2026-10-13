@@ -1,6 +1,6 @@
 ---
 name: suitecloud-cli
-description: Use when a task needs to view, export, duplicate, edit, deploy or migrate NetSuite custom objects (custom forms, record types, fields, lists, scripts, workflows, roles, PDF templates; whole saved searches or email templates when migrating them), pull or upload SuiteScript files, or set up SuiteCloud CLI (SDF, `suitecloud`) authentication for an account netsuite-cli already knows — including when netsuite-cli has no endpoint for an object definition or the only alternative seems to be the NetSuite UI.
+description: Use when a task needs to view, export, duplicate, edit, deploy or migrate NetSuite custom objects (custom forms, record types, fields, lists, scripts, workflows, roles, PDF templates; whole saved searches or email templates when migrating), pull or upload SuiteScript files, or set up SuiteCloud CLI (SDF, `suitecloud`) authentication for an account netsuite-cli already knows — including when netsuite-cli has no endpoint for an object definition or the only alternative seems to be the NetSuite UI.
 ---
 
 # SuiteCloud CLI (SDF) for object definitions
