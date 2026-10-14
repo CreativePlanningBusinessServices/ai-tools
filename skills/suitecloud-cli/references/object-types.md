@@ -50,7 +50,7 @@ with underscores.
 | **Plug-ins** | `plugintype`, `pluginimplementation`, `customglplugin`, `emailcaptureplugin`, `ficonnectivityplugin`, `bankstatementparserplugin`, `paymentgatewayplugin`, `promotionsplugin`, `shippingpartnersplugin`, `taxcalculationplugin`, `platformextensionplugin`, `advancedrevrecplugin`, `consolidatedrateadjustorplugin` | `customscript_` |
 | **Workflow, search, analytics** | | |
 | Workflow | `workflow` | `customworkflow_` |
-| Saved search (to run, create, edit or delete one, use the `cp-saved-search` skill; SDF only migrates whole searches) | `savedsearch` | `customsearch_` |
+| Saved search (to run, create, edit or delete one, use the `netsuite-saved-search` skill; SDF only migrates whole searches) | `savedsearch` | `customsearch_` |
 | Saved CSV import | `savedcsvimport` | `custimport_` |
 | Dataset | `dataset` | `custdataset_` |
 | Workbook | `workbook` | `custworkbook_` |

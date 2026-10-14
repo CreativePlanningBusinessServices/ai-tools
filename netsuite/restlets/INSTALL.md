@@ -1,6 +1,6 @@
 # Installing the CP RESTlets: runbook for an agent
 
-The four CP skills (`cp-saved-search`, `cp-file-cabinet`, `cp-mr-driver`,
+The four NetSuite skills (`netsuite-saved-search`, `netsuite-file-cabinet`, `netsuite-mr-driver`,
 `netsuite-email-designer`) send you here when their RESTlet is missing from an account, or when
 its deployment is undeployed or not released. This folder is the SDF package that holds all four
 RESTlets; it installs with the SuiteCloud CLI, and the same steps upgrade or repair an existing

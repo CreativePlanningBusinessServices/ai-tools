@@ -6,24 +6,24 @@ Claude Code skills and NetSuite scripts maintained by Creative Planning.
 
 | Path | What it is |
 |---|---|
-| `skills/cp-saved-search` | Run, create, edit, describe and delete saved searches |
-| `skills/cp-file-cabinet` | Read, download, list, create, edit and delete File Cabinet files |
-| `skills/cp-mr-driver` | Trigger Map/Reduce scripts and poll their progress |
+| `skills/netsuite-saved-search` | Run, create, edit, describe and delete saved searches |
+| `skills/netsuite-file-cabinet` | Read, download, list, create, edit and delete File Cabinet files |
+| `skills/netsuite-mr-driver` | Trigger Map/Reduce scripts and poll their progress |
 | `skills/netsuite-email-designer` | Preview, edit, save and create email templates, with an email-client compatibility check |
 | `netsuite/restlets` | The four RESTlets those skills call, ready to deploy into an account |
 | `skills/edi-template-builder` | Build and revise EDI benefits-feed templates (X12 834 and others) |
 | `skills/suitecloud-cli` | When and how to use the SuiteCloud CLI for NetSuite object definitions (forms, records, fields, scripts…), and how to set up its machine-to-machine auth from an existing netsuite-cli account |
 
-The `cp-*` and `netsuite-email-designer` skills only work in an account where the RESTlets are installed.
+The `netsuite-*` skills only work in an account where the RESTlets are installed.
 `edi-template-builder` has its own setup notes, including how to upgrade from the old zip
 install, in [`skills/edi-template-builder/INSTALL.md`](skills/edi-template-builder/INSTALL.md).
 
 ## Prerequisites
 
 - Claude Code
-- For the `cp-*` and `netsuite-email-designer` skills: [`netsuite-cli`](https://github.com/CreativePlanningBusinessServices/netsuite-cli),
-  with an account alias for each NetSuite account you work in. For `cp-mr-driver`, that alias
-  must be an Administrator-role integration.
+- For the `netsuite-*` skills: [`netsuite-cli`](https://github.com/CreativePlanningBusinessServices/netsuite-cli),
+  with an account alias for each NetSuite account you work in. For `netsuite-mr-driver`, that
+  alias must be an Administrator-role integration.
 - `jq`
 - To install the RESTlets: the SuiteCloud CLI (`npm install -g @oracle/suitecloud-cli`)
 
@@ -36,7 +36,9 @@ ai-tools/scripts/install-skills.sh
 
 This symlinks each skill into `~/.claude/skills/`. It never overwrites: if a skill with the same
 name already exists there, it's skipped and named so you can move it aside. Run `git pull` in the
-clone to update; the links pick up changes automatically. Restart Claude Code to load new skills.
+clone to update; the links pick up changes automatically. When a pull adds, renames or removes a
+skill, re-run the script: it links the new names and deletes links to skills that are gone.
+Restart Claude Code to load new skills.
 
 ## Install the RESTlets in an account
 

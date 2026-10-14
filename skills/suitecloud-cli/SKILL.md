@@ -15,7 +15,7 @@ before any browser automation for objects.**
 
 | Need | Use |
 |---|---|
-| Record data: read, query, create, update, transform, schemas, RESTlets, File Cabinet contents; saved searches (run, create, edit, delete → `cp-saved-search`); email templates (preview, edit, create → `netsuite-email-designer`) | `netsuite-cli` and its sibling skills — always first |
+| Record data: read, query, create, update, transform, schemas, RESTlets, File Cabinet contents; saved searches (run, create, edit, delete → `netsuite-saved-search`); email templates (preview, edit, create → `netsuite-email-designer`) | `netsuite-cli` and its sibling skills — always first |
 | An object's definition: see it, copy it, change a label/field/tab, add a script deployment, move it (including a whole saved search or template) to another account, upload a SuiteScript file | **this skill** |
 | Delete an object, touch a standard form, legacy (non-advanced) PDF/HTML form layouts, Setup pages | browser (agent-browser) or a person — only after both CLIs are ruled out |
 
@@ -148,8 +148,8 @@ suitecloud file:import --paths "/SuiteScripts/MyFolder/my_script.js"      # pull
 suitecloud file:upload --paths "/SuiteScripts/MyFolder/my_script.js"      # push from FileCabinet/
 ```
 Paths are File Cabinet paths and must be quoted; no wildcards. For reading or writing file
-*contents* without a project, the cp-file-cabinet skill is simpler; `file:upload` is the right
-tool when the file belongs to a script deployment you are also deploying.
+*contents* without a project, the netsuite-file-cabinet skill is simpler; `file:upload` is the
+right tool when the file belongs to a script deployment you are also deploying.
 
 ### Workflow objects (the `workflow` type)
 A workflow can be written as XML from scratch. Take the shape of each element from workflows

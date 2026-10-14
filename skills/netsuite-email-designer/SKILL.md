@@ -140,7 +140,7 @@ Response: the GET shape plus `backup: {id, path} | null` and an optional `warnin
 - Refused with `error`: an empty body; the literal strings `null`/`undefined` (a shell pipeline lost
   its input); a body that removes every `${…}` field from a template that had them, unless the
   request carries `"allowNoFields": true`.
-- Restore = PUT the backup file's contents back (download it with the cp-file-cabinet skill).
+- Restore = PUT the backup file's contents back (download it with the netsuite-file-cabinet skill).
 
 ### PUT without `id` — create
 

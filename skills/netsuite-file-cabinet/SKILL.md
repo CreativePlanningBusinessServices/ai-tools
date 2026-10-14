@@ -1,5 +1,5 @@
 ---
-name: cp-file-cabinet
+name: netsuite-file-cabinet
 description: Use when a task needs to read, download, list, create, edit, or delete a NetSuite File Cabinet file in any account where Creative Planning's cp_file_cabinet_rl RESTlet is installed (CP's own accounts or a client's). Covers the cp_file_cabinet_rl RESTlet's JSON contract, called via netsuite-cli restlet call.
 ---
 

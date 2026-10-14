@@ -1,5 +1,5 @@
 <restlet scriptid="customscript_cp_mr_driver_rl">
-  <description>Trigger Map/Reduce scripts and poll their progress over JSON. Primarily called by netsuite-cli via `restlet call`; contract documented in the cp-mr-driver skill. POST {"script","deployment"?,"params"?} submits the MR and returns the task id; GET ?taskid= returns task.checkStatus with stage detail. Deployment audience is Administrator only, since this can start any Map/Reduce in the account.</description>
+  <description>Trigger Map/Reduce scripts and poll their progress over JSON. Primarily called by netsuite-cli via `restlet call`; contract documented in the netsuite-mr-driver skill. POST {"script","deployment"?,"params"?} submits the MR and returns the task id; GET ?taskid= returns task.checkStatus with stage detail. Deployment audience is Administrator only, since this can start any Map/Reduce in the account.</description>
   <isinactive>F</isinactive>
   <name>CP | MR Driver RESTlet</name>
   <notifyadmins>F</notifyadmins>

@@ -24,4 +24,12 @@ assert_eq "$(run_install)" 1 "an existing non-link exits 1"
 assert_contains "$(cat "$tmp/out.log")" "skipped  skill-a" "the conflict is named"
 assert_eq "$(cat "$target/skill-a/SKILL.md")" mine "an existing folder is never overwritten"
 
+rm -rf "$target/skill-a"; mv "$repo/skills/skill-b" "$repo/skills/skill-c"
+mkdir -p "$tmp/elsewhere"; ln -s "$tmp/elsewhere/gone" "$target/foreign-dangling"
+assert_eq "$(run_install)" 0 "re-running after a rename exits 0"
+assert_contains "$(cat "$tmp/out.log")" "removed  skill-b" "the stale link is reported"
+assert_eq "$([ -L "$target/skill-b" ] && echo present || echo absent)" absent "a link to a removed skill is deleted"
+assert_eq "$(readlink "$target/skill-c")" "$repo/skills/skill-c" "the renamed skill is linked"
+assert_eq "$([ -L "$target/foreign-dangling" ] && echo present || echo absent)" present "a dangling link into another folder is left alone"
+
 finish
