@@ -127,6 +127,14 @@ Never edit `<definition>` blobs (saved searches, workbooks, datasets); they are 
 ### Migrate between accounts (sandbox → production)
 1. In the project pointed at the **source** account, import the objects.
 2. Switch: `suitecloud account:setup:ci --select <target authid>` and re-read `project.json`.
+   Accounts drift (an old sandbox lacks newer roles, subtabs, fields and features), so for every
+   object the XML references, `suitecloud object:list --scriptid <id>` against the target. A
+   missing one is migrated first or taken out of the XML, and the user hears which part of the
+   change did not travel (for example a form's role preference).
+   **A custom form is a snapshot of the source account's whole layout, not only your edits.** If
+   it was copied from another custom form, import that base form from both accounts and `diff`
+   them. When they differ, do not deploy the source XML: build the copy in the target from the
+   target's own base form ("Duplicate an object") and apply the same edits.
 3. `suitecloud project:validate --accountspecificvalues WARNING` — imported XML can contain
    `[ACCOUNT_SPECIFIC_VALUE]` where an internal id (employee, folder, item…) did not travel;
    replace those by hand or accept the WARNING for optional fields.
@@ -151,6 +159,9 @@ Summary (full recipe with Windows and macOS/Linux variants, edge cases and clean
 1. `netsuite-cli account list` → account id (sandboxes end in `_SB1`, `_SB2`…).
    `suitecloud account:manageauth --list` → if an auth id for that account exists, just
    `account:setup:ci --select <authid>` and stop.
+   No netsuite-cli alias for that account either? Create an M2M one first with the netsuite-cli
+   skill's "Bootstrap" (credentials of another account, even the production a sandbox was copied
+   from, do not work), then continue here.
 2. `netsuite-cli account cert list --account <alias>` → the **entity** and **role** ids of the
    existing machine-to-machine mapping (the same user and role will own the SuiteCloud mapping).
 3. Generate a **new RSA 4096** key pair with openssl (SuiteCloud rejects the EC keys netsuite-cli
@@ -186,8 +197,9 @@ Summary (full recipe with Windows and macOS/Linux variants, edge cases and clean
 - Renaming a form and deploying creates a new form instead of updating the old one.
 - A manifest feature error stops `project:validate` before the object is checked against the
   account: a run that fails only on "feature must be enabled" proves nothing about the XML.
-- A deploy that fails at `CUSTOM_OBJECT_CREATION` with no detail may still have created the object:
-  run `object:list --scriptid <new id>` before retrying.
+- A deploy that fails at `CUSTOM_OBJECT_CREATION` with no detail can leave a half-built object:
+  run `object:list --scriptid <new id>`, and if it is listed rerun the same deploy (the step then
+  reads `CUSTOM_OBJECT_UPDATE`). The object is not done until that rerun succeeds.
 - Form names max 60 characters; every field label needs a value (use a single space).
 - Standard forms are not objects; a custom form points at its base via `standard="STANDARD…"`.
 - 3.x prints local "object referenced in id is missing" errors that the server does not; upgrade.
