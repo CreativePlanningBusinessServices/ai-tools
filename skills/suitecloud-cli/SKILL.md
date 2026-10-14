@@ -151,6 +151,33 @@ Paths are File Cabinet paths and must be quoted; no wildcards. For reading or wr
 *contents* without a project, the cp-file-cabinet skill is simpler; `file:upload` is the right
 tool when the file belongs to a script deployment you are also deploying.
 
+### Workflow objects (the `workflow` type)
+A workflow can be written as XML from scratch. Take the shape of each element from workflows
+imported from the same account: `object:import --type workflow --scriptid ALL` is safe here
+(bundle workflows fail with "…cannot download the XML file for this object because it is locked",
+which is harmless). Internal ids: `SELECT internalid, scriptid, name, releasestatus FROM workflow`
+(the column is `internalid`; `id` does not exist on this table).
+
+- **A new workflow starts with a formula condition, not the visual builder, when the start
+  condition compares a select field to a record** (seen with "Subsidiary is X" on the workflow's
+  own `<initcondition>`). The visual-builder form passes `project:validate` and then fails the
+  deploy preview with no message (signature: `references/errors.md` → "Workflows"). Create
+  the workflow with `<formula><![CDATA[{subsidiary.id} = <internal id>]]></formula>`
+  `<type>FORMULA</type>` and no `<parameters>`. Once it exists, the visual-builder version of the
+  same condition deploys as an update, so switching is a second deploy. Conditions on actions and
+  transitions that compare to a standard role or to a joined field created without trouble.
+- **Select values in conditions carry internal ids.** An export writes `[ACCOUNT_SPECIFIC_VALUE]`
+  in the `<value>` of a `<selectrecordtype>` parameter, and validation rejects it ("The object
+  field value must not be ACCOUNT_SPECIFIC_VALUE"). Write the target account's internal id there,
+  and look it up again for every account you deploy to.
+- **`project:adddependencies` is wrong for workflows.** It missed a field reached through a join
+  (`STDBODYCUSTOMER:[scriptid=custentity_…]`) and added the workflow's own button actions as
+  dependencies. Edit `manifest.xml` by hand instead: `WORKFLOW` as a required feature, the feature
+  behind any field a condition names (for example `SUBSIDIARIES`), and an `<object>` entry for each
+  custom field or record the workflow references that is not in the project.
+- **`<releasestatus>RELEASED</releasestatus>` is live the moment the deploy finishes**, for every
+  record that matches. Deploy as `NOTINITIATING` when the workflow should not run yet.
+
 ## Authenticate an account netsuite-cli already knows
 
 Summary (full recipe with Windows and macOS/Linux variants, edge cases and cleanup:
@@ -180,7 +207,8 @@ Summary (full recipe with Windows and macOS/Linux variants, edge cases and clean
 
 ## Safety rules
 
-- `--dryrun` before every deploy and read the preview lines (`Create object`, `Update object`).
+- `--dryrun` before every deploy and read the preview lines (`Create object`, `Update object`; 4.1.1
+  prints them as `CUSTOM_OBJECT_CREATION --- <id>` and `CUSTOM_OBJECT_UPDATE --- <id>` steps).
 - `deploy.xml` lists only the files for this task.
 - Deploy to production only when the user named production for this change.
 - SuiteCloud cannot delete objects: say so and offer the UI path instead of retrying.

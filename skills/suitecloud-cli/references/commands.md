@@ -22,7 +22,7 @@ separated by spaces; `(flag)` takes no value.
 | Command | Purpose | Options | Notes |
 |---|---|---|---|
 | `project:create` | Scaffold an account customization project (ACP) or SuiteApp. | `--type ACCOUNTCUSTOMIZATION\|SUITEAPP*`, `--projectname <name>*`, `--projectid`, `--publisherid`, `--projectversion` (the last three required for SuiteApps), `--overwrite` (flag), `--includeunittesting` (flag) | Creates `<name>/src/{Objects,FileCabinet,AccountConfiguration,Translations}`, `manifest.xml`, `deploy.xml`, `suitecloud.config.js`. Then `cd` into it and select an auth id. |
-| `project:adddependencies` | Add every missing feature/object/file dependency to `manifest.xml`. | none | Read the manifest diff afterwards: it can mark a feature `required="true"` that the target account lacks; set it to `required="false"` unless the object truly needs it. |
+| `project:adddependencies` | Add every missing feature/object/file dependency to `manifest.xml`. | none | Read the manifest diff afterwards: it can mark a feature `required="true"` that the target account lacks; set it to `required="false"` unless the object truly needs it. Unreliable for workflows (SKILL.md → "Workflow objects"): edit the manifest by hand there. |
 | `project:validate` | Validate the project on the server. | `--accountspecificvalues WARNING\|ERROR` (ACP; default ERROR), `--applyinstallprefs` (SuiteApp), `--log <dir-or-file>`, `--json` (flag) | `--server` still parses but is a no-op since 4.0 (validation is always server-side). |
 | `project:deploy` | Zip what `deploy.xml` references and deploy it; validates first. | `--dryrun` (flag: preview only), `--accountspecificvalues WARNING\|ERROR`, `--applyinstallprefs`, `--log <dir-or-file>`, `--json` (flag) | `--validate` is a no-op since 4.0. `--dryrun` is non-interactive only. Deploys to the account in `project.json`. |
 | `project:package` | Build the deployment ZIP without deploying. | none | |
@@ -70,7 +70,26 @@ Installation COMPLETE (0 minutes 9 seconds)
 ```
 
 A `--dryrun` ends with `DEPLOYMENT PREVIEW` and the `Create object` / `Update object` lines without
-deploying. With `--json` the same run returns one object:
+deploying.
+
+4.1.1 prints the same information differently, for a preview and for a real deploy: a summary
+block first (`PREVIEW SUMMARY` on a `--dryrun`, then `Status: SUCCESS|FAILED` and
+`Steps: <done>/<total> successful`), and one step per object and sub-object instead of the
+`Create object` / `Update object` lines:
+
+```
+✔ Step 24: BEGIN_DEPLOYMENT --- <project>
+✔ Step 25: CUSTOM_OBJECT_CREATION --- custbody_xyz (transactionbodycustomfield)
+✔ Step 26: CUSTOM_OBJECT_UPDATE --- customworkflow_xyz (workflow)
+✔ Step 27: CUSTOM_OBJECT_UPDATE --- customworkflow_xyz.workflowstate1 (workflowstate)
+...
+✔ Step 53: FILE_UPLOAD --- ~/Objects/customworkflow_xyz.xml
+```
+
+Read `CUSTOM_OBJECT_CREATION` as "Create object" and `CUSTOM_OBJECT_UPDATE` as "Update object". A
+failed step is marked `✖`; `Status:` and `Steps:` are the lines to check first.
+
+With `--json` the same run returns one object:
 
 ```json
 {"summary": {"action": "preview", "status": "SUCCESS"},

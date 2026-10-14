@@ -25,7 +25,7 @@ Messages are quoted as the 4.x CLI prints them (placeholders in `<…>`).
 | `Form name must be between 1 and 60 characters long.` | `<name>` too long in a form XML. | Shorten it. |
 | `To install this SuiteCloud project, the <FEATURE> feature must be enabled in the account.` | `manifest.xml` marks a feature `required="true"` (often added by `project:adddependencies`) that the target lacks. | Set it to `required="false"` if the object does not truly need it, otherwise enable the feature. |
 | `The manifest contains a dependency on <object> object, but it is not in the account.` | A referenced object exists in the source account only. | Import and deploy that object too, or remove the reference. |
-| `The "<field>" field depends on the "<FEATURE>" feature. The manifest must define the "<FEATURE>" feature as required or optional.` | Missing feature dependency. | `project:adddependencies`, then review the manifest. |
+| `The "<field>" field depends on the "<FEATURE>" feature. The manifest must define the "<FEATURE>" feature as required or optional.` | Missing feature dependency. A custom list always raises it as a warning for `MATRIXITEMS` (`ismatrixoption`, `abbreviation`). | `project:adddependencies`, then review the manifest; for a workflow add the feature by hand. `required="false"` is enough for the list warning. |
 | `[ACCOUNT_SPECIFIC_VALUE]` validation errors | Imported XML holds an internal id that did not travel (employee, folder, item…). | Replace the value, or `--accountspecificvalues WARNING` for optional fields (ACP only). |
 | `Installation preferences cannot be applied in an Account Customization Project` | `--applyinstallprefs` on an ACP. | Drop the flag; it is for SuiteApps. |
 | `The "--validate" option has no effect…` / `The "--server" option has no effect…` | Flags from 3.x. | Remove them; 4.x always validates on the server. |
@@ -50,3 +50,15 @@ feature error is cleared. Each fix changes the copy, so after deploying re-impor
 Sublists that the source export omits can come back from the re-import as extra `<subList>`
 blocks (custom child-record sublists). Check they render the same by opening one record under each
 form (`<record url>&cf=<form internal id>`) and comparing the tabs.
+
+## Workflows
+
+| Message | Cause | Fix |
+|---|---|---|
+| No message at all: `project:validate` passes, then `project:deploy --dryrun` ends `Status: FAILED`, `Steps: <n-1>/<n> successful`, `SDF Errors: none`, and the last step is a second `✖ FILE_UPLOAD --- ~/Objects/…/<workflow>.xml`. `--json` and `--log` add nothing. | The deploy would create the workflow, and its own start condition is a visual-builder condition comparing a select field to a record (seen with Subsidiary). | Create the workflow with a formula condition (`{subsidiary.id} = <internal id>`, `<type>FORMULA</type>`, no `<parameters>`). The visual-builder version then deploys as an update. |
+| `The object field value must not be ACCOUNT_SPECIFIC_VALUE.` on a workflow | An exported condition holds `[ACCOUNT_SPECIFIC_VALUE]` as the `<value>` of a `<selectrecordtype>` parameter. | Write the target account's internal id in its place. |
+
+A silent failure for any other reason is found by bisecting: copy the objects into a scratch
+project pointed at the same account and `--dryrun` variants that each differ in one thing (drop a
+state, an action, a condition). A preview writes nothing to the account. A workflow reduced to one
+empty state previews clean, so add parts back until it fails.
