@@ -1,5 +1,5 @@
 <restlet scriptid="customscript_cp_saved_search_rl">
-  <description>Create, edit, describe, run and delete saved searches over JSON. Primarily called by netsuite-cli via `restlet call`; contract documented in the cp-saved-search skill. GET ?id= describes; GET ?id=&amp;run=T runs; POST creates; POST {"run":true,...} runs a definition without saving it; PUT updates (full-definition replace); DELETE ?id= removes a search.</description>
+  <description>Create, edit, describe, run and delete saved searches over JSON. Primarily called by netsuite-cli via `restlet call`; contract documented in the netsuite-saved-search skill. GET ?id= describes; GET ?id=&amp;run=T runs; POST creates; POST {"run":true,...} runs a definition without saving it; PUT updates (full-definition replace); DELETE ?id= removes a search.</description>
   <isinactive>F</isinactive>
   <name>CP | Saved Search RESTlet</name>
   <notifyadmins>F</notifyadmins>

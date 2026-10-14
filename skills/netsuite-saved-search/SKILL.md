@@ -1,5 +1,5 @@
 ---
-name: cp-saved-search
+name: netsuite-saved-search
 description: Use when a task needs to run, create, edit, describe or delete a NetSuite saved search in any account where Creative Planning's cp_saved_search_rl RESTlet is installed (CP's own accounts or a client's) — including one-off queries that should NOT be saved (listing a record's attachments, ad-hoc joins), running a search with an extra filter, or building a hyperlink/drill URL that opens a saved search's UI results pre-filtered via searchresults.nl query params (record, class, date-range filters). Covers the cp_saved_search_rl RESTlet's JSON contract, called via netsuite-cli restlet call; the URL-filter rules are generic NetSuite.
 ---
 

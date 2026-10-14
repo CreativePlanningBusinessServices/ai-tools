@@ -1,5 +1,5 @@
 ---
-name: cp-mr-driver
+name: netsuite-mr-driver
 description: Use when a task needs to trigger (run/execute/kick off) a NetSuite Map/Reduce script programmatically in any account where Creative Planning's cp_mr_driver_rl RESTlet is installed (CP's own accounts or a client's), or poll a submitted MR task's progress — including ad-hoc reruns of scheduled MRs, per-run script-parameter overrides, and waiting for an MR to complete before verifying its output. Covers the cp_mr_driver_rl RESTlet's JSON contract, called via netsuite-cli restlet call.
 ---
 
