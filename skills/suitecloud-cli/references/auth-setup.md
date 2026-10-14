@@ -63,6 +63,11 @@ suitecloud account:manageauth --list
 If the list already has an auth id for that account id, select it in the project and stop:
 `suitecloud account:setup:ci --select <authid>`. Otherwise continue.
 
+If `netsuite-cli account list` has no alias for the account, this recipe has nothing to start
+from: create an M2M alias first with the netsuite-cli skill's "Bootstrap" (one browser login to
+that account, then `cert generate` → `cert upload` → `account add --flow m2m`). An alias for a
+different account, including the production a sandbox was copied from, cannot be used.
+
 ### 2. Entity and role
 
 ```
@@ -108,7 +113,8 @@ SuiteCloud Development Integration record). The calling role needs the permissio
 missing. NetSuite allows **five active certificates per integration record**, and every SuiteCloud
 M2M user in the account shares this one integration: check with
 `netsuite-cli account cert list --account <alias> --client-id <the client id above>` and revoke
-stale ones before adding a sixth.
+stale ones before adding a sixth. That list answers HTTP 500 while nothing is mapped yet (Edge
+cases); upload anyway.
 
 Alternative (no API access): Setup > Integration > Manage Authentication > OAuth 2.0 Client
 Credentials (M2M) Setup (`/app/oauth2/clientcredentials/setup.nl`) > Create New: Entity = the user,
@@ -149,10 +155,15 @@ with a `deploy.xml` (4.x reports "Invalid SuiteCloud project context" otherwise)
   was wiped by a sandbox refresh. Mappings are per account and are not copied to sandboxes;
   redo steps 3–5 after every refresh.
 - **"error with the private key"**: not an RSA key, or not the key of that certificate.
+- **`cert list --client-id <SuiteCloud id>` returns HTTP 500 "Internal Error"**: seen on a sandbox
+  whose SuiteCloud Development Integration record existed but had no certificate mapped to it yet.
+  It does not mean the record is missing: run the `cert upload` of step 4, after which the same
+  list works.
 - **The account has never had a SuiteCloud login** (no SuiteCloud Development Integration record):
   the Setup page's Application list lacks *SuiteCloud Development Integration* (observed symptom), and
-  `cert upload` / `cert list --client-id <SuiteCloud id>` are expected to reject the client id (not
-  yet observed; report the exact error). One browser-based `suitecloud account:setup` by any user,
+  `cert upload` is expected to reject the client id (not yet observed; report the exact error).
+  `netsuite-cli suiteql --account <alias> "SELECT COUNT(*) AS logins FROM LoginAudit WHERE oauthappname = 'SuiteCloud Development Integration'"`
+  above zero shows the record exists. One browser-based `suitecloud account:setup` by any user,
   with the CI variables unset, creates the record; then redo step 4.
 - **"authentication ID is not available"** right after a successful setup: you are in the other
   execution context (variables unset). Certificate auth ids are invisible without them.
