@@ -186,7 +186,7 @@ printf '%s\n' "$rows" | jq -R -s --arg checksum "$checksum" --arg release "$rele
         rawFields: $aud } end),
       availableFilters: ($rows | records("availableFilterFields") | map({
         field: .FIELD_NAME, customLabel: .FIELD_CUSTOM_LABEL, showInFooter: (.FLAG_FOOTER == "true"),
-        footerMultiSelect: (.FLAG_FOOTER_MULTI_SELECT == "true"), sequence: (.SEQ_NUMBER | tonumber) })),
+        footerMultiSelect: (.FLAG_FOOTER_MULTI_SELECT == "true"), sequence: ((.SEQ_NUMBER // "0") | tonumber) })),
       email: {
         flags: labelled($emailFlagLabels; $desc),
         fields: ([ $emailFieldLabels | to_entries[] | {key: .value, value: $desc[.key]} ] | from_entries),
@@ -195,10 +195,13 @@ printf '%s\n' "$rows" | jq -R -s --arg checksum "$checksum" --arg release "$rele
       criteria: ($rows | filters("filters")),
       summaryCriteria: ($rows | filters("summaryFilters")),
       results: ($rows | records("returnFields") | map({
-        field: .FIELD_ALIAS, index: (.FIELD_INDEX | tonumber), label: .FIELD_LABEL, summaryType: .FIELD_SUMMARY_TYPE,
+        field: .FIELD_ALIAS, index: ((.FIELD_INDEX // "0") | tonumber), label: .FIELD_LABEL, summaryType: .FIELD_SUMMARY_TYPE,
         function: .FIELD_FUNCTION, formula: .FIELD_FORMULA } | compact)),
+      # The NetSuite serializer really spells the sort position FILELD_ORDER (seen in every export
+      # so far); FIELD_ORDER is accepted too in case a release ever corrects it. No apostrophes in
+      # these comments: the whole jq program is a single-quoted shell string.
       sort: ($rows | records("sortColumns") | map({
-        field: .KEY_FIELD, order: (.FILELD_ORDER | tonumber), descending: (.FLAG_DESCENDING == "true") })),
+        field: .KEY_FIELD, order: ((.FILELD_ORDER // .FIELD_ORDER // "0") | tonumber), descending: (.FLAG_DESCENDING == "true") })),
       maxRows: $desc.MAX_ROWS,
       rawDescriptor: $desc,
       export: { checksum: $checksum, release: $release, scriptIdInWrapper: $wrapper }
