@@ -1,6 +1,6 @@
 ---
 name: netsuite-saved-search
-description: Use when a task needs to run, create, edit, describe or delete a NetSuite saved search in any account where Creative Planning's cp_saved_search_rl RESTlet is installed (CP's own accounts or a client's) — including one-off queries that should NOT be saved (listing a record's attachments, ad-hoc joins), running a search with an extra filter, or building a hyperlink/drill URL that opens a saved search's UI results pre-filtered via searchresults.nl query params (record, class, date-range filters). Covers the cp_saved_search_rl RESTlet's JSON contract, called via netsuite-cli restlet call; the URL-filter rules are generic NetSuite.
+description: Use when a task needs to run, create, edit, describe or delete a NetSuite saved search in any account where Creative Planning's cp_saved_search_rl RESTlet is installed (CP's own accounts or a client's) — including one-off queries that should NOT be saved (listing a record's attachments, ad-hoc joins), running a search with an extra filter, building a hyperlink/drill URL that opens a saved search's UI results pre-filtered via searchresults.nl query params (record, class, date-range filters), or reading a search's Available Filters, Audience/roles, email-alert or Available-for-Reminders settings, which the RESTlet cannot see. Covers the cp_saved_search_rl RESTlet's JSON contract, called via netsuite-cli restlet call; the URL-filter rules are generic NetSuite.
 ---
 
 # Saved searches via the cp_saved_search_rl RESTlet
@@ -245,7 +245,72 @@ PUTing that back must supply its own title like any other required field.
 `id` and `type` are immutable once created (PUT with a different `type` returns
 `{"error": "type cannot be changed — the search's type is <actual>"}`); the only editable fields
 are `title`, `filterExpression`, `columns`, and `isPublic` — no scheduling, email alerts, or
-audience settings. Verbs are describe / run / ad-hoc run / create / update / delete.
+audience settings. Verbs are describe / run / ad-hoc run / create / update / delete. To *read*
+the settings the RESTlet can't see, use the full describe below; to *write* them, the UI section
+after it.
+
+## Full describe — Available Filters, Audience, Email, reminder/list/menu flags (read-only)
+
+The RESTlet describe shows title/type/criteria/columns/public only. Everything else on the
+search form — Available Filters, Audience (all-roles flags and role ids), the Email tab (alert
+flags, from/subject/body/comment, specific recipients and recipients-from-results), Available for
+Reminders / List View / Dashboard View / Sublist View / Show in Menu / Run Unrestricted — is in
+the SuiteCloud (SDF) export of the search, inside its `<definition>` blob. The blob is
+`<checksum>@GZC@<release>@<base64 gzip>` of NetSuite's own `SearchDefinition` XML, and
+`scripts/describe-full.sh` decodes it into JSON (bash, awk, base64, gunzip and jq — nothing else).
+
+**REQUIRED SUB-SKILL:** `suitecloud-cli` for a project pointed at the account (read `project.json`
+first; `object:import` is read-only). No RESTlet call is involved, so the "RESTlet installed?"
+check at the top of this skill does not apply here — the account only needs SuiteCloud auth. Then,
+from the project folder:
+
+```bash
+mkdir -p src/Objects/SavedSearches      # the destination folder must exist; adjust to the project's objects folder
+suitecloud object:import --type savedsearch --scriptid <customsearch_id> --destinationfolder /Objects/SavedSearches --excludefiles
+bash "<this skill's base directory>/scripts/describe-full.sh" src/Objects/SavedSearches/<customsearch_id>.xml \
+  | jq '{title, isPublic, availableFilters, audience, email, flags}'      # drop the jq for everything
+```
+
+Several ids can go in one `--scriptid a b c` import. Add `--raw` to dump the decoded XML to
+stderr when the JSON lacks something.
+
+Reading the output:
+
+- **Field names are NetSuite's search-field aliases**, the same spelling as the
+  `searchresults.nl` URL params further down: `EM_Employee_SUPERVISOR` is the Employee-join
+  Supervisor field, `Timesheet_TIMESHEETDATE` a body field, a bare uppercase
+  `CUSTBODY_…`/`CUSTRECORD_…` a custom field.
+- **Select values and role ids are internal ids** — resolve them with SuiteQL (`role`, `employee`,
+  `department`…). `@CURRENT@` is the running user, `@NONE@` is "none".
+- **Date criteria carry stale literals next to the relative keyword** (`operator: "LW"` plus two
+  dates): NetSuite re-evaluates the keyword at run time and the dates are a cache from the last
+  save. Report the keyword, ignore the literals.
+- **`flags` / `email.flags` keys are best-effort labels of the internal names**; the raw names and
+  values are in `rawDescriptor` and `audience.rawFields`, so quote those when precision matters.
+  The UI's single "Send On Update" checkbox has two candidate flags in the export
+  (`FLAG_TRIGGERED_ALERT`, `FLAG_SEND_ON_UPDATE`) and which one it maps to is unverified — report
+  both by raw name. The email schedule itself (frequency, time) is not in the export.
+- `email.recipientsFromResults[].FIELD_NAME` is the result field whose value receives the mail;
+  `email.fields` is already HTML-unescaped.
+- **Private search:** `isPublic: false` with `audience.allRoles: false` and no `roleIds`. The RESTlet
+  describe answers `{"error":"That search or mass update does not exist."}` for a private search
+  another user owns, but the SDF export still works — so this is also the way to inspect one.
+- A search with a role-restricted audience has not been observed yet: `roleIds` is parsed from
+  `FIELD_AUDIENCE_ROLES` on a comma/space split. Check `audience.rawFields` the first time one
+  shows up and fix the script if the separator differs.
+- Searches installed by a locked bundle fail the import with "cannot download the XML file for
+  this object because it is locked" — no export route; use the UI.
+
+**This is read-only. Do not edit the `<definition>` and deploy it.** The checksum prefix is
+validated server-side over the compressed bytes with a key NetSuite holds; an edited blob fails
+`project:deploy` with "The object definition does not match given check sum", and no local digest
+reproduces it (verified 2026-10-15, release 2026.2.13 — recompressing even the identical XML is
+rejected). Writes to Available Filters, Audience and Email stay in the UI (next section); after a
+UI write, rerun the full describe to confirm what persisted.
+
+SuiteQL side note: the `savedsearch` table has `id, scriptid, name, owner, ispublic, isinactive`
+(no title or record type) and stores `scriptid` **upper-case**, so filter with
+`UPPER(scriptid) = UPPER('customsearch_…')` or by `id`.
 
 ## UI-only flags: Available for Reminders / Dashboard View / Show in Menu (verified 2026-08-07)
 
