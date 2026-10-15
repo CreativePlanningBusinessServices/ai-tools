@@ -6,7 +6,7 @@ Claude Code skills and NetSuite scripts maintained by Creative Planning.
 
 | Path | What it is |
 |---|---|
-| `skills/netsuite-saved-search` | Run, create, edit, describe and delete saved searches |
+| `skills/netsuite-saved-search` | Run, create, edit, describe and delete saved searches; decode a SuiteCloud export to read a search's Available Filters, Audience and email settings |
 | `skills/netsuite-file-cabinet` | Read, download, list, create, edit and delete File Cabinet files |
 | `skills/netsuite-mr-driver` | Trigger Map/Reduce scripts and poll their progress |
 | `skills/netsuite-email-designer` | Preview, edit, save and create email templates, with an email-client compatibility check |
