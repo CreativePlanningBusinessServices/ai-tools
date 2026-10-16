@@ -1,0 +1,37 @@
+<?xml version="1.0"?><!DOCTYPE pdf PUBLIC "-//big.faceless.org//report" "report-1.1.dtd">
+<pdf>
+<head>
+	<link name="NotoSans" type="font" subtype="truetype" src="file:///fonts/NotoSans-Regular.ttf" src-bold="file:///fonts/NotoSans-Bold.ttf" bytes="2" />
+    <macrolist>
+        <macro id="nlheader">
+            <table class="header" style="width: 100%;"><tr>
+	<td width="50%"><strong>Header Company Name</strong><br />100 Main St. - Anytown, KS 00000<br />Phone: 555-0100&nbsp; &nbsp;Fax: 555-0101</td>
+	<td align="right" width="50%"><barcode codetype="code128" value="INV60699"/></td>
+	</tr></table>
+        </macro>
+        <macro id="nlfooter">
+            <table class="footer" style="width: 100%;"><tr>
+	<td align="right">Footer Marker <pagenumber/> of <totalpages/></td>
+	</tr></table>
+        </macro>
+    </macrolist>
+    <style type="text/css">* {
+		font-family: NotoSans, sans-serif;
+		}
+		table { font-size: 9pt; table-layout: fixed; }
+		th { font-weight: bold; background-color: #e3e3e3; }
+</style>
+</head>
+<body header="nlheader" footer="nlfooter" size="Letter" padding="0.5in 0.5in 0.5in 0.5in">
+<table style="width: 100%; margin-top: 10px;"><tr>
+	<td><b>INVOICE #</b> INV60699</td>
+	<td><b>DATE</b> 01/15/2026</td>
+	</tr></table>
+<pbr/>
+<table style="width: 100%;"><tr>
+	<td><b>Item</b></td><td align="right"><b>Amount</b></td>
+	</tr>
+	<tr><td>Consulting&nbsp;Services</td><td align="right">$1,000.00</td></tr>
+	<tr><td>Copy &amp; Print</td><td align="right">$25.00</td></tr></table>
+</body>
+</pdf>
