@@ -73,6 +73,25 @@ assert_eq "$status" 1 "malformed XML exits 1"
 assert_contains "$message" "bfo-to-html" "the failure message names the script"
 assert_contains "$message" "parser error" "the failure message carries xsltproc's error"
 
+# Sibling paths: mixed children, comments and PIs
+cat > "$tmp/mixed.xml" <<'XML'
+<pdf><head/><body>
+<p>first</p><table><thead><tr><th>H</th><td>T1</td><td>T2</td></tr></thead><tr/><!-- c --><?pi x?><tr><td>row</td></tr></table>
+<table><tr><td>text <span>a</span> and <span>b</span> &aacute;</td></tr></table><pbr/><table/>
+</body></pdf>
+XML
+bash "$twin_script" "$tmp/mixed.xml" "$tmp/mixed.html"
+mixed="$(cat "$tmp/mixed.html")"
+assert_contains "$mixed" 'data-bfo="/pdf/body/table[1]/tr[2]"' "a comment between rows does not shift the next row index"
+assert_not_contains "$mixed" 'data-bfo="/pdf/body/table[1]/tr[3]"' "a comment and a PI between rows add no phantom row"
+assert_contains "$mixed" 'data-bfo="/pdf/body/table[1]/thead[1]/tr[1]/th[1]"' "th has its own index in a mixed row"
+assert_contains "$mixed" 'data-bfo="/pdf/body/table[1]/thead[1]/tr[1]/td[1]"' "td[1] after a th"
+assert_contains "$mixed" 'data-bfo="/pdf/body/table[1]/thead[1]/tr[1]/td[2]"' "td[2] after a th"
+assert_contains "$mixed" 'data-bfo="/pdf/body/table[2]/tr[1]/td[1]/span[2]"' "the second span after text is span[2]"
+assert_contains "$mixed" 'data-bfo="/pdf/body/table[3]"' "a table after p and pbr keeps counting tables"
+assert_contains "$mixed" 'data-bfo="/pdf/body/pbr[1]"' "pbr carries its path"
+assert_contains "$mixed" "&amp;aacute;" "an unmapped entity stays literal"
+
 # A ~3 MB merged document converts in under 15 s.
 {
   sed -n '1,/<\/style>/p' "$fixtures/merged.xml"
@@ -91,6 +110,23 @@ bash "$twin_script" "$tmp/big.xml" "$tmp/big.html"; status=$?
 elapsed=$((SECONDS - start_seconds))
 assert_eq "$status" 0 "the 3 MB fixture converts"
 if [ "$elapsed" -lt 15 ]; then pass "the 3 MB fixture converts in under 15 s (${elapsed}s)"; else fail "the 3 MB fixture took ${elapsed}s"; fi
+
+# A mixed parent (thead + many tr, many p + table) also converts quickly and keeps exact indexes.
+{
+  echo '<pdf><head/><body><p>x</p><table><thead><tr><th>H</th></tr></thead>'
+  for row in $(seq 1 25000); do echo "<tr><td>Row $row with some filler text to bulk the file up</td></tr>"; done
+  echo '</table>'
+  for block in $(seq 1 3000); do echo "<p>para $block</p><table><tr><td>t</td></tr></table>"; done
+  echo '</body></pdf>'
+} > "$tmp/mixed-big.xml"
+start_seconds=$SECONDS
+bash "$twin_script" "$tmp/mixed-big.xml" "$tmp/mixed-big.html"; status=$?
+elapsed=$((SECONDS - start_seconds))
+assert_eq "$status" 0 "the mixed-parent fixture converts"
+if [ "$elapsed" -lt 15 ]; then pass "the mixed-parent fixture converts in under 15 s (${elapsed}s)"; else fail "the mixed-parent fixture took ${elapsed}s"; fi
+mixed_big="$(cat "$tmp/mixed-big.html")"
+assert_contains "$mixed_big" 'data-bfo="/pdf/body/table[1]/tr[25000]"' "the last of 25000 rows after a thead is tr[25000]"
+assert_contains "$mixed_big" 'data-bfo="/pdf/body/table[3001]"' "table[3001] after interleaved p elements"
 
 # Banner
 printf '<html><body class="x"><p>hi</p></body></html>' > "$tmp/banner.html"

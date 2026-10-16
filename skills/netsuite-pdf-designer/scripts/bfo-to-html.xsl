@@ -5,6 +5,8 @@
 
   <xsl:strip-space elements="table thead tbody tfoot tr ul ol"/>
 
+  <xsl:key name="same-name" match="*" use="concat(generate-id(..), '|', name())"/>
+
   <xsl:variable name="upper" select="'ABCDEFGHIJKLMNOPQRSTUVWXYZ'"/>
   <xsl:variable name="lower" select="'abcdefghijklmnopqrstuvwxyz'"/>
 
@@ -137,15 +139,19 @@
 
   <xsl:template match="link"/>
 
-  <!-- Context = the parent element. When every child is an element of one name (a table's rows) xsl:number would scan the
-       preceding siblings of each child, which is quadratic, so position() stands in for the same-name index. -->
+  <!-- Context = the parent element. xsl:number scans the preceding siblings of each child, which is quadratic for a long run of rows.
+       The children named like the middle element are usually one unbroken run (a table's rows, maybe after a thead), so when they are,
+       position() minus the run's offset is their same-name index; other children fall back to xsl:number. -->
   <xsl:template name="children">
     <xsl:param name="path"/>
-    <xsl:variable name="uniform" select="not(text()) and not(*[name() != name(current()/*[1])])"/>
+    <xsl:variable name="pivot" select="name(*[ceiling(count(*) div 2)])"/>
+    <xsl:variable name="pivot-nodes" select="key('same-name', concat(generate-id(), '|', $pivot))"/>
+    <xsl:variable name="pivot-start" select="count($pivot-nodes[1]/preceding-sibling::node())"/>
+    <xsl:variable name="pivot-contiguous" select="$pivot != '' and count($pivot-nodes[last()]/preceding-sibling::node()) - $pivot-start + 1 = count($pivot-nodes)"/>
     <xsl:for-each select="node()">
       <xsl:apply-templates select=".">
         <xsl:with-param name="parent-path" select="$path"/>
-        <xsl:with-param name="same-name-index" select="number($uniform) * position()"/>
+        <xsl:with-param name="same-name-index" select="number($pivot-contiguous and name() = $pivot) * (position() - $pivot-start)"/>
       </xsl:apply-templates>
     </xsl:for-each>
   </xsl:template>

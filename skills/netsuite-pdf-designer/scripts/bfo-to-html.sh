@@ -30,7 +30,7 @@ jq -r '{nbsp:160,copy:169,reg:174,trade:8482,mdash:8212,ndash:8211,bull:8226,hel
   "$data_file" > "$work/prolog.xml" || { echo "bfo-to-html: $data_file is not usable" >&2; exit 2; }
 
 # The DOCTYPE names an external DTD, so it goes; the entity prolog takes its place.
-awk 'function blanks(count) { return sprintf("%" count "s", "") }
+awk '
   NR == 1 { while ((getline prolog < prologFile) > 0) print prolog }
   !inRoot {
     while (match($0, /<\?xml[^>]*\?>|<!DOCTYPE[^>]*>/)) $0 = substr($0, 1, RSTART - 1) substr($0, RSTART + RLENGTH)
