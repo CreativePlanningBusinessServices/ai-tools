@@ -161,7 +161,7 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "../fi
     const requireRecordRef = (value) => {
         const reference = typeof value === 'object' && value !== null ? value : {};
         if (typeof reference.type !== 'string' || reference.type.trim() === '' || reference.id === undefined) {
-            throw new index_js_1.ValidationError('record {type, id} is required, e.g. {"type": "invoice", "id": 2801559}');
+            throw new index_js_1.ValidationError('record {type, id} is required, e.g. {"type": "invoice", "id": 456}');
         }
         return { type: reference.type.trim(), id: requireId(reference.id) };
     };
