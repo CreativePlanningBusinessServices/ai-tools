@@ -82,8 +82,9 @@ failures pass through with their message, except `UNEXPECTED_ERROR` during a ren
 ### GET `?id=<n>` or `?scriptid=<CUSTTMPL_…|STDTMPL…>` — describe + source
 
 ```bash
-rl --method GET --param id=123 > "$SP/get-123.json"
-jq -j .source "$SP/get-123.json" > "$SP/pdf-base-123.xml"     # -j: no added newline
+rl --method GET --param id=123 > "$SP/get-123.json" \
+  && { jq -e 'has("error") | not' "$SP/get-123.json" >/dev/null || { jq -r .error "$SP/get-123.json"; false; }; } \
+  && jq -j .source "$SP/get-123.json" > "$SP/pdf-base-123.xml"     # -j: no added newline
 ```
 
 ```json
@@ -105,7 +106,7 @@ rl --method POST --data '{"printType": "STATEMENT", "entityId": 789, "formId": 2
   the SuiteScript record type (`CustInvc` → `invoice`, `CustCred` → `creditmemo`, `SalesOrd` →
   `salesorder`, `PurchOrd` → `purchaseorder`, `CashSale` → `cashsale`, `Estimate` → `estimate`,
   `VendBill` → `vendorbill`, `Check` → `check`). `source` makes it a draft; `templateId` alongside
-  it is only echoed.
+  it is accepted and ignored.
 - **Statement** (saved only): `entityId` (customer) and `formId`, the id of an existing statement
   form that prints with the template, are required; `statementDate`, `startDate`
   (`MM/DD/YYYY` strings) and `openTransactionsOnly` (boolean) are optional. The form decides the
@@ -161,13 +162,15 @@ the backup file's contents (download it with the netsuite-file-cabinet skill) th
    so instead of calling the RESTlet. Validate and save still work for them.
 4. **Preview.** `POST` (saved mode first), then write the PDF and the HTML twin:
    ```bash
-   rl --method POST --data '{"templateId": 123, "record": {"type": "invoice", "id": 456}}' > "$SP/render-123.json"
-   jq -e 'has("error") | not' "$SP/render-123.json" > /dev/null || jq -r .error "$SP/render-123.json"
-   jq -j .pdf "$SP/render-123.json" | base64 -D > "$SP/pdf-preview-123.pdf"
-   jq -j .xml "$SP/render-123.json" > "$SP/merged-123.xml"
+   rl --method POST --data '{"templateId": 123, "record": {"type": "invoice", "id": 456}}' > "$SP/render-123.json" \
+     && { jq -e 'has("error") | not' "$SP/render-123.json" >/dev/null || { jq -r .error "$SP/render-123.json"; false; }; } \
+     && jq -j .pdf "$SP/render-123.json" | base64 -D > "$SP/pdf-preview-123.pdf" \
+     && jq -j .xml "$SP/render-123.json" > "$SP/merged-123.xml"
    bash "$PD/scripts/bfo-to-html.sh" "$SP/merged-123.xml" "$SP/pdf-preview-123.html"
    bash "$PD/scripts/preview-banner.sh" "$SP/pdf-preview-123.html" "<template name>" "<alias>" "<sample, e.g. invoice INV123>" saved
    ```
+   Stop on an `{error}`: report it and send nothing. If `bfo-to-html.sh` fails, still send the PDF
+   and report the error.
    Send **both** files together with SendUserFile (render display) as the **last** action of the
    turn, after the explanatory text, so the cards sit at the bottom of the chat. The PDF is the
    real output; the HTML twin is for clicking and annotating (every element carries a `data-bfo`
@@ -181,8 +184,9 @@ the backup file's contents (download it with the netsuite-file-cabinet skill) th
    ```bash
    bash "$PD/scripts/pdf-validate.sh" "$SP/pdf-draft-123.xml"              # fix every ERROR before rendering
    jq -n --rawfile source "$SP/pdf-draft-123.xml" '{source: $source, templateId: 123, record: {type: "invoice", id: 456}}' > "$SP/draft.json"
-   rl --method POST --data @"$SP/draft.json" > "$SP/render-123.json"
-   jq -j .xml "$SP/render-123.json" > "$SP/merged-123.xml"
+   rl --method POST --data @"$SP/draft.json" > "$SP/render-123.json" \
+     && { jq -e 'has("error") | not' "$SP/render-123.json" >/dev/null || { jq -r .error "$SP/render-123.json"; false; }; } \
+     && jq -j .xml "$SP/render-123.json" > "$SP/merged-123.xml"
    bash "$PD/scripts/pdf-validate.sh" --merged "$SP/merged-123.xml"        # markup FreeMarker produced
    ```
    then PDF, twin and banner (mode `draft`) as in step 4, and re-send both. Say in one line what
@@ -219,8 +223,9 @@ the backup file's contents (download it with the netsuite-file-cabinet skill) th
    targets any other, when the dry run shows anything but `Update` of that one scriptid, or when
    the draft has a validator ERROR. `stage` refuses when the template changed in NetSuite since the
    base was read: re-read it, merge, and try again (`--force` only if the user says to overwrite).
-   Import and deploy can each take a minute or more; give the Bash calls a long timeout. After a matching `cmp`, render once in
-   saved mode as the confirmation preview, then report the backup path and the record link
+   Import and deploy can each take a minute or more; give the Bash calls a long timeout. After a matching `cmp`, copy the draft over the base
+   (`cp "$SP/pdf-draft-<id>.xml" "$SP/pdf-base-<id>.xml"`; the draft is now the base), render once
+   in saved mode as the confirmation preview, then report the backup path and the record link
    (step 9). A failed deploy leaves the template unchanged; report the error and the backup.
 7. **Which template gets the result.** When the user hands you an existing custom template (URL,
    id, scriptid or name) and asks to change, redo or rebuild it, the result goes back onto **that
@@ -232,6 +237,8 @@ the backup file's contents (download it with the netsuite-file-cabinet skill) th
    totals) or `references/starter-statement.xml` (the same frame over `statement.lines` with the
    aging row), or from a copy of an existing template. Work in `$SP/pdf-draft-new.xml`, preview
    transaction drafts against a sample (step 5), then, after an explicit yes naming the account:
+   Find the auth id and `init` the project as in step 6 (production only when the user names it for
+   this create).
    ```bash
    bash "$PD/scripts/sdf-template.sh" create "$PROJ" custtmpl_cp_example_invoice "$SP/pdf-draft-new.xml" --title "Example Invoice" --printtype TRANSACTION --trantype CUSTINVC
    bash "$PD/scripts/sdf-template.sh" deploy "$PROJ" custtmpl_cp_example_invoice --expect Create --authid <authid>
