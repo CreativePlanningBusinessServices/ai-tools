@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Test double for suitecloud used by sdf-template.test.sh. Configured through:
+#   FAKE_SUITECLOUD_LOG         file that receives one "<cwd> | <argv>" line per call
+#   FAKE_SUITECLOUD_IMPORT_DIR  holds <scriptid>.xml and <scriptid>.template.xml served by object:import
+#   FAKE_SUITECLOUD_DRYRUN      file whose contents project:deploy --dryrun prints
+echo "$PWD | $*" >> "${FAKE_SUITECLOUD_LOG:?}"
+case "$1" in
+  account:manageauth)
+    printf '\033[2K\033[1G'
+    echo '6967599_SB2 | Administrator @ Creative Planning LLC - SB2 (ERP 6/5/26) | 6967599-sb2.app.netsuite.com'
+    echo '6967599 | Administrator @ Creative Planning LLC | 6967599.app.netsuite.com' ;;
+  object:import)
+    scriptid=""; destination=""
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --scriptid) scriptid="$2"; shift ;;
+        --destinationfolder) destination="$2"; shift ;;
+      esac
+      shift
+    done
+    [ -d ".$destination" ] || { echo "destination folder missing" >&2; exit 1; }
+    for suffix in xml template.xml; do
+      source_file="$FAKE_SUITECLOUD_IMPORT_DIR/$scriptid.$suffix"
+      [ -f "$source_file" ] || { echo "no such object $scriptid" >&2; exit 1; }
+      cp "$source_file" ".$destination/$scriptid.$suffix"
+    done
+    echo "The following objects have been imported:" ;;
+  project:deploy)
+    case " $* " in
+      *" --dryrun "*) cat "${FAKE_SUITECLOUD_DRYRUN:?}" ;;
+      *) echo "Deployed" ;;
+    esac ;;
+  *) echo "fake suitecloud: unexpected call: $*" >&2; exit 2 ;;
+esac
