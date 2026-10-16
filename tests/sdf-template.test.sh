@@ -78,6 +78,41 @@ assert_contains "$output" "ERROR" "stage passes the validator's ERROR lines thro
 run_helper stage "$project" "$scriptid" "$tmp/draft.xml"
 assert_eq "$status" 2 "stage without --base is a usage error"
 
+# a refused stage leaves nothing deployable
+run_helper stage "$project" "$scriptid" "$tmp/draft.xml" --base "$tmp/other-base.xml"
+assert_eq "$(grep -c '<path>' "$project/deploy.xml")" 0 "a base-mismatch refusal empties deploy.xml"
+run_helper stage "$project" "$scriptid" "$fixtures/fm-unclosed-if.xml" --base "$tmp/base.xml"
+assert_eq "$(grep -c '<path>' "$project/deploy.xml")" 0 "a validator refusal empties deploy.xml"
+
+# scriptid validation: uppercase is fine, anything path-like or unescaped is refused
+for bad_scriptid in ../x custtmpl_a/b "custtmpl_a b" 'custtmpl_a"b' custtmpl_; do
+  run_helper stage "$project" "$bad_scriptid" "$tmp/draft.xml" --base "$tmp/base.xml"
+  assert_eq "$status" 1 "stage refuses scriptid '$bad_scriptid'"
+  run_helper create "$project" "$bad_scriptid" "$tmp/draft.xml" --title T --printtype TRANSACTION
+  assert_eq "$status" 1 "create refuses scriptid '$bad_scriptid'"
+  run_helper import "$project" "$bad_scriptid"
+  assert_eq "$status" 1 "import refuses scriptid '$bad_scriptid'"
+done
+run_helper stage "$project" CUSTTMPL_ACS_TAX_INV_WITH_LINK "$tmp/draft.xml" --base "$tmp/base.xml"
+assert_eq "$status" 0 "stage accepts an uppercase scriptid"
+run_helper create "$project" CUSTTMPL_UPPER "$tmp/draft.xml" --title T --printtype TRANSACTION
+assert_eq "$status" 0 "create accepts an uppercase scriptid"
+[ -f "$project/Objects/Templates/custtmpl_upper.xml" ] && pass "create lowercases the file name" || fail "create lowercases the file name"
+
+# init on existing directories
+run_helper init 6967599_SB2 "$project"
+assert_eq "$status" 0 "init is repeatable for the same project and authid"
+run_helper init 6967599 "$project"
+assert_eq "$status" 1 "init refuses an existing project with another authid"
+mkdir -p "$tmp/real-sdf-repo/Objects/Templates"
+echo '<manifest projecttype="ACCOUNTCUSTOMIZATION"><projectname>other</projectname></manifest>' > "$tmp/real-sdf-repo/manifest.xml"
+echo '{ "defaultAuthId": "6967599_SB2" }' > "$tmp/real-sdf-repo/project.json"
+run_helper init 6967599_SB2 "$tmp/real-sdf-repo"
+assert_eq "$status" 1 "init refuses a non-empty directory that is not a designer project"
+run_helper stage "$tmp/real-sdf-repo" "$scriptid" "$tmp/draft.xml" --base "$tmp/base.xml"
+assert_eq "$status" 1 "stage refuses an SDF repo whose manifest is not the scratch project"
+assert_contains "$output" "not a project made by" "stage explains the rejected project"
+
 # create
 run_helper create "$project" custtmpl_cp_x "$tmp/draft.xml" --title 'Fish & "Chips" <1>' --printtype TRANSACTION --trantype CUSTINVC
 assert_eq "$status" 0 "create exits 0"
@@ -108,34 +143,63 @@ real_deploys() { grep 'project:deploy' "$FAKE_SUITECLOUD_LOG" | grep -vc -- '--d
 printf '%s\n' '✔ Step 6: CUSTOM_OBJECT_VALIDATION --- custtmpl_cp_x (advancedpdftemplate)' \
   '✔ Step 19: CUSTOM_OBJECT_UPDATE --- custtmpl_cp_x (advancedpdftemplate)' > "$FAKE_SUITECLOUD_DRYRUN"
 : > "$FAKE_SUITECLOUD_LOG"
-run_helper deploy "$project" custtmpl_cp_x --expect Update
+run_helper deploy "$project" custtmpl_cp_x --expect Update --authid 6967599_SB2
 assert_eq "$status" 0 "deploy with a matching dry run exits 0"
 assert_contains "$output" "6967599_SB2" "deploy prints the project's authid"
 assert_eq "$(real_deploys)" 1 "deploy runs the real project:deploy once"
 
 printf '%s\n' '✔ Step 19: Update object -- custtmpl_cp_x' > "$FAKE_SUITECLOUD_DRYRUN"
 : > "$FAKE_SUITECLOUD_LOG"
-run_helper deploy "$project" custtmpl_cp_x --expect Update
+run_helper deploy "$project" custtmpl_cp_x --expect Update --authid 6967599_SB2
 assert_eq "$status" 0 "deploy accepts the older 'Update object --' wording"
 
 printf '%s\n' '✔ Step 19: CUSTOM_OBJECT_UPDATE --- custtmpl_cp_x (advancedpdftemplate)' \
   '✔ Step 20: CUSTOM_OBJECT_UPDATE --- custtmpl_other (advancedpdftemplate)' > "$FAKE_SUITECLOUD_DRYRUN"
 : > "$FAKE_SUITECLOUD_LOG"
-run_helper deploy "$project" custtmpl_cp_x --expect Update
+run_helper deploy "$project" custtmpl_cp_x --expect Update --authid 6967599_SB2
 assert_eq "$status" 1 "deploy refuses a dry run naming a second object"
 assert_eq "$(real_deploys)" 0 "a second object never reaches the real deploy"
 
 printf '%s\n' '✔ Step 19: CUSTOM_OBJECT_CREATION --- custtmpl_cp_x (advancedpdftemplate)' > "$FAKE_SUITECLOUD_DRYRUN"
 : > "$FAKE_SUITECLOUD_LOG"
-run_helper deploy "$project" custtmpl_cp_x --expect Update
+run_helper deploy "$project" custtmpl_cp_x --expect Update --authid 6967599_SB2
 assert_eq "$status" 1 "deploy refuses Create when Update was expected"
 assert_eq "$(real_deploys)" 0 "a wrong verb never reaches the real deploy"
 assert_eq "$(deploy_log_count)" 1 "only the dry run was invoked"
 
 printf '%s\n' '✔ Step 1: PROJECT_VALIDATION' > "$FAKE_SUITECLOUD_DRYRUN"
 : > "$FAKE_SUITECLOUD_LOG"
-run_helper deploy "$project" custtmpl_cp_x --expect Update
+run_helper deploy "$project" custtmpl_cp_x --expect Update --authid 6967599_SB2
 assert_eq "$status" 1 "deploy refuses an empty object preview"
 assert_eq "$(real_deploys)" 0 "an empty preview never reaches the real deploy"
+
+
+# authid guard
+printf '%s\n' '✔ Step 19: CUSTOM_OBJECT_UPDATE --- custtmpl_cp_x (advancedpdftemplate)' > "$FAKE_SUITECLOUD_DRYRUN"
+: > "$FAKE_SUITECLOUD_LOG"
+run_helper deploy "$project" custtmpl_cp_x --expect Update --authid 6967599
+assert_eq "$status" 1 "deploy refuses when project.json targets another account"
+assert_contains "$output" "project.json targets 6967599_SB2, not 6967599" "deploy names both account ids"
+assert_eq "$(deploy_log_count)" 0 "an authid mismatch never calls project:deploy"
+run_helper deploy "$project" custtmpl_cp_x --expect Update
+assert_eq "$status" 2 "deploy without --authid is a usage error"
+
+# prefix scriptids stay separate; project paths may contain spaces
+printf '%s\n' '✔ Step 19: CUSTOM_OBJECT_UPDATE --- custtmpl_cp_x2 (advancedpdftemplate)' > "$FAKE_SUITECLOUD_DRYRUN"
+: > "$FAKE_SUITECLOUD_LOG"
+run_helper deploy "$project" custtmpl_cp_x --expect Update --authid 6967599_SB2
+assert_eq "$status" 1 "deploy refuses custtmpl_cp_x2 when custtmpl_cp_x was expected"
+assert_eq "$(real_deploys)" 0 "a prefix-only match never reaches the real deploy"
+
+spaced_project="$tmp/my project"
+run_helper init 6967599_SB2 "$spaced_project"
+assert_eq "$status" 0 "init works in a path with a space"
+run_helper stage "$spaced_project" "$scriptid" "$tmp/draft.xml" --base "$tmp/base.xml"
+assert_eq "$status" 0 "stage works in a path with a space"
+printf '%s\n' "✔ Step 19: CUSTOM_OBJECT_UPDATE --- $scriptid (advancedpdftemplate)" > "$FAKE_SUITECLOUD_DRYRUN"
+: > "$FAKE_SUITECLOUD_LOG"
+run_helper deploy "$spaced_project" CUSTTMPL_ACS_TAX_INV_WITH_LINK --expect Update --authid 6967599_SB2
+assert_eq "$status" 0 "deploy works in a spaced path with an uppercase scriptid"
+assert_eq "$(real_deploys)" 1 "the spaced project reached the real deploy"
 
 finish

@@ -7,7 +7,7 @@
 #   sdf-template.sh stage  <project-dir> <scriptid> <draft.xml> --base <base-source> [--force]
 #   sdf-template.sh create <project-dir> <scriptid> <draft.xml> --title <t> --printtype <TRANSACTION|STATEMENT|…>
 #                          [--trantype <CUSTINVC…>] [--standard <STDTMPL…>]
-#   sdf-template.sh deploy <project-dir> <scriptid> --expect <Update|Create>
+#   sdf-template.sh deploy <project-dir> <scriptid> --expect <Update|Create> --authid <authid>
 # exit 0 ok, 1 refused/failed (reason on stderr), 2 usage
 set -uo pipefail
 
@@ -21,7 +21,7 @@ usage: sdf-template.sh init   <authid> <project-dir>
        sdf-template.sh import <project-dir> <scriptid>
        sdf-template.sh stage  <project-dir> <scriptid> <draft.xml> --base <base-source> [--force]
        sdf-template.sh create <project-dir> <scriptid> <draft.xml> --title <t> --printtype <type> [--trantype <t>] [--standard <STDTMPL…>]
-       sdf-template.sh deploy <project-dir> <scriptid> --expect <Update|Create>
+       sdf-template.sh deploy <project-dir> <scriptid> --expect <Update|Create> --authid <authid>
 USAGE
   exit 2
 }
@@ -43,7 +43,8 @@ main() {
 command_stage() {
   [ $# -ge 3 ] || usage
   local project_dir="$1" scriptid base_file="" force=0 draft_file="$3"
-  scriptid="$(normalize_scriptid "$2")"; shift 3
+  scriptid="$(normalize_scriptid "$2")" || exit 1
+  shift 3
   while [ $# -gt 0 ]; do
     case "$1" in
       --base) [ $# -ge 2 ] || usage; base_file="$2"; shift ;;
@@ -54,16 +55,11 @@ command_stage() {
   done
   [ -n "$base_file" ] || usage
   require_project "$project_dir"
+  # A refusal below must leave nothing deployable behind.
+  write_deploy_xml "$project_dir" || exit 1
   [ -r "$draft_file" ] || refuse "cannot read draft $draft_file"
   [ -r "$base_file" ] || refuse "cannot read base $base_file"
-
-  local validator_output validator_status
-  validator_output="$(bash "$validator" "$draft_file" 2>&1)"; validator_status=$?
-  if [ "$validator_status" -ne 0 ]; then
-    printf '%s\n' "$validator_output" | grep '^ERROR' >&2
-    [ "$validator_status" -eq 1 ] || printf '%s\n' "$validator_output" >&2
-    refuse "the draft did not pass pdf-validate.sh; nothing was staged"
-  fi
+  validate_draft "$draft_file" staged
 
   import_template "$project_dir" "$scriptid" || exit 1
   local template_file="$project_dir/$templates_folder/$scriptid.template.xml"
@@ -71,7 +67,7 @@ command_stage() {
     refuse "$scriptid changed in NetSuite since the draft's base was read; re-read it and merge, or pass --force to overwrite"
   fi
   cp "$draft_file" "$template_file" || exit 1
-  write_deploy_xml "$project_dir" "$scriptid"
+  write_deploy_xml "$project_dir" "$scriptid" || exit 1
   echo "staged $scriptid in $project_dir"
 }
 
@@ -92,16 +88,10 @@ command_create() {
   done
   [ -n "$title" ] && [ -n "$printtype" ] || usage
   require_project "$project_dir"
+  write_deploy_xml "$project_dir" || exit 1
   [ -r "$draft_file" ] || refuse "cannot read draft $draft_file"
-  scriptid="$(normalize_scriptid "$scriptid")"
-  case "$scriptid" in custtmpl_*) ;; *) refuse "scriptid must start with custtmpl_" ;; esac
-
-  local validator_output validator_status
-  validator_output="$(bash "$validator" "$draft_file" 2>&1)"; validator_status=$?
-  if [ "$validator_status" -ne 0 ]; then
-    printf '%s\n' "$validator_output" | grep '^ERROR' >&2
-    refuse "the draft did not pass pdf-validate.sh; nothing was created"
-  fi
+  scriptid="$(normalize_scriptid "$scriptid")" || exit 1
+  validate_draft "$draft_file" created
 
   local trantype_line=""
   [ -z "$trantype" ] || trantype_line="  <trantype>$(xml_escape "$trantype")</trantype>"
@@ -115,30 +105,34 @@ command_create() {
     printf '  <title>%s</title>\n' "$(xml_escape "$title")"
     [ -z "$trantype_line" ] || printf '%s\n' "$trantype_line"
     printf '</advancedpdftemplate>\n'
-  } > "$project_dir/$templates_folder/$scriptid.xml"
+  } > "$project_dir/$templates_folder/$scriptid.xml" || exit 1
   cp "$draft_file" "$project_dir/$templates_folder/$scriptid.template.xml" || exit 1
-  write_deploy_xml "$project_dir" "$scriptid"
+  write_deploy_xml "$project_dir" "$scriptid" || exit 1
   echo "created $scriptid in $project_dir"
 }
 
 command_deploy() {
-  [ $# -ge 4 ] || usage
-  local project_dir="$1" scriptid expected_verb=""
-  scriptid="$(normalize_scriptid "$2")"; shift 2
+  [ $# -ge 2 ] || usage
+  local project_dir="$1" scriptid expected_verb="" intended_authid=""
+  scriptid="$(normalize_scriptid "$2")" || exit 1
+  shift 2
   while [ $# -gt 0 ]; do
     case "$1" in
       --expect) [ $# -ge 2 ] || usage; expected_verb="$2"; shift ;;
+      --authid) [ $# -ge 2 ] || usage; intended_authid="$2"; shift ;;
       *) usage ;;
     esac
     shift
   done
   case "$expected_verb" in Update|Create) ;; *) usage ;; esac
+  [ -n "$intended_authid" ] || usage
   require_project "$project_dir"
 
   local authid
   authid="$(jq -r '.defaultAuthId // empty' "$project_dir/project.json")"
   [ -n "$authid" ] || refuse "project.json has no defaultAuthId"
   echo "deploying with auth id $authid"
+  [ "$authid" = "$intended_authid" ] || refuse "project.json targets $authid, not $intended_authid; nothing was deployed"
 
   local preview preview_status
   preview="$(cd "$project_dir" && suitecloud project:deploy --dryrun 2>&1)"; preview_status=$?
@@ -166,8 +160,12 @@ command_init() {
   if ! list_auth_ids | grep -Fxq "$authid"; then
     refuse "$authid is not a SuiteCloud auth id (see: suitecloud account:manageauth --list)"
   fi
+  if [ -e "$project_dir" ] && [ -n "$(ls -A "$project_dir" 2>/dev/null)" ]; then
+    is_designer_project "$project_dir" && [ "$(jq -r '.defaultAuthId // empty' "$project_dir/project.json" 2>/dev/null)" = "$authid" ] \
+      || refuse "$project_dir is not empty and is not a cp-pdf-designer project for $authid"
+  fi
   mkdir -p "$project_dir/$templates_folder" || exit 1
-  printf '{ "defaultAuthId": "%s" }\n' "$authid" > "$project_dir/project.json"
+  printf '{ "defaultAuthId": "%s" }\n' "$authid" > "$project_dir/project.json" || exit 1
   cat > "$project_dir/manifest.xml" <<'MANIFEST'
 <manifest projecttype="ACCOUNTCUSTOMIZATION">
   <projectname>cp-pdf-designer</projectname>
@@ -180,15 +178,17 @@ command_init() {
   </dependencies>
 </manifest>
 MANIFEST
-  echo "module.exports = { defaultProjectFolder: '.', commands: {} };" > "$project_dir/suitecloud.config.js"
-  write_deploy_xml "$project_dir"
+  echo "module.exports = { defaultProjectFolder: '.', commands: {} };" > "$project_dir/suitecloud.config.js" || exit 1
+  write_deploy_xml "$project_dir" || exit 1
   echo "initialized $project_dir for $authid"
 }
 
 command_import() {
   [ $# -eq 2 ] || usage
   require_project "$1"
-  import_template "$1" "$(normalize_scriptid "$2")" || exit 1
+  local scriptid
+  scriptid="$(normalize_scriptid "$2")" || exit 1
+  import_template "$1" "$scriptid" || exit 1
 }
 
 import_template() {
@@ -215,7 +215,22 @@ write_deploy_xml() {
 }
 
 require_project() {
-  [ -f "$1/project.json" ] && [ -d "$1/$templates_folder" ] || refuse "$1 is not a project made by 'sdf-template.sh init'"
+  is_designer_project "$1" || refuse "$1 is not a project made by 'sdf-template.sh init'"
+}
+
+is_designer_project() {
+  [ -f "$1/project.json" ] && [ -d "$1/$templates_folder" ] && [ -f "$1/manifest.xml" ] \
+    && grep -q '<projectname>cp-pdf-designer</projectname>' "$1/manifest.xml"
+}
+
+# validate_draft <file> <staged|created>: refuses with the validator's full output unless it exits 0.
+validate_draft() {
+  local draft_file="$1" outcome="$2" validator_output validator_status
+  validator_output="$(bash "$validator" "$draft_file" 2>&1)"; validator_status=$?
+  if [ "$validator_status" -ne 0 ]; then
+    printf '%s\n' "$validator_output" >&2
+    refuse "the draft did not pass pdf-validate.sh; nothing was $outcome"
+  fi
 }
 
 list_auth_ids() {
@@ -225,7 +240,17 @@ list_auth_ids() {
 strip_terminal_codes() { sed $'s/\x1b\\[[0-9;]*[A-Za-z]//g'; }
 # Command substitution drops trailing newlines, so a base saved with `jq -r` (which appends one) still matches.
 strip_carriage_returns() { tr -d '\r' < "$1"; }
-normalize_scriptid() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
+# Prints the lowercase scriptid; it becomes a file name and XML text, so anything else is refused.
+normalize_scriptid() {
+  local scriptid
+  scriptid="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
+  case "$scriptid" in
+    custtmpl_*[!a-z0-9_]* | custtmpl_ | *$'\n'*) ;;
+    custtmpl_*) printf '%s' "$scriptid"; return 0 ;;
+  esac
+  echo "sdf-template: '$1' is not a valid template scriptid (custtmpl_ followed by letters, digits, underscores)" >&2
+  return 1
+}
 xml_escape() { printf '%s' "$1" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' -e 's/"/\&quot;/g'; }
 
 main "$@"
