@@ -75,6 +75,6 @@
 	</#if>
 	</td>
 	</tr></table>
-<p style="font-size: 8pt;">Questions? Email billing@example.com &amp; include ${record.tranid}.</p>
+<p style="font-size: 8pt;">Questions? Email the billing team &amp; include ${record.tranid}.</p>
 </body>
 </pdf>

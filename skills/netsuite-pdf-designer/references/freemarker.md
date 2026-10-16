@@ -1,8 +1,8 @@
 # FreeMarker in NetSuite PDF templates
 
-FreeMarker merges data into the template before BFO sees it. NetSuite's help lists FreeMarker 2.3.26, but a draft render in SB2 printed `${.version}` as 2.3.34 and `${.locale}` as en_US [sb2], so use the 2.3.34 manual. Name lists for the validator are `freemarker.builtins` and `freemarker.directives` in `data/bfo-support.json`.
+FreeMarker merges data into the template before BFO sees it. NetSuite's help lists FreeMarker 2.3.26, but a draft render in a NetSuite sandbox printed `${.version}` as 2.3.34 and `${.locale}` as en_US [probe], so use the 2.3.34 manual. Name lists for the validator are `freemarker.builtins` and `freemarker.directives` in `data/bfo-support.json`.
 
-Sources (fetched 2026-10-16). A claim marked **unverified** has no fetched source or SB2 render behind it.
+Sources (fetched 2026-10-16). A claim marked **unverified** has no fetched source or sandbox render behind it.
 - [fm-builtins] https://freemarker.apache.org/docs/ref_builtins_alphaidx.html (and `ref_builtins_string.html`, `_number.html`, `_date.html`, `_boolean.html`, `_expert.html`)
 - [fm-directives] https://freemarker.apache.org/docs/ref_directive_alphaidx.html
 - [fm-exp] https://freemarker.apache.org/docs/dgui_template_exp.html (missing values, operators)
@@ -12,11 +12,11 @@ Sources (fetched 2026-10-16). A claim marked **unverified** has no fetched sourc
 - [ns-format] https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/subsect_156624108232.html (`nsformat_*`)
 - [ns-file] https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/subsect_156630695265.html (`<@filecabinet>`)
 - [ns-faq] https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_159984373188.html
-- [sb2] SB2 probe, 2026-10-15/16 (design spec section 2). It overrides documents.
+- [probe] NetSuite sandbox probe, 2026-10-15/16 (design spec section 2). It overrides documents.
 
 ## Processing order
 
-On preview or print NetSuite parses FreeMarker, then BFO validates the XML, then generates the PDF [ns-faq]. A FreeMarker syntax error (unclosed `<#if>`, unknown built-in) comes back as UNEXPECTED_ERROR with no detail; malformed XML gives a clear "Error Parsing XML" message [sb2]. So validate FreeMarker structure locally first.
+On preview or print NetSuite parses FreeMarker, then BFO validates the XML, then generates the PDF [ns-faq]. A FreeMarker syntax error (unclosed `<#if>`, unknown built-in) comes back as UNEXPECTED_ERROR with no detail; malformed XML gives a clear "Error Parsing XML" message [probe]. So validate FreeMarker structure locally first.
 
 ## Roots
 
@@ -25,13 +25,13 @@ On preview or print NetSuite parses FreeMarker, then BFO validates the XML, then
 | Root | What it is | Notes |
 |---|---|---|
 | `record` | the current transaction | `${record.trandate}`, `${record.entity.email}` (select fields can be dotted into the related record) [ns-body] |
-| `companyInformation` | company info | auto-added [sb2]; `companyId`, `appDomain`, `customerCenterDomain`, `customerLoginUrl`, `extformsDomain` [ns-body]. `companyInformation.logoUrl` rendered as a broken image in SB2 [sb2] |
-| `subsidiary` | the transaction's subsidiary | **not** auto-populated, with or without `record` [sb2]. The skill's render adds it by loading the record's subsidiary; whether NetSuite's own print fills it the same way was not tested [sb2]. `${subsidiary.mainaddress_text}`, `subsidiary.logo` are used by real templates [ns-body; sb2] |
-| `user` | current user | auto-populated: `user.firstname`, `user.email` filled, `user.entityid` empty [sb2] |
-| `preferences` | Setup > Company > Printing & Fax | auto-populated for keys like `preferences.RETURNFORM`; `preferences.dateformat`, `DATEFORMAT`, `NUMBERFORMAT` came back empty and `?keys` lists nothing [sb2] |
-| `nsfont` | font file paths | auto-populated, e.g. `nsfont.NotoSans_Regular` [sb2]; see bfo.md |
+| `companyInformation` | company info | auto-added [probe]; `companyId`, `appDomain`, `customerCenterDomain`, `customerLoginUrl`, `extformsDomain` [ns-body]. `companyInformation.logoUrl` rendered as a broken image in a NetSuite sandbox [probe] |
+| `subsidiary` | the transaction's subsidiary | **not** auto-populated, with or without `record` [probe]. The skill's render adds it by loading the record's subsidiary; whether NetSuite's own print fills it the same way was not tested [probe]. `${subsidiary.mainaddress_text}`, `subsidiary.logo` are used by real templates [ns-body; probe] |
+| `user` | current user | auto-populated: `user.firstname`, `user.email` filled, `user.entityid` empty [probe] |
+| `preferences` | Setup > Company > Printing & Fax | auto-populated for keys like `preferences.RETURNFORM`; `preferences.dateformat`, `DATEFORMAT`, `NUMBERFORMAT` came back empty and `?keys` lists nothing [probe] |
+| `nsfont` | font file paths | auto-populated, e.g. `nsfont.NotoSans_Regular` [probe]; see bfo.md |
 | `customer` | statement templates only | `${customer.entityId}`, `${customer.subsidiary.legalname}` [ns-body] |
-| `statement` | statement documents | `${statement.amountDue}` [ns-body]; statement templates loop `<#list statements as statement>` inside `<pdfset>` [sb2]. `statement.lines` is named in the design spec but not in a fetched NetSuite page: **unverified** |
+| `statement` | statement documents | `${statement.amountDue}` [ns-body]; statement templates loop `<#list statements as statement>` inside `<pdfset>` [probe]. `statement.lines` is named in the design spec but not in a fetched NetSuite page: **unverified** |
 | `salesorder` | packing slips | [ns-body] |
 | `records` | multiple sources (label, check, statement templates) | [ns-body] |
 | `results` | joined saved-search results | `${results[0].customer.phone}`, `<#list results as row>` [ns-join] |
@@ -76,9 +76,9 @@ Restrictions: subrecords are not supported except the inventory detail values; a
 
 - FreeMarker's rule: a missing variable aborts processing; `x!default` supplies a value, `x??` tests, and a parenthesised chain `(a.b.c)!""` covers a missing `a` too, while `a.b.c!""` only covers a missing `c` [fm-exp]. Never write `x!y + 1`; use `(x!y) + 1` [fm-exp].
 - `?has_content` is true for non-empty strings, sequences and hashes, and for numbers, dates and booleans (including 0 and false); `(a.b)?has_content` is safe when `a` is missing [fm-builtins `_expert`].
-- **Observed in SB2, not what the manual says:** `${record.nosuchfield}` and a field on a missing root render an empty string without error [sb2]. A typo therefore prints a silent blank, so check the output for blanks. Using a missing value in arithmetic or a built-in (`?upper_case`, `?c`) was not tested: **unverified**; guard with `!` or `?has_content` to be safe.
+- **Observed in a NetSuite sandbox, not what the manual says:** `${record.nosuchfield}` and a field on a missing root render an empty string without error [probe]. A typo therefore prints a silent blank, so check the output for blanks. Using a missing value in arithmetic or a built-in (`?upper_case`, `?c`) was not tested: **unverified**; guard with `!` or `?has_content` to be safe.
 - Hidden fields: a field not shown on the custom form is a string in the template, a visible one is a boolean. Test both: `<#if (f?is_boolean && f) || (f?is_string && f == "T")>` [ns-faq].
-- `?is_string`, `?is_boolean`, `?is_hash` and the rest of the `is_*` family exist [fm-builtins `_expert`]. `preferences` is a hash that answers `?is_hash` true and `?is_hash_ex` false [sb2].
+- `?is_string`, `?is_boolean`, `?is_hash` and the rest of the `is_*` family exist [fm-builtins `_expert`]. `preferences` is a hash that answers `?is_hash` true and `?is_hash_ex` false [probe].
 
 ## Directives and operators
 

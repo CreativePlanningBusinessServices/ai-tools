@@ -1,6 +1,6 @@
 # BFO syntax for NetSuite Advanced PDF templates
 
-NetSuite renders Advanced PDF/HTML templates with the Big Faceless (BFO) Report Generator after FreeMarker has merged the data. The machine-readable allowlist is `data/bfo-support.json`; this page is the prose. Every claim names its source in brackets. A claim marked **unverified** is not pinned to a fetched source or an SB2 render.
+NetSuite renders Advanced PDF/HTML templates with the Big Faceless (BFO) Report Generator after FreeMarker has merged the data. The machine-readable allowlist is `data/bfo-support.json`; this page is the prose. Every claim names its source in brackets. A claim marked **unverified** is not pinned to a fetched source or a sandbox render.
 
 Sources (fetched 2026-10-16):
 - [bfo-userguide] http://bfo.com/products/report/docs/userguide.pdf (v1.1.63)
@@ -12,9 +12,9 @@ Sources (fetched 2026-10-16):
 - [ns-barcodes] https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_N2868543.html
 - [ns-fonts] https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/bridgehead_3963046048.html
 - [ns-pagebreaks] https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/bridgehead_4418819945.html
-- [sb2] SB2 probe, 2026-10-15/16 (design spec section 2). Where it disagrees with a document, the probe wins.
+- [probe] NetSuite sandbox probe, 2026-10-15/16 (design spec section 2). Where it disagrees with a document, the probe wins.
 
-Versions: BFO's reference is for 1.1.x; NetSuite's help lists BFO 1.2.10 (https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_N2862977.html). Treat BFO documentation as "documented", and only [sb2] items as "tested in NetSuite".
+Versions: BFO's reference is for 1.1.x; NetSuite's help lists BFO 1.2.10 (https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_N2862977.html). Treat BFO documentation as "documented", and only [probe] items as "tested in NetSuite".
 
 ## Document model
 
@@ -29,9 +29,9 @@ Versions: BFO's reference is for 1.1.x; NetSuite's help lists BFO 1.2.10 (https:
 
 - One `<pdf>`, an optional `<head>`, a mandatory `<body>` [bfo-userguide, "Document Structure"]. NetSuite requires the XML declaration and the DOCTYPE, uses `<pdf>` rather than `<html>`, and forbids HTML5 declarations [ns-source].
 - XML rules: close every element, quote every attribute, self-close empty elements (`<br />`, `<img ... />`) [ns-source]. Escape `&` as `&amp;` (also in URLs). Named entities need the DOCTYPE; the list is `entities` in the JSON [bfo-userguide, Appendix "Named Entities"].
-- `&nbsp;` is defined by BFO. NetSuite help claims it isn't rendered [ns-html4], but SB2 shows it is: template 135's header source contains `Phone: 913-303-4356&nbsp; &nbsp;Fax`, it rendered, and the merged output kept the entity [sb2]. Leave it alone.
-- `<pdfset>` wraps several `<pdf>` documents (statement templates). The merged output of a statement render uses `<html>` as the root of each document inside `<pdfset>`, not `<pdf>` [sb2]. A PDF template printed as HTML also gets `<pdf>` converted to `<html>` [ns-source].
-- Invalid CSS is an error, not ignored (CSS2 differences 4.2) [bfo-userguide]. Unknown tags and unsupported CSS values that parse are silently ignored [sb2].
+- `&nbsp;` is defined by BFO. NetSuite help claims it isn't rendered [ns-html4], but a NetSuite sandbox shows it is: a production invoice template's header source contains `Phone: 913-555-0101&nbsp; &nbsp;Fax`, it rendered, and the merged output kept the entity [probe]. Leave it alone.
+- `<pdfset>` wraps several `<pdf>` documents (statement templates). The merged output of a statement render uses `<html>` as the root of each document inside `<pdfset>`, not `<pdf>` [probe]. A PDF template printed as HTML also gets `<pdf>` converted to `<html>` [ns-source].
+- Invalid CSS is an error, not ignored (CSS2 differences 4.2) [bfo-userguide]. Unknown tags and unsupported CSS values that parse are silently ignored [probe].
 
 ## Pages, size and margins
 
@@ -56,7 +56,7 @@ Versions: BFO's reference is for 1.1.x; NetSuite's help lists BFO 1.2.10 (https:
 - Macros live in `<head><macrolist>`, each with an `id`; content cannot be bare text. Apply them with `header`, `footer`, `background-macro` on `body` or `pbr` [bfo-userguide "Headers, Footers and Macros"; bfo-tags `macro`].
 - Header and footer need `header-height` / `footer-height`, or they are not applied; a template cannot have several headers [ns-bfo].
 - `<pbr>` passes its attributes to the new page and all following pages [bfo-tags `pbr`].
-- `background-macro` is how to place something at a fixed spot on the page; a plain `position:absolute` cannot be a child of `<body>` [bfo-tags `position`] (also failed in [sb2]).
+- `background-macro` is how to place something at a fixed spot on the page; a plain `position:absolute` cannot be a child of `<body>` [bfo-tags `position`] (also failed in [probe]).
 
 ## Page numbers
 
@@ -77,25 +77,25 @@ Versions: BFO's reference is for 1.1.x; NetSuite's help lists BFO 1.2.10 (https:
 ## Text, divs and spans
 
 - Text lives in paragraphs: `p`, `pre`, `h1`-`h4`, `blockquote`; inline elements (`b`, `i`, `u`, `span`, `a`...) only inside a paragraph [bfo-userguide "Text Elements"].
-- Bare text directly in `body`, `li` or `td` gets an anonymous `<p>`; `div` is not on that list [bfo-userguide "Anonymous Paragraphs"]. In SB2, `<div>FLEX-A</div>` drew nothing and `<p>` around it drew [sb2]. Wrap text in `p`, `span` or a cell.
-- `display` is `block`, `inline` or `none` only; the default is block, not inline [bfo-tags `display`; bfo-userguide, CSS2 differences 9.2.5]. Flex and grid are ignored: children stack [sb2].
+- Bare text directly in `body`, `li` or `td` gets an anonymous `<p>`; `div` is not on that list [bfo-userguide "Anonymous Paragraphs"]. In a NetSuite sandbox, `<div>FLEX-A</div>` drew nothing and `<p>` around it drew [probe]. Wrap text in `p`, `span` or a cell.
+- `display` is `block`, `inline` or `none` only; the default is block, not inline [bfo-tags `display`; bfo-userguide, CSS2 differences 9.2.5]. Flex and grid are ignored: children stack [probe].
 - `float="left|right"` makes a block inline and wraps text around it [bfo-userguide "Float positioning"].
-- `position:relative` offsets with `left`/`top` (not `right`/`bottom`) [bfo-userguide, CSS2 differences 9.4]. `position:absolute` is relative to its parent and is not allowed as a child of `<body>` [bfo-tags `position`]. In SB2 it failed the render (UNEXPECTED_ERROR) on a top-level `div`/`p` and worked inside a `position:relative` parent [sb2].
-- `max-width`, `max-height`, `z-index`, `word-spacing`, `text-shadow`, `font-size-adjust` are ignored [bfo-userguide, CSS2 differences]. `border-radius` is ignored [sb2]; BFO's `corner-radius` exists [bfo-tags], not render-tested here.
-- Units: `pt`, `mm`, `in`, `em`, `%` and bare numbers (points) appear in BFO's pages; `px` appears in NetSuite's font sample [ns-fonts] but is **unverified** in BFO's pages. `rem` is ignored [sb2]. See `lengthUnits` in the JSON.
+- `position:relative` offsets with `left`/`top` (not `right`/`bottom`) [bfo-userguide, CSS2 differences 9.4]. `position:absolute` is relative to its parent and is not allowed as a child of `<body>` [bfo-tags `position`]. In a NetSuite sandbox it failed the render (UNEXPECTED_ERROR) on a top-level `div`/`p` and worked inside a `position:relative` parent [probe].
+- `max-width`, `max-height`, `z-index`, `word-spacing`, `text-shadow`, `font-size-adjust` are ignored [bfo-userguide, CSS2 differences]. `border-radius` is ignored [probe]; BFO's `corner-radius` exists [bfo-tags], not render-tested here.
+- Units: `pt`, `mm`, `in`, `em`, `%` and bare numbers (points) appear in BFO's pages; `px` appears in NetSuite's font sample [ns-fonts] but is **unverified** in BFO's pages. `rem` is ignored [probe]. See `lengthUnits` in the JSON.
 
 ## Images
 
 - Formats: PNG, JPEG, GIF, PBM, PGM, TIFF; animated GIF shows frame 1; size follows `dpi` (default from the file, else 72) unless `width`/`height` are set [bfo-userguide "Images"].
 - Self-close `<img ... />`. URLs must be absolute and reachable without login: File Cabinet files need Available Without Login or Company-Wide Usage; Company-Wide files need the `<@filecabinet nstype="image" src="..."/>` directive https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/subsect_156630695265.html
-- `background-image: url(...)` on a block works and draws behind its text; use `background-repeat: no-repeat` for a single copy [sb2]. BFO's own controls are `background-image-position` (`stretch` default, `repeat`, `center middle`...) and `background-image-dpi` [bfo-userguide "Drawing the Background"].
+- `background-image: url(...)` on a block works and draws behind its text; use `background-repeat: no-repeat` for a single copy [probe]. BFO's own controls are `background-image-position` (`stretch` default, `repeat`, `center middle`...) and `background-image-dpi` [bfo-userguide "Drawing the Background"].
 - Escape `&` in image URLs as `&amp;`.
 
 ## Fonts and nsfont
 
 - Built in: Times/`serif`, Helvetica/`sans-serif`, Courier/`monospace`, Symbol, ZapfDingbats, plus CJK names. Any other face must be linked [bfo-userguide "Fonts"].
 - A font is linked in `<head>`: `<link name="NotoSans" type="font" subtype="truetype" src="${nsfont.NotoSans_Regular}" src-bold="${nsfont.NotoSans_Bold}" src-italic="${nsfont.NotoSans_Italic}" src-bolditalic="${nsfont.NotoSans_BoldItalic}" bytes="2" />`, then `* { font-family: NotoSans, sans-serif; }` [ns-fonts]. `bytes="2"` for glyphs beyond Latin-1 [bfo-userguide "OpenType"].
-- `nsfont` is a root populated without `addRecord` (`nsfont.NotoSans_Regular` is a `file:///...WEB-INF/fonts/NotoSans-Regular.ttf` path) [sb2]. NetSuite's help does not enumerate its keys; the families it names are NotoSans, NotoSerif, NotoSansCJKsc/tc/jp/kr, NotoSansThai, NotoSansArabic, NotoSansHebrew and a few Indic scripts, each with Regular and Bold (NotoSans/NotoSerif also Italic and BoldItalic) [ns-fonts].
+- `nsfont` is a root populated without `addRecord` (`nsfont.NotoSans_Regular` is a `file:///...WEB-INF/fonts/NotoSans-Regular.ttf` path) [probe]. NetSuite's help does not enumerate its keys; the families it names are NotoSans, NotoSerif, NotoSansCJKsc/tc/jp/kr, NotoSansThai, NotoSansArabic, NotoSansHebrew and a few Indic scripts, each with Regular and Bold (NotoSans/NotoSerif also Italic and BoldItalic) [ns-fonts].
 - Your own font: upload the TTF to the File Cabinet and reference it with `subtype="opentype"` (not `truetype`) and the media URL [ns-fonts; https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_4549515329.html]. `subset="false"` embeds the whole font (Arabic ligature fixes) [ns-fonts].
 - `font-weight` only knows `normal` and `bold`; `font-family` with a list means per-character fallback [bfo-userguide "Text Attributes"].
 
@@ -110,13 +110,13 @@ Versions: BFO's reference is for 1.1.x; NetSuite's help lists BFO 1.2.10 (https:
 
 | Construct | What happens | Source |
 |---|---|---|
-| `display:flex`, `display:grid` | ignored, children stack | [sb2] |
-| `border-radius` | ignored | [sb2] |
-| `rem` units | ignored (use em, pt) | [sb2] |
-| Text directly in `<div>` | not drawn | [sb2] |
-| `position:absolute` with no relative ancestor | render fails, UNEXPECTED_ERROR | [sb2] |
+| `display:flex`, `display:grid` | ignored, children stack | [probe] |
+| `border-radius` | ignored | [probe] |
+| `rem` units | ignored (use em, pt) | [probe] |
+| Text directly in `<div>` | not drawn | [probe] |
+| `position:absolute` with no relative ancestor | render fails, UNEXPECTED_ERROR | [probe] |
 | `position:absolute` as a child of body | not allowed | [bfo-tags] |
-| `&nbsp;` | NOT a problem: NetSuite help says unrendered, SB2 renders it (template 135) | [sb2] |
+| `&nbsp;` | NOT a problem: NetSuite help says unrendered, sandbox renders it (a production invoice template) | [probe] |
 | `cellspacing` | not supported, use `cellmargin` | [ns-editor] |
 | Percentage body width | "no size specified" error | [ns-editor] |
 | `max-width`, `max-height`, `z-index`, `word-spacing`, `text-shadow` | ignored | [bfo-userguide] |
@@ -124,4 +124,4 @@ Versions: BFO's reference is for 1.1.x; NetSuite's help lists BFO 1.2.10 (https:
 | `double`/`groove`/`ridge`/`inset`/`outset` borders | not used | [bfo-userguide] |
 | `@media`, `@import`, `@page`, `:hover`, `::before` | not supported | [bfo-userguide] |
 | Unclosed tags, bare `&`, unquoted attributes | XML parse error | [ns-source] |
-| Unknown element (e.g. `<blink>`) | silently ignored | [sb2] |
+| Unknown element (e.g. `<blink>`) | silently ignored | [probe] |

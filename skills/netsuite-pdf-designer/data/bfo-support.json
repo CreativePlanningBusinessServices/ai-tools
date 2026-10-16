@@ -19,14 +19,14 @@
     "netsuite-third-party": "https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_N2862977.html",
     "freemarker-builtins": "https://freemarker.apache.org/docs/ref_builtins_alphaidx.html",
     "freemarker-directives": "https://freemarker.apache.org/docs/ref_directive_alphaidx.html",
-    "sb2-probe-2026-10": "SB2 probe rounds 1 and 2, 2026-10-15/16 (spec section 2); not a public document",
+    "netsuite-probe-2026-10": "sandbox probe rounds 1 and 2, 2026-10-15/16 (spec section 2); not a public document",
     "freemarker-deprecated-builtins": "https://freemarker.apache.org/docs/ref_depr_builtin.html"
   },
   "notes": [
-    "Status vocabulary: supported = documented by BFO or NetSuite, or confirmed by an SB2 render; partial = works with a stated condition; unsupported = documented as not implemented, or ignored/failing in the SB2 probe; unverified = not pinned to a fetched source or SB2 render (see note).",
-    "BFO's published reference is for Report Generator 1.1.x (userguide 1.1.63). NetSuite's help lists BFO 1.2.10 and FreeMarker 2.3.26 (netsuite-third-party), but the SB2 probe saw FreeMarker 2.3.34, so the doc version numbers lag the engine. BFO claims are 'documented', not 'tested in NetSuite', unless the source is sb2-probe-2026-10.",
+    "Status vocabulary: supported = documented by BFO or NetSuite, or confirmed by a sandbox render; partial = works with a stated condition; unsupported = documented as not implemented, or ignored/failing in the sandbox probe; unverified = not pinned to a fetched source or sandbox render (see note).",
+    "BFO's published reference is for Report Generator 1.1.x (userguide 1.1.63). NetSuite's help lists BFO 1.2.10 and FreeMarker 2.3.26 (netsuite-third-party), but the sandbox probe saw FreeMarker 2.3.34, so the doc version numbers lag the engine. BFO claims are 'documented', not 'tested in NetSuite', unless the source is netsuite-probe-2026-10.",
     "BFO attributes and CSS properties are the same thing: a style=\"...\" attribute or a <style> rule sets the same names as an XML attribute (userguide, 'Stylesheet definitions'). Attribute pages in bfo-css say 'Used By: All block elements' for most layout attributes; element attribute lists here are expanded from the per-element pages plus their shared attribute pages (border-top-color, margin-left, header-height ...).",
-    "effect: every css entry, css value and attribute marked unsupported or partial says what happens. ignored = silently dropped (SB2 probe: flex, grid, border-radius, rem); breaks = fails the render (SB2 probe: position:absolute with no position:relative ancestor); unknown = not tested. Validator mapping: breaks -> ERROR, ignored and unknown -> WARN. Value-level effects live in css[prop].valueEffects[keyword] (values themselves stay plain status strings); use the value effect first, then the entry effect.",
+    "effect: every css entry, css value and attribute marked unsupported or partial says what happens. ignored = silently dropped (sandbox probe: flex, grid, border-radius, rem); breaks = fails the render (sandbox probe: position:absolute with no position:relative ancestor); unknown = not tested. Validator mapping: breaks -> ERROR, ignored and unknown -> WARN. Value-level effects live in css[prop].valueEffects[keyword] (values themselves stay plain status strings); use the value effect first, then the entry effect.",
     "Attribute lookup rule: status = elements[el].attributes[attr] // globalAttributes[attr]; if neither has it the status is unknown and the validator WARNs. Attributes of unsupported/partial status carry their effect in elements[el].attributeEffects[attr].",
     "Unverified elements: their attributes are not checked; the element itself gets one WARN."
   ],
@@ -283,7 +283,7 @@
     "zwnbsp",
     "zwnj"
   ],
-  "entitiesNote": "The 246 names come from the 'Named Entities' appendix of the BFO userguide (bfo-userguide), which is the table the BFO DTD is built from. amp, lt, gt, quot and apos are the five predefined XML entities, added here as standard XML, not from the BFO table. NetSuite help claims &nbsp; isn't rendered (netsuite-html4-differences); SB2 shows it is: template 135's header source contains 'Phone: 913-303-4356&nbsp; &nbsp;Fax', it rendered, and renderAsString kept the entity (sb2-probe-2026-10). Do not rewrite or flag &nbsp;.",
+  "entitiesNote": "The 246 names come from the 'Named Entities' appendix of the BFO userguide (bfo-userguide), which is the table the BFO DTD is built from. amp, lt, gt, quot and apos are the five predefined XML entities, added here as standard XML, not from the BFO table. NetSuite help claims &nbsp; isn't rendered (netsuite-html4-differences); a NetSuite sandbox shows it is: a production invoice template's header source contains 'Phone: 913-555-0101&nbsp; &nbsp;Fax', it rendered, and renderAsString kept the entity (netsuite-probe-2026-10). Do not rewrite or flag &nbsp;.",
   "lengthUnits": {
     "supported": [
       "pt",
@@ -303,7 +303,7 @@
       "vw",
       "pc"
     ],
-    "note": "pt, mm, in, em and % appear in BFO's own examples (bfo-userguide, bfo-css width/margin/font-size pages); a bare number means points. px appears in NetSuite's font sample (netsuite-fonts) but BFO's pages do not list it, and the SB2 probe did not test it. rem is ignored (sb2-probe-2026-10). cm and the others were not found in a fetched source."
+    "note": "pt, mm, in, em and % appear in BFO's own examples (bfo-userguide, bfo-css width/margin/font-size pages); a bare number means points. px appears in NetSuite's font sample (netsuite-fonts) but BFO's pages do not list it, and the sandbox probe did not test it. rem is ignored (netsuite-probe-2026-10). cm and the others were not found in a fetched source."
   },
   "globalAttributes": {
     "style": "supported",
@@ -350,8 +350,8 @@
     "html": {
       "status": "supported",
       "attributes": {},
-      "note": "Not a BFO source element. Merged statement output from render.statement uses <html> as the root of each document inside <pdfset> (SB2 probe round 2); validators for merged XML must accept <pdfset> holding <html> children. In source templates use <pdf>.",
-      "source": "sb2-probe-2026-10"
+      "note": "Not a BFO source element. Merged statement output from render.statement uses <html> as the root of each document inside <pdfset> (sandbox probe round 2); validators for merged XML must accept <pdfset> holding <html> children. In source templates use <pdf>.",
+      "source": "netsuite-probe-2026-10"
     },
     "head": {
       "status": "supported",
@@ -519,7 +519,7 @@
       "attributes": {
         "type": "supported"
       },
-      "note": "CSS2 stylesheet in head; must not be wrapped in HTML comments. Parse errors in CSS throw instead of being ignored. type=\"text/css\" is accepted: NetSuite stock templates carry it and SB2 template 135 renders with it (sb2-probe-2026-10).",
+      "note": "CSS2 stylesheet in head; must not be wrapped in HTML comments. Parse errors in CSS throw instead of being ignored. type=\"text/css\" is accepted: NetSuite stock templates carry it and a production invoice template renders with it (netsuite-probe-2026-10).",
       "source": "bfo-tags"
     },
     "bookmarklist": {
@@ -773,7 +773,7 @@
         "width": "supported",
         "word-break": "supported"
       },
-      "note": "General paragraph; anonymous paragraphs are created for bare text directly inside body, li and td but NOT div (text directly in a div did not draw in SB2).",
+      "note": "General paragraph; anonymous paragraphs are created for bare text directly inside body, li and td but NOT div (text directly in a div did not draw in a NetSuite sandbox).",
       "source": "bfo-tags"
     },
     "pre": {
@@ -3811,7 +3811,7 @@
         "whitespace": "supported",
         "width": "supported"
       },
-      "note": "Block container. Text directly inside a div is not drawn (SB2 probe): wrap it in p, span or a table cell. position:absolute needs a position:relative parent and cannot be a direct child of body.",
+      "note": "Block container. Text directly inside a div is not drawn (sandbox probe): wrap it in p, span or a table cell. position:absolute needs a position:relative parent and cannot be a direct child of body.",
       "source": "bfo-tags"
     },
     "hr": {
@@ -4301,8 +4301,8 @@
         "table-cell": "unverified",
         "list-item": "unverified"
       },
-      "note": "BFO documents only block, inline and none. flex and grid are ignored: children stack vertically (SB2 probe). inline-block, table, table-cell and list-item are not documented values.",
-      "source": "sb2-probe-2026-10",
+      "note": "BFO documents only block, inline and none. flex and grid are ignored: children stack vertically (sandbox probe). inline-block, table, table-cell and list-item are not documented values.",
+      "source": "netsuite-probe-2026-10",
       "effect": "ignored",
       "valueEffects": {
         "flex": "ignored",
@@ -4319,8 +4319,8 @@
         "fixed": "unverified",
         "sticky": "unverified"
       },
-      "note": "absolute is placed relative to its parent and cannot be a child of body. In SB2, absolute on a top-level div or p failed the render (UNEXPECTED_ERROR); inside a position:relative parent it worked. fixed and sticky are not BFO values (use a background-macro for fixed placement).",
-      "source": "sb2-probe-2026-10",
+      "note": "absolute is placed relative to its parent and cannot be a child of body. In a NetSuite sandbox, absolute on a top-level div or p failed the render (UNEXPECTED_ERROR); inside a position:relative parent it worked. fixed and sticky are not BFO values (use a background-macro for fixed placement).",
+      "source": "netsuite-probe-2026-10",
       "effect": "breaks",
       "valueEffects": {
         "absolute": "breaks"
@@ -4492,13 +4492,13 @@
     },
     "border-radius": {
       "status": "unsupported",
-      "note": "Ignored on a div, a table and a td with background (SB2 probe, identical PDF with and without). BFO's own rounded-corner attribute is corner-radius.",
-      "source": "sb2-probe-2026-10",
+      "note": "Ignored on a div, a table and a td with background (sandbox probe, identical PDF with and without). BFO's own rounded-corner attribute is corner-radius.",
+      "source": "netsuite-probe-2026-10",
       "effect": "ignored"
     },
     "corner-radius": {
       "status": "supported",
-      "note": "BFO's rounded-corner attribute (length or percentage of the block width). Not render-tested in SB2.",
+      "note": "BFO's rounded-corner attribute (length or percentage of the block width). Not render-tested in a NetSuite sandbox.",
       "source": "bfo-css"
     },
     "border-collapse": {
@@ -4535,13 +4535,13 @@
     },
     "background-image": {
       "status": "supported",
-      "note": "Works with an absolute, publicly reachable URL (& escaped as &amp;); SB2 probe drew the image behind the div text with background-repeat:no-repeat.",
-      "source": "sb2-probe-2026-10"
+      "note": "Works with an absolute, publicly reachable URL (& escaped as &amp;); sandbox probe drew the image behind the div text with background-repeat:no-repeat.",
+      "source": "netsuite-probe-2026-10"
     },
     "background-repeat": {
       "status": "supported",
-      "note": "no-repeat was used in the SB2 probe and drew the image once; without it the div was empty in that test. Not an attribute in BFO's index (its own control is background-image-position).",
-      "source": "sb2-probe-2026-10"
+      "note": "no-repeat was used in the sandbox probe and drew the image once; without it the div was empty in that test. Not an attribute in BFO's index (its own control is background-image-position).",
+      "source": "netsuite-probe-2026-10"
     },
     "background-image-position": {
       "status": "supported",
@@ -4595,7 +4595,7 @@
     },
     "font-size": {
       "status": "supported",
-      "note": "Lengths in pt, mm, em, %, or named sizes (medium = 11pt). rem is ignored (SB2 probe).",
+      "note": "Lengths in pt, mm, em, %, or named sizes (medium = 11pt). rem is ignored (sandbox probe).",
       "source": "bfo-css"
     },
     "font-weight": {
@@ -4908,8 +4908,8 @@
   },
   "netsuiteCaveats": [
     {
-      "text": "NetSuite help claims &nbsp; isn't rendered; SB2 shows it is (template 135 header, rendered PDF and merged XML kept it). Leave &nbsp; alone.",
-      "source": "sb2-probe-2026-10"
+      "text": "NetSuite help claims &nbsp; isn't rendered; a NetSuite sandbox shows it is (a production invoice template header, rendered PDF and merged XML kept it). Leave &nbsp; alone.",
+      "source": "netsuite-probe-2026-10"
     },
     {
       "text": "cellspacing is not supported; use cellmargin. A percentage body width fails with a 'no size specified' error.",
@@ -4937,15 +4937,15 @@
     },
     {
       "text": "Text directly inside a <div> is not drawn; wrap it in <p>, <span> or a table cell.",
-      "source": "sb2-probe-2026-10"
+      "source": "netsuite-probe-2026-10"
     },
     {
       "text": "position:absolute with no position:relative ancestor failed the render with UNEXPECTED_ERROR.",
-      "source": "sb2-probe-2026-10"
+      "source": "netsuite-probe-2026-10"
     },
     {
       "text": "display:flex, display:grid, border-radius and rem units are silently ignored.",
-      "source": "sb2-probe-2026-10"
+      "source": "netsuite-probe-2026-10"
     }
   ],
   "freemarker": {
@@ -5197,13 +5197,13 @@
       "netsuiteModifiers": "netsuite-body-fields",
       "deprecatedBuiltins": "freemarker-deprecated-builtins"
     },
-    "note": "Names come from the FreeMarker manual's alphabetical indexes (NetSuite runs 2.3.34 per the SB2 probe; its help lists 2.3.26). is_* and iso_* variants were expanded from the expert and date built-in pages, truncate_* and json_string/url_path from the string page. The index pages are the only source for names like switch and with_args: they were not render-tested. default, exists, if_exists and web_safe are deprecated but still valid (freemarker-deprecated-builtins); ?exists appears in a real SB2 template."
+    "note": "Names come from the FreeMarker manual's alphabetical indexes (NetSuite runs 2.3.34 per the sandbox probe; its help lists 2.3.26). is_* and iso_* variants were expanded from the expert and date built-in pages, truncate_* and json_string/url_path from the string page. The index pages are the only source for names like switch and with_args: they were not render-tested. default, exists, if_exists and web_safe are deprecated but still valid (freemarker-deprecated-builtins); ?exists appears in a real a NetSuite sandbox template."
   },
   "entityStatus": {
     "nbsp": {
       "status": "supported",
-      "source": "sb2-probe-2026-10",
-      "note": "Rendered in SB2 (template 135, 41,318-byte PDF); merged renderAsString output kept the entity. Contradicts NetSuite help's claim that it isn't rendered."
+      "source": "netsuite-probe-2026-10",
+      "note": "Rendered in a NetSuite sandbox (a production invoice template, 41,318-byte PDF); merged renderAsString output kept the entity. Contradicts NetSuite help's claim that it isn't rendered."
     }
   }
 }

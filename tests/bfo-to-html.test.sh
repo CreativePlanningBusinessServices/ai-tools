@@ -130,11 +130,11 @@ assert_contains "$mixed_big" 'data-bfo="/pdf/body/table[3001]"' "table[3001] aft
 
 # Banner
 printf '<html><body class="x"><p>hi</p></body></html>' > "$tmp/banner.html"
-bash "$banner_script" "$tmp/banner.html" "ACS | Standard Invoice" sb2 "invoice 123" saved; status=$?
+bash "$banner_script" "$tmp/banner.html" "ACS | Standard Invoice" sandbox "invoice 123" saved; status=$?
 assert_eq "$status" 0 "the banner is inserted"
 banner_out="$(cat "$tmp/banner.html")"
 assert_contains "$banner_out" "ACS | Standard Invoice" "the banner shows the title"
-assert_contains "$banner_out" "sb2" "the banner shows the alias"
+assert_contains "$banner_out" "sandbox" "the banner shows the alias"
 assert_contains "$banner_out" "invoice 123" "the banner shows the sample"
 assert_contains "$banner_out" "saved" "the banner shows the mode"
 assert_contains "$banner_out" "Preview only — contains live record data, do not share" "the banner carries the live-data warning"
@@ -143,7 +143,7 @@ assert_contains "$banner_out" '<body class="x"><div' "the banner goes straight a
 assert_contains "$banner_out" "<p>hi</p>" "the page content is kept"
 
 printf '<p>no body here</p>' > "$tmp/nobody.html"
-bash "$banner_script" "$tmp/nobody.html" "Title & <b>" sb2 sample draft
+bash "$banner_script" "$tmp/nobody.html" "Title & <b>" sandbox sample draft
 nobody_out="$(cat "$tmp/nobody.html")"
 assert_contains "$nobody_out" "Preview only" "a file without <body> gets the banner"
 assert_eq "${nobody_out:0:4}" "<div" "the banner is prepended when there is no <body>"

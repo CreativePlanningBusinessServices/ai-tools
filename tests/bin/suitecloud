@@ -7,8 +7,8 @@ echo "$PWD | $*" >> "${FAKE_SUITECLOUD_LOG:?}"
 case "$1" in
   account:manageauth)
     printf '\033[2K\033[1G'
-    echo '6967599_SB2 | Administrator @ Creative Planning LLC - SB2 (ERP 6/5/26) | 6967599-sb2.app.netsuite.com'
-    echo '6967599 | Administrator @ Creative Planning LLC | 6967599.app.netsuite.com' ;;
+    echo '1234567_SB1 | Administrator @ Example Co - Sandbox | 1234567-sb1.app.netsuite.com'
+    echo '1234567 | Administrator @ Example Co | 1234567.app.netsuite.com' ;;
   object:import)
     scriptid=""; destination=""
     while [ $# -gt 0 ]; do

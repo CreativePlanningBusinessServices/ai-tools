@@ -36,9 +36,9 @@ function check_value(property, value, offset, inline,   keyword, known, effect, 
   known = (property, keyword) in valueStatus
   if (known && valueStatus[property, keyword] == "supported") { if (property == "position" && keyword == "relative") ownRelative = 1 }
   else if (known && property == "position" && keyword == "absolute") {
-    # spec 6 makes this a WARN although the data says breaks: SB2 only tested the top-level case
-    if (!inline) report("WARN", offset, "bfo.position", "position:absolute in a <style> rule: selectors are not matched, so make sure the element has a position:relative ancestor (absolute without one failed the SB2 render)")
-    else if (relativeAncestors == 0) report("WARN", offset, "bfo.position", "position:absolute with no position:relative ancestor failed the SB2 render (UNEXPECTED_ERROR); only style attributes are checked, not <style> rules")
+    # spec 6 makes this a WARN although the data says breaks: a NetSuite sandbox only tested the top-level case
+    if (!inline) report("WARN", offset, "bfo.position", "position:absolute in a <style> rule: selectors are not matched, so make sure the element has a position:relative ancestor (absolute without one failed the sandbox render)")
+    else if (relativeAncestors == 0) report("WARN", offset, "bfo.position", "position:absolute with no position:relative ancestor failed the sandbox render (UNEXPECTED_ERROR); only style attributes are checked, not <style> rules")
   } else if (known) {
     effect = valueEffect[property, keyword]
     report(severity_of(effect), offset, "bfo.css-value", property ":" keyword " is " valueStatus[property, keyword] " in BFO (" effect ")")
