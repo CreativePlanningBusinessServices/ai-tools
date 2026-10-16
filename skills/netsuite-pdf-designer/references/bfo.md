@@ -29,7 +29,7 @@ Versions: BFO's reference is for 1.1.x; NetSuite's help lists BFO 1.2.10 (https:
 
 - One `<pdf>`, an optional `<head>`, a mandatory `<body>` [bfo-userguide, "Document Structure"]. NetSuite requires the XML declaration and the DOCTYPE, uses `<pdf>` rather than `<html>`, and forbids HTML5 declarations [ns-source].
 - XML rules: close every element, quote every attribute, self-close empty elements (`<br />`, `<img ... />`) [ns-source]. Escape `&` as `&amp;` (also in URLs). Named entities need the DOCTYPE; the list is `entities` in the JSON [bfo-userguide, Appendix "Named Entities"].
-- `&nbsp;` is defined by BFO but NetSuite says it "isn't rendered": use `<br />`, or `width`/`height` on `<td>` [ns-html4].
+- `&nbsp;` is defined by BFO. NetSuite help claims it isn't rendered [ns-html4], but SB2 shows it is: template 135's header source contains `Phone: 913-303-4356&nbsp; &nbsp;Fax`, it rendered, and the merged output kept the entity [sb2]. Leave it alone.
 - `<pdfset>` wraps several `<pdf>` documents (statement templates). The merged output of a statement render uses `<html>` as the root of each document inside `<pdfset>`, not `<pdf>` [sb2]. A PDF template printed as HTML also gets `<pdf>` converted to `<html>` [ns-source].
 - Invalid CSS is an error, not ignored (CSS2 differences 4.2) [bfo-userguide]. Unknown tags and unsupported CSS values that parse are silently ignored [sb2].
 
@@ -116,7 +116,7 @@ Versions: BFO's reference is for 1.1.x; NetSuite's help lists BFO 1.2.10 (https:
 | Text directly in `<div>` | not drawn | [sb2] |
 | `position:absolute` with no relative ancestor | render fails, UNEXPECTED_ERROR | [sb2] |
 | `position:absolute` as a child of body | not allowed | [bfo-tags] |
-| `&nbsp;` | not rendered | [ns-html4] |
+| `&nbsp;` | NOT a problem: NetSuite help says unrendered, SB2 renders it (template 135) | [sb2] |
 | `cellspacing` | not supported, use `cellmargin` | [ns-editor] |
 | Percentage body width | "no size specified" error | [ns-editor] |
 | `max-width`, `max-height`, `z-index`, `word-spacing`, `text-shadow` | ignored | [bfo-userguide] |

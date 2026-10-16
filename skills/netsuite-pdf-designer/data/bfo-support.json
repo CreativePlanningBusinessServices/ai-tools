@@ -24,7 +24,10 @@
   "notes": [
     "Status vocabulary: supported = documented by BFO or NetSuite, or confirmed by an SB2 render; partial = works with a stated condition; unsupported = documented as not implemented, or ignored/failing in the SB2 probe; unverified = not pinned to a fetched source or SB2 render (see note).",
     "BFO's published reference is for Report Generator 1.1.x (userguide 1.1.63). NetSuite's help lists BFO 1.2.10 and FreeMarker 2.3.26 (netsuite-third-party), but the SB2 probe saw FreeMarker 2.3.34, so the doc version numbers lag the engine. BFO claims are 'documented', not 'tested in NetSuite', unless the source is sb2-probe-2026-10.",
-    "BFO attributes and CSS properties are the same thing: a style=\"...\" attribute or a <style> rule sets the same names as an XML attribute (userguide, 'Stylesheet definitions'). Attribute pages in bfo-css say 'Used By: All block elements' for most layout attributes; element attribute lists here are expanded from the per-element pages plus their shared attribute pages (border-top-color, margin-left, header-height ...)."
+    "BFO attributes and CSS properties are the same thing: a style=\"...\" attribute or a <style> rule sets the same names as an XML attribute (userguide, 'Stylesheet definitions'). Attribute pages in bfo-css say 'Used By: All block elements' for most layout attributes; element attribute lists here are expanded from the per-element pages plus their shared attribute pages (border-top-color, margin-left, header-height ...).",
+    "effect: every css entry, css value and attribute marked unsupported or partial says what happens. ignored = silently dropped (SB2 probe: flex, grid, border-radius, rem); breaks = fails the render (SB2 probe: position:absolute with no position:relative ancestor); unknown = not tested. Validator mapping: breaks -> ERROR, ignored and unknown -> WARN. Value-level effects live in css[prop].valueEffects[keyword] (values themselves stay plain status strings); use the value effect first, then the entry effect.",
+    "Attribute lookup rule: status = elements[el].attributes[attr] // globalAttributes[attr]; if neither has it the status is unknown and the validator WARNs. Attributes of unsupported/partial status carry their effect in elements[el].attributeEffects[attr].",
+    "Unverified elements: their attributes are not checked; the element itself gets one WARN."
   ],
   "entities": [
     "Aacute",
@@ -279,7 +282,7 @@
     "zwnbsp",
     "zwnj"
   ],
-  "entitiesNote": "The 246 names come from the 'Named Entities' appendix of the BFO userguide (bfo-userguide), which is the table the BFO DTD is built from. amp, lt, gt, quot and apos are the five predefined XML entities, added here as standard XML, not from the BFO table. NetSuite help says &nbsp; 'isn't rendered' in advanced templates even though BFO defines it (netsuite-html4-differences); use <br /> or td width/height for spacing.",
+  "entitiesNote": "The 246 names come from the 'Named Entities' appendix of the BFO userguide (bfo-userguide), which is the table the BFO DTD is built from. amp, lt, gt, quot and apos are the five predefined XML entities, added here as standard XML, not from the BFO table. NetSuite help claims &nbsp; isn't rendered (netsuite-html4-differences); SB2 shows it is: template 135's header source contains 'Phone: 913-303-4356&nbsp; &nbsp;Fax', it rendered, and renderAsString kept the entity (sb2-probe-2026-10). Do not rewrite or flag &nbsp;.",
   "lengthUnits": {
     "supported": [
       "pt",
@@ -3210,7 +3213,10 @@
         "cellspacing": "unsupported"
       },
       "note": "Use table-layout=\"fixed\" with an explicit width for predictable columns; border applies to the whole table (use cellborder for every cell); cellspacing is not supported, use cellmargin. Do not nest a table in a td if it must split across pages.",
-      "source": "bfo-tags"
+      "source": "bfo-tags",
+      "attributeEffects": {
+        "cellspacing": "unknown"
+      }
     },
     "thead": {
       "status": "supported",
@@ -4293,7 +4299,14 @@
         "list-item": "unverified"
       },
       "note": "BFO documents only block, inline and none. flex and grid are ignored: children stack vertically (SB2 probe). inline-block, table, table-cell and list-item are not documented values.",
-      "source": "sb2-probe-2026-10"
+      "source": "sb2-probe-2026-10",
+      "effect": "ignored",
+      "valueEffects": {
+        "flex": "ignored",
+        "grid": "ignored",
+        "inline-flex": "unknown",
+        "inline-grid": "unknown"
+      }
     },
     "position": {
       "status": "partial",
@@ -4304,7 +4317,11 @@
         "sticky": "unverified"
       },
       "note": "absolute is placed relative to its parent and cannot be a child of body. In SB2, absolute on a top-level div or p failed the render (UNEXPECTED_ERROR); inside a position:relative parent it worked. fixed and sticky are not BFO values (use a background-macro for fixed placement).",
-      "source": "sb2-probe-2026-10"
+      "source": "sb2-probe-2026-10",
+      "effect": "breaks",
+      "valueEffects": {
+        "absolute": "breaks"
+      }
     },
     "top": {
       "status": "supported",
@@ -4319,17 +4336,20 @@
     "bottom": {
       "status": "unsupported",
       "note": "Not used for positioning (userguide, CSS2 differences, 9.4).",
-      "source": "bfo-userguide"
+      "source": "bfo-userguide",
+      "effect": "unknown"
     },
     "right": {
       "status": "unsupported",
       "note": "Not used for positioning (userguide, CSS2 differences, 9.4).",
-      "source": "bfo-userguide"
+      "source": "bfo-userguide",
+      "effect": "unknown"
     },
     "z-index": {
       "status": "unsupported",
       "note": "Later elements are always drawn over earlier ones (userguide, CSS2 differences, 9.9.1).",
-      "source": "bfo-userguide"
+      "source": "bfo-userguide",
+      "effect": "unknown"
     },
     "float": {
       "status": "supported",
@@ -4361,7 +4381,11 @@
         "auto": "unsupported"
       },
       "note": "Only visible and hidden. Do not nest overflow:hidden deeper than 12 (Acrobat 4) or 28 levels.",
-      "source": "bfo-css"
+      "source": "bfo-css",
+      "valueEffects": {
+        "scroll": "unknown",
+        "auto": "unknown"
+      }
     },
     "visibility": {
       "status": "supported",
@@ -4385,12 +4409,14 @@
     "max-width": {
       "status": "unsupported",
       "note": "Ignored (userguide, CSS2 differences, 10.4).",
-      "source": "bfo-userguide"
+      "source": "bfo-userguide",
+      "effect": "unknown"
     },
     "max-height": {
       "status": "unsupported",
       "note": "Ignored (userguide, CSS2 differences, 10.7).",
-      "source": "bfo-userguide"
+      "source": "bfo-userguide",
+      "effect": "unknown"
     },
     "min-width": {
       "status": "unverified",
@@ -4451,12 +4477,21 @@
         "hidden": "unverified"
       },
       "note": "double, groove, ridge, inset and outset are not used (userguide, CSS2 differences, 8.5.3).",
-      "source": "bfo-css"
+      "source": "bfo-css",
+      "valueEffects": {
+        "double": "unknown",
+        "groove": "unknown",
+        "ridge": "unknown",
+        "inset": "unknown",
+        "outset": "unknown"
+      },
+      "effect": "unknown"
     },
     "border-radius": {
       "status": "unsupported",
       "note": "Ignored on a div, a table and a td with background (SB2 probe, identical PDF with and without). BFO's own rounded-corner attribute is corner-radius.",
-      "source": "sb2-probe-2026-10"
+      "source": "sb2-probe-2026-10",
+      "effect": "ignored"
     },
     "corner-radius": {
       "status": "supported",
@@ -4466,7 +4501,8 @@
     "border-collapse": {
       "status": "unsupported",
       "note": "The collapsing border model is not implemented and borders are always drawn around empty cells (userguide, CSS2 differences, 17.6). Whether NetSuite ignores or rejects the property was not tested.",
-      "source": "bfo-userguide"
+      "source": "bfo-userguide",
+      "effect": "unknown"
     },
     "border-spacing": {
       "status": "unverified",
@@ -4481,7 +4517,8 @@
     "text-shadow": {
       "status": "unsupported",
       "note": "Ignored (userguide, CSS2 differences, 16.4).",
-      "source": "bfo-userguide"
+      "source": "bfo-userguide",
+      "effect": "unknown"
     },
     "opacity": {
       "status": "unverified",
@@ -4569,7 +4606,8 @@
         "700": "unverified"
       },
       "note": "BFO recognises only normal and bold; numeric weights are not documented.",
-      "source": "bfo-css"
+      "source": "bfo-css",
+      "effect": "unknown"
     },
     "font-style": {
       "status": "supported",
@@ -4605,7 +4643,8 @@
     "font-size-adjust": {
       "status": "unsupported",
       "note": "Ignored (userguide, CSS2 differences, 15.2.4).",
-      "source": "bfo-userguide"
+      "source": "bfo-userguide",
+      "effect": "unknown"
     },
     "line-height": {
       "status": "supported",
@@ -4620,7 +4659,8 @@
     "word-spacing": {
       "status": "unsupported",
       "note": "Not used; see justification-ratio (userguide, CSS2 differences, 16.5).",
-      "source": "bfo-userguide"
+      "source": "bfo-userguide",
+      "effect": "unknown"
     },
     "text-align": {
       "status": "supported",
@@ -4649,7 +4689,12 @@
         "blink": "unsupported"
       },
       "note": "overline and blink are not valid (userguide, CSS2 differences, 16.3).",
-      "source": "bfo-css"
+      "source": "bfo-css",
+      "valueEffects": {
+        "overline": "unknown",
+        "blink": "unknown"
+      },
+      "effect": "unknown"
     },
     "text-transform": {
       "status": "supported",
@@ -4732,7 +4777,8 @@
         "always": "supported"
       },
       "note": "Only recognised on direct children of body (tr also accepts join). Use <pbr/> for explicit page breaks.",
-      "source": "bfo-userguide"
+      "source": "bfo-userguide",
+      "effect": "unknown"
     },
     "page-break-after": {
       "status": "partial",
@@ -4742,7 +4788,8 @@
         "always": "supported"
       },
       "note": "Only recognised on direct children of body.",
-      "source": "bfo-userguide"
+      "source": "bfo-userguide",
+      "effect": "unknown"
     },
     "page-break-inside": {
       "status": "partial",
@@ -4751,7 +4798,8 @@
         "avoid": "supported"
       },
       "note": "Only recognised on direct children of body; only table, ul, ol, p, pre, h1-h4 and blockquote can split across pages.",
-      "source": "bfo-userguide"
+      "source": "bfo-userguide",
+      "effect": "unknown"
     },
     "orphans": {
       "status": "supported",
@@ -4801,22 +4849,26 @@
     "content": {
       "status": "unsupported",
       "note": "Generated content is handled differently in BFO (userguide, CSS2 differences, 12).",
-      "source": "bfo-userguide"
+      "source": "bfo-userguide",
+      "effect": "unknown"
     },
     "@import": {
       "status": "unsupported",
       "note": "At-rules (@import, @charset) are not supported (userguide, CSS2 differences, 4.1.5); load stylesheets with <link type=\"stylesheet\">.",
-      "source": "bfo-userguide"
+      "source": "bfo-userguide",
+      "effect": "unknown"
     },
     "@media": {
       "status": "unsupported",
       "note": "Media types are not used; there is only one medium, PDF (userguide, CSS2 differences, 7).",
-      "source": "bfo-userguide"
+      "source": "bfo-userguide",
+      "effect": "unknown"
     },
     "@page": {
       "status": "unsupported",
       "note": "The @page rule is not used; set size and margins on body/pbr (userguide, CSS2 differences, 13.1).",
-      "source": "bfo-userguide"
+      "source": "bfo-userguide",
+      "effect": "unknown"
     }
   },
   "selectors": {
@@ -4853,8 +4905,8 @@
   },
   "netsuiteCaveats": [
     {
-      "text": "&nbsp; is not rendered in advanced templates. Use <br /> or width/height on <td> instead.",
-      "source": "netsuite-html4-differences"
+      "text": "NetSuite help claims &nbsp; isn't rendered; SB2 shows it is (template 135 header, rendered PDF and merged XML kept it). Leave &nbsp; alone.",
+      "source": "sb2-probe-2026-10"
     },
     {
       "text": "cellspacing is not supported; use cellmargin. A percentage body width fails with a 'no size specified' error.",
@@ -5138,5 +5190,12 @@
       "netsuiteModifiers": "netsuite-body-fields"
     },
     "note": "Names come from the FreeMarker manual's alphabetical indexes (NetSuite runs 2.3.34 per the SB2 probe; its help lists 2.3.26). is_* and iso_* variants were expanded from the expert and date built-in pages, truncate_* and json_string/url_path from the string page. The index pages are the only source for names like switch and with_args: they were not render-tested."
+  },
+  "entityStatus": {
+    "nbsp": {
+      "status": "supported",
+      "source": "sb2-probe-2026-10",
+      "note": "Rendered in SB2 (template 135, 41,318-byte PDF); merged renderAsString output kept the entity. Contradicts NetSuite help's claim that it isn't rendered."
+    }
   }
 }

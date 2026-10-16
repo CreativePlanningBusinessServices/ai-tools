@@ -45,9 +45,21 @@ assert_eq "$(jq -r '.css["background-image"].status' "$data")" supported "backgr
 assert_eq "$(jq -r '.css.position.values.absolute' "$data")" partial "position:absolute is partial (needs a relative ancestor)"
 assert_eq "$(jq -r '.lengthUnits.unsupported | index("rem") != null' "$data")" true "rem is listed as an unsupported unit"
 
+missing_effect="$(jq -r '.css | to_entries[] | select((.value.status == "unsupported" or .value.status == "partial") and ((.value.effect // "") | IN("ignored","breaks","unknown") | not)) | .key' "$data")"
+assert_eq "$missing_effect" "" "every unsupported/partial css entry has an effect"
+missing_value_effect="$(jq -r '.css | to_entries[] | .key as $prop | .value as $entry | ($entry.values // {}) | to_entries[] | select(.value == "unsupported" or .value == "partial") | select(($entry.valueEffects[.key] // "") | IN("ignored","breaks","unknown") | not) | "\($prop).\(.key)"' "$data")"
+assert_eq "$missing_value_effect" "" "every unsupported/partial css value has an effect"
+missing_attr_effect="$(jq -r '.elements | to_entries[] | .key as $el | .value as $entry | ($entry.attributes // {}) | to_entries[] | select(.value == "unsupported" or .value == "partial") | select(($entry.attributeEffects[.key] // "") | IN("ignored","breaks","unknown") | not) | "\($el).\(.key)"' "$data")"
+assert_eq "$missing_attr_effect" "" "every unsupported/partial attribute has an effect"
+assert_eq "$(jq -r '.css.display.valueEffects.flex' "$data")" ignored "display:flex is ignored (SB2 probe)"
+assert_eq "$(jq -r '.css.display.valueEffects.grid' "$data")" ignored "display:grid is ignored (SB2 probe)"
+assert_eq "$(jq -r '.css["border-radius"].effect' "$data")" ignored "border-radius is ignored (SB2 probe)"
+assert_eq "$(jq -r '.css.position.valueEffects.absolute' "$data")" breaks "position:absolute breaks the render (SB2 probe)"
+assert_eq "$(jq -r '.entityStatus.nbsp.status + " " + .entityStatus.nbsp.source' "$data")" "supported sb2-probe-2026-10" "nbsp works (SB2 template 135)"
 for element in pdf pdfset html head body macrolist macro pbr pagenumber totalpages barcode link table thead tbody tfoot tr td th img div p span br ul ol li; do
   assert_eq "$(jq -r --arg el "$element" '.elements | has($el)' "$data")" true "element <$element> is listed"
 done
+assert_eq "$(jq -r '.elements.html.status' "$data")" supported "<html> is supported"
 assert_eq "$(jq -r '.elements.html.source' "$data")" sb2-probe-2026-10 "<html> support comes from the SB2 probe"
 
 assert_eq "$(jq -r '.entities | index("nbsp") != null' "$data")" true "entities contains nbsp"
