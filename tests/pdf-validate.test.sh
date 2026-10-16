@@ -88,6 +88,40 @@ run_validator --merged "$fixtures/merged-pdfset.xml"
 assert_eq "$status" 0 "--merged accepts <pdfset> holding <html> documents"
 assert_not_contains "$output" "envelope." "a <pdfset> of <html> documents passes the envelope"
 
+run_validator "$fixtures/branch-alternative-rows.xml"
+assert_eq "$status" 0 "a <tr> opened differently in <#if>/<#else> exits 0"
+assert_not_contains "$output" "xml." "alternative row openers are not an XML error"
+run_validator "$fixtures/branch-alternative-attributes.xml"
+assert_eq "$status" 0 "alternative attributes and <#switch>/<#attempt> branches exit 0"
+assert_not_contains "$output" "xml." "an attribute set in both branches is not 'redefined'"
+
+run_validator "$fixtures/freemarker-idioms.xml"
+assert_eq "$status" 0 "camelCase directives, ?exists, &copy; and < inside \${} exit 0"
+assert_contains "$output" "0 errors, 0 warnings" "the FreeMarker idioms fixture has no findings"
+assert_not_contains "$output" "copy" "&copy; is not flagged"
+
+run_validator "$fixtures/assign-before-declaration.xml"
+assert_not_contains "$output" "envelope.xml-declaration" "a FreeMarker directive before <?xml on line 1 is accepted"
+
+run_validator "$fixtures/div-text.xml"
+assert_line '^WARN 7:32 netsuite\.div-text ' "bare text inside <div> is a warning"
+
+run_validator "$fixtures/xml-unknown-entity.xml"
+assert_line '^ERROR 7:10 xml\.entity .*&euro2;' "an unknown entity is an XML error at its &"
+assert_line '^ERROR 7:22 xml\.entity .*&bogus;' "every unknown entity is reported"
+
+run_validator "$fixtures/multiline-directive.xml"
+assert_line '^ERROR 10:9 xml\.entity ' "lines stay mapped after a multi-line directive"
+
+: > "$tmp/empty.xml"
+run_validator "$tmp/empty.xml"
+assert_eq "$status" 1 "an empty file exits 1"
+assert_line '^ERROR 1:1 envelope\.empty ' "an empty file is an envelope error"
+printf '  \n\t\n' > "$tmp/blank.xml"
+run_validator "$tmp/blank.xml"
+assert_line '^ERROR 1:1 envelope\.empty ' "a whitespace-only file is an envelope error"
+assert_contains "$output" "1 errors, 0 warnings" "an empty file reports only envelope.empty"
+
 run_validator "$tmp/missing.xml"
 assert_eq "$status" 2 "a missing file exits 2"
 run_validator

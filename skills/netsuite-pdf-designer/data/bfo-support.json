@@ -19,7 +19,8 @@
     "netsuite-third-party": "https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_N2862977.html",
     "freemarker-builtins": "https://freemarker.apache.org/docs/ref_builtins_alphaidx.html",
     "freemarker-directives": "https://freemarker.apache.org/docs/ref_directive_alphaidx.html",
-    "sb2-probe-2026-10": "SB2 probe rounds 1 and 2, 2026-10-15/16 (spec section 2); not a public document"
+    "sb2-probe-2026-10": "SB2 probe rounds 1 and 2, 2026-10-15/16 (spec section 2); not a public document",
+    "freemarker-deprecated-builtins": "https://freemarker.apache.org/docs/ref_depr_builtin.html"
   },
   "notes": [
     "Status vocabulary: supported = documented by BFO or NetSuite, or confirmed by an SB2 render; partial = works with a stated condition; unsupported = documented as not implemented, or ignored/failing in the SB2 probe; unverified = not pinned to a fetched source or SB2 render (see note).",
@@ -4973,6 +4974,7 @@
       "datetime",
       "datetime_if_unknown",
       "dedent",
+      "default",
       "double",
       "drop_while",
       "empty_to_null",
@@ -4982,6 +4984,7 @@
       "esc",
       "eval",
       "eval_json",
+      "exists",
       "filter",
       "first",
       "float",
@@ -4991,6 +4994,7 @@
       "has_content",
       "has_next",
       "html",
+      "if_exists",
       "indent",
       "index",
       "index_of",
@@ -5112,6 +5116,7 @@
       "url",
       "url_path",
       "values",
+      "web_safe",
       "with_args",
       "with_args_last",
       "word_list",
@@ -5189,9 +5194,10 @@
       "directives": "freemarker-directives",
       "netsuiteFunctions": "netsuite-formatting",
       "netsuiteDirectives": "netsuite-filecabinet",
-      "netsuiteModifiers": "netsuite-body-fields"
+      "netsuiteModifiers": "netsuite-body-fields",
+      "deprecatedBuiltins": "freemarker-deprecated-builtins"
     },
-    "note": "Names come from the FreeMarker manual's alphabetical indexes (NetSuite runs 2.3.34 per the SB2 probe; its help lists 2.3.26). is_* and iso_* variants were expanded from the expert and date built-in pages, truncate_* and json_string/url_path from the string page. The index pages are the only source for names like switch and with_args: they were not render-tested."
+    "note": "Names come from the FreeMarker manual's alphabetical indexes (NetSuite runs 2.3.34 per the SB2 probe; its help lists 2.3.26). is_* and iso_* variants were expanded from the expert and date built-in pages, truncate_* and json_string/url_path from the string page. The index pages are the only source for names like switch and with_args: they were not render-tested. default, exists, if_exists and web_safe are deprecated but still valid (freemarker-deprecated-builtins); ?exists appears in a real SB2 template."
   },
   "entityStatus": {
     "nbsp": {

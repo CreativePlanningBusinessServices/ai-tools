@@ -1,0 +1,17 @@
+<?xml version="1.0"?><!DOCTYPE pdf PUBLIC "-//big.faceless.org//report" "report-1.1.dtd">
+<pdf>
+<head>
+	<link name="NotoSans" type="font" subtype="truetype" src="${nsfont.NotoSans_Regular}" src-bold="${nsfont.NotoSans_Bold}" bytes="2" />
+</head>
+<body padding="0.5in" size="Letter">
+<table style="width: 100%;"><tr>
+	<td <#if record.total?has_content>style="color:red"<#else>style="color:blue"</#if>>${record.total}</td>
+	<#switch record.status>
+	<#case "Open"><td style="color:green">Open</td><#break>
+	<#case "Paid"><td style="color:gray">Paid</td><#break>
+	<#default><td>Other</td>
+	</#switch>
+	<#attempt><td>${record.memo}</td><#recover><td>-</td></#attempt>
+</tr></table>
+</body>
+</pdf>
