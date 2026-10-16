@@ -27,6 +27,9 @@ assert_contains "$(cat "$tmp/out.log")" "PASS deployed netsuite_modules/extra/in
 assert_contains "$(cat "$tmp/out.log")" "PASS email template: describe template 7" "the email template RESTlet is exercised"
 assert_contains "$(cat "$tmp/out.log")" "PASS pdf template: describe template 9" "the PDF template RESTlet is exercised"
 
+assert_eq "$(run_verify standard-only)" 0 "an account with only standard PDF templates exits 0"
+assert_contains "$(cat "$tmp/out.log")" "PASS pdf template: describe template 11" "the describe check falls back to a standard template"
+
 assert_eq "$(run_verify missing-script)" 1 "missing script exits 1"
 assert_contains "$(cat "$tmp/out.log")" "FAIL all five scripts installed" "missing script is named"
 

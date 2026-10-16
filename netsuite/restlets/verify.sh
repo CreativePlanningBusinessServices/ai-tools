@@ -58,12 +58,17 @@ else
   check "email template: describe (no active email template in the account to describe)" 1
 fi
 
-pdf_template_id="$(netsuite-cli suiteql --account "$alias_name" "SELECT id FROM advancedpdftemplate WHERE inactive = 'F' AND UPPER(scriptid) LIKE 'CUSTTMPL%' ORDER BY id FETCH FIRST 1 ROWS ONLY" 2> /dev/null | jq -r '.items[0].id // empty' 2> /dev/null)"
+first_pdf_template_id() {
+  netsuite-cli suiteql --account "$alias_name" "SELECT id FROM advancedpdftemplate WHERE inactive = 'F' AND UPPER(scriptid) LIKE '$1%' ORDER BY id FETCH FIRST 1 ROWS ONLY" 2> /dev/null | jq -r '.items[0].id // empty' 2> /dev/null
+}
+# A fresh account may have only standard templates; describe one of those instead.
+pdf_template_id="$(first_pdf_template_id CUSTTMPL)"
+[ -n "$pdf_template_id" ] || pdf_template_id="$(first_pdf_template_id STDTMPL)"
 if [ -n "$pdf_template_id" ]; then
   restlet pdf_template --method GET --param "id=$pdf_template_id" | jq -e 'has("source") and (has("error") | not)' > /dev/null 2>&1
   check "pdf template: describe template $pdf_template_id" $?
 else
-  check "pdf template: describe (no active custom PDF template in the account to describe)" 1
+  check "pdf template: describe (no active PDF template in the account to describe)" 1
 fi
 
 deployed="$(mktemp)"
