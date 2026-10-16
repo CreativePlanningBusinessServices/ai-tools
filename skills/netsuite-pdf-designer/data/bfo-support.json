@@ -515,8 +515,10 @@
     },
     "style": {
       "status": "supported",
-      "attributes": {},
-      "note": "CSS2 stylesheet in head; must not be wrapped in HTML comments. Parse errors in CSS throw instead of being ignored.",
+      "attributes": {
+        "type": "supported"
+      },
+      "note": "CSS2 stylesheet in head; must not be wrapped in HTML comments. Parse errors in CSS throw instead of being ignored. type=\"text/css\" is accepted: NetSuite stock templates carry it and SB2 template 135 renders with it (sb2-probe-2026-10).",
       "source": "bfo-tags"
     },
     "bookmarklist": {
