@@ -1,4 +1,4 @@
-define(["require", "exports", "N/format", "N/query", "../file-cabinet/index.js"], function (require, exports, format, query, index_js_1) {
+define(["require", "exports", "N/format", "N/query", "N/runtime", "../file-cabinet/index.js"], function (require, exports, format, query, runtime, index_js_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.parseStatementPeriod = exports.buildDraftStatement = void 0;
@@ -117,14 +117,16 @@ define(["require", "exports", "N/format", "N/query", "../file-cabinet/index.js"]
         })
             .asMappedResults()[0];
     };
+    const LINE_PAGE_SIZE = 1000;
+    // Cast needed: this id is documented by NetSuite but missing from @hitc/netsuite-types' feature union.
+    const MULTI_BOOK_FEATURE = 'MULTIBOOK';
     // The running balance is windowed over every line up to statementDate, so lines before startDate
     // carry into the first printed balance; the outer filter then drops them.
     const loadLines = (filter) => {
         const base = arLinesQuery(filter);
         const bodyColumns = filter.bodyFields.map((field) => `, arLine.${field}`).join('');
         const startClause = filter.startDate === null ? '' : /* sql */ `AND arLine.trandate >= TO_DATE(?, 'YYYY-MM-DD')`;
-        return query
-            .runSuiteQL({
+        const pagedLines = query.runSuiteQLPaged({
             query: /* sql */ `
         SELECT arLine.transactionid, arLine.trandate, arLine.duedate, arLine.description, arLine.amount, arLine.balance${bodyColumns}
         FROM (
@@ -135,16 +137,21 @@ define(["require", "exports", "N/format", "N/query", "../file-cabinet/index.js"]
         WHERE (? = 'F' OR arLine.openamount <> 0) ${startClause}
         ORDER BY arLine.trandate, arLine.transactionid`,
             params: [...base.params, filter.openOnly ? 'T' : 'F', ...(filter.startDate === null ? [] : [filter.startDate.iso])],
-        })
-            .asMappedResults();
+            pageSize: LINE_PAGE_SIZE,
+        });
+        return pagedLines.pageRanges.flatMap((pageRange) => pagedLines.fetch({ index: pageRange.index }).data.asMappedResults());
     };
     /**
      * Posting accounts-receivable lines for the customer in its own currency, up to statementDate, from
-     * the primary accounting book only (Multi-Book accounts carry one accounting line per book).
+     * the primary accounting book only (Multi-Book accounts carry one accounting line per book; the
+     * accountingbook table exists only when the feature is on, so the filter is added conditionally).
      */
     const arLinesQuery = (filter) => {
         const openAmount = /* sql */ `SIGN(transactionLine.foreignamount) * (NVL(txn.foreignamountunpaid, 0) + NVL(txn.foreignpaymentamountunused, 0))`;
         const bodyColumns = filter.bodyFields.map((field) => `, BUILTIN.DF(txn.${field}) AS ${field}`).join('');
+        const primaryBookClause = runtime.isFeatureInEffect({ feature: MULTI_BOOK_FEATURE })
+            ? /* sql */ `AND accountingLine.accountingbook = (SELECT primaryBook.id FROM accountingbook primaryBook WHERE primaryBook.isprimary = 'T')`
+            : '';
         return {
             query: /* sql */ `
       SELECT
@@ -161,7 +168,7 @@ define(["require", "exports", "N/format", "N/query", "../file-cabinet/index.js"]
       JOIN account arAccount ON arAccount.id = accountingLine.account
       WHERE transactionLine.entity = ? AND txn.currency = ?
         AND accountingLine.posting = 'T' AND arAccount.accttype = 'AcctRec'
-        AND accountingLine.accountingbook = (SELECT primaryBook.id FROM accountingbook primaryBook WHERE primaryBook.isprimary = 'T')
+        ${primaryBookClause}
         AND txn.trandate <= TO_DATE(?, 'YYYY-MM-DD')`,
             params: [filter.openOnly ? 'T' : 'F', filter.statementDate.iso, filter.entityId, filter.currencyId, filter.statementDate.iso],
         };
