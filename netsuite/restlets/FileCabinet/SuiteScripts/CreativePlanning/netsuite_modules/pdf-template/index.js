@@ -104,13 +104,7 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "../fi
             renderer.setTemplateByScriptId({ scriptId: templateRef.scriptid });
         const transaction = record.load({ type: target.type, id: target.id });
         renderer.addRecord({ templateName: 'record', record: transaction });
-        const subsidiaryId = transaction.getValue({ fieldId: 'subsidiary' });
-        if (subsidiaryId !== '' && subsidiaryId !== null && subsidiaryId !== undefined) {
-            renderer.addRecord({
-                templateName: 'subsidiary',
-                record: record.load({ type: record.Type.SUBSIDIARY, id: Number(subsidiaryId) }),
-            });
-        }
+        addSubsidiaryRoot(renderer, transaction);
         const pdfFile = renderer.renderAsPdf();
         return {
             mode: isDraft ? 'draft' : 'saved',
@@ -129,12 +123,13 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "../fi
             throw new index_js_1.ValidationError('formId is required for a STATEMENT render — pass the id of the statement form that prints with the template');
         const entityId = requireId(request.entityId);
         const formId = requireId(request.formId);
+        const period = (0, statement_data_js_1.parseStatementPeriod)(request);
         const options = {
             entityId,
             formId,
-            ...(request.statementDate !== undefined && { statementDate: String(request.statementDate) }),
-            ...(request.startDate !== undefined && { startDate: String(request.startDate) }),
-            ...(request.openTransactionsOnly !== undefined && { openTransactionsOnly: request.openTransactionsOnly === true }),
+            ...(period.statementDate !== null && { statementDate: period.statementDate.display }),
+            ...(period.startDate !== null && { startDate: period.startDate.display }),
+            ...(period.openTransactionsOnly !== null && { openTransactionsOnly: period.openTransactionsOnly }),
         };
         const pdfFile = render.statement({ ...options, printMode: render.PrintMode.PDF });
         // HTML mode returns the merged markup (a <pdfset> of <html> children), which the preview needs.
@@ -160,7 +155,7 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "../fi
             entityId,
             statementDate: request.statementDate,
             startDate: request.startDate,
-            openTransactionsOnly: request.openTransactionsOnly === true,
+            openTransactionsOnly: request.openTransactionsOnly,
             source,
         });
         const renderer = render.create();
@@ -168,9 +163,7 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "../fi
         const customer = record.load({ type: record.Type.CUSTOMER, id: entityId });
         renderer.addRecord({ templateName: 'record', record: customer });
         renderer.addRecord({ templateName: 'customer', record: customer });
-        if (draft.subsidiaryId !== null) {
-            renderer.addRecord({ templateName: 'subsidiary', record: record.load({ type: record.Type.SUBSIDIARY, id: draft.subsidiaryId }) });
-        }
+        addSubsidiaryRoot(renderer, customer);
         renderer.addCustomDataSource({ format: render.DataSource.OBJECT, ...draft.dataSource });
         const pdfFile = renderer.renderAsPdf();
         return {
@@ -182,6 +175,13 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "../fi
             xml: renderer.renderAsString(),
             approximate: true,
         };
+    };
+    // Accounts without subsidiaries (non-OneWorld) leave the field empty, so the root is skipped.
+    const addSubsidiaryRoot = (renderer, owner) => {
+        const subsidiaryId = owner.getValue({ fieldId: 'subsidiary' });
+        if (subsidiaryId === '' || subsidiaryId === null || subsidiaryId === undefined)
+            return;
+        renderer.addRecord({ templateName: 'subsidiary', record: record.load({ type: record.Type.SUBSIDIARY, id: Number(subsidiaryId) }) });
     };
     const requireSource = (source) => {
         const isBlank = typeof source !== 'string' || ['', 'null', 'undefined'].includes(source.trim());

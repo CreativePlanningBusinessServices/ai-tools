@@ -1,9 +1,14 @@
 define(["require", "exports", "N/format", "N/query", "../file-cabinet/index.js"], function (require, exports, format, query, index_js_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.buildDraftStatement = void 0;
+    exports.parseStatementPeriod = exports.buildDraftStatement = void 0;
     const BODY_FIELD_PATTERN = /^custbody_[a-z0-9_]+$/;
     const DRAFT_DATA_ALIAS = 'cpDraftStatement';
+    const BARE_STATEMENTS = /(?<![\w.])statements(?!\w)/;
+    const STRING_LITERAL = /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/;
+    const CONSTRUCT_OPENER = /<#--|<\/?#|<\/?@|\[\/?[#@]|\$\{/g;
+    const CONSTRUCT_CLOSERS = { directive: '>', macro: '>', squareTag: ']', interpolation: '}' };
+    const DRAFT_NOT_SUPPORTED = "draft preview isn't supported — use a saved render through a statement form (formId)";
     const STATEMENT_LABELS = {
         amountDue: 'Amount Due', billaddress: 'Billing Address', agingbal: 'Amount Due',
         aging1: 'Current', aging2: '1-30 Days', aging3: '31-60 Days', aging4: '61-90 Days', aging5: 'Over 90 Days',
@@ -17,19 +22,18 @@ define(["require", "exports", "N/format", "N/query", "../file-cabinet/index.js"]
      * statementDate, and same-day transactions are ordered by internal id.
      */
     const buildDraftStatement = (options) => {
-        const statementDate = parseStatementDate(options.statementDate, 'statementDate') ?? today();
-        const startDate = parseStatementDate(options.startDate, 'startDate');
-        if (startDate !== null && startDate.iso > statementDate.iso) {
-            throw new index_js_1.ValidationError(`startDate must not be after statementDate (${startDate.display} > ${statementDate.display})`);
-        }
-        const customer = loadCustomer(options.entityId);
+        const period = (0, exports.parseStatementPeriod)(options);
+        const statementDate = period.statementDate ?? today();
+        const { startDate } = period;
         const references = findTemplateReferences(options.source);
+        const templateSource = adaptSourceToDraftData(options.source, references);
+        const customer = loadCustomer(options.entityId);
         const filter = {
             entityId: options.entityId,
             currencyId: customer.currency,
             statementDate,
             startDate,
-            openOnly: options.openTransactionsOnly === true,
+            openOnly: period.openTransactionsOnly === true,
             bodyFields: existingBodyFields(references.linePaths),
         };
         const currency = { symbol: customer.currencysymbol ?? '', symbolAfter: Number(customer.symbolplacement) === 2 };
@@ -56,18 +60,29 @@ define(["require", "exports", "N/format", "N/query", "../file-cabinet/index.js"]
         for (const line of lines)
             for (const path of references.linePaths)
                 fillPath(line, path);
-        return {
-            subsidiaryId: customer.subsidiary === null || customer.subsidiary === undefined ? null : Number(customer.subsidiary),
-            templateSource: adaptSourceToDraftData(options.source, references),
-            dataSource: { alias: DRAFT_DATA_ALIAS, data: { statements: [statement] } },
-        };
+        return { templateSource, dataSource: { alias: DRAFT_DATA_ALIAS, data: { statements: [statement] } } };
     };
     exports.buildDraftStatement = buildDraftStatement;
+    /** The statement options saved and draft renders share, validated the same way for both. */
+    const parseStatementPeriod = (options) => {
+        const statementDate = parseStatementDate(options.statementDate, 'statementDate');
+        const startDate = parseStatementDate(options.startDate, 'startDate');
+        const effectiveStatementDate = statementDate ?? today();
+        if (startDate !== null && startDate.iso > effectiveStatementDate.iso) {
+            throw new index_js_1.ValidationError(`startDate must not be after statementDate (${startDate.display} > ${effectiveStatementDate.display})`);
+        }
+        const { openTransactionsOnly } = options;
+        if (openTransactionsOnly !== undefined && openTransactionsOnly !== null && typeof openTransactionsOnly !== 'boolean') {
+            throw new index_js_1.ValidationError(`openTransactionsOnly must be true or false — got ${JSON.stringify(openTransactionsOnly)}`);
+        }
+        return { statementDate, startDate, openTransactionsOnly: openTransactionsOnly ?? null };
+    };
+    exports.parseStatementPeriod = parseStatementPeriod;
     const loadCustomer = (entityId) => {
         const rows = query
             .runSuiteQL({
             query: /* sql */ `
-        SELECT customer.id, customer.currency, customer.subsidiary,
+        SELECT customer.id, customer.currency,
           BUILTIN.DF(customer.defaultbillingaddress) AS billaddress,
           customerCurrency.displaysymbol AS currencysymbol, customerCurrency.symbolplacement
         FROM customer
@@ -123,7 +138,10 @@ define(["require", "exports", "N/format", "N/query", "../file-cabinet/index.js"]
         })
             .asMappedResults();
     };
-    /** Posting accounts-receivable lines for the customer in its own currency, up to statementDate. */
+    /**
+     * Posting accounts-receivable lines for the customer in its own currency, up to statementDate, from
+     * the primary accounting book only (Multi-Book accounts carry one accounting line per book).
+     */
     const arLinesQuery = (filter) => {
         const openAmount = /* sql */ `SIGN(transactionLine.foreignamount) * (NVL(txn.foreignamountunpaid, 0) + NVL(txn.foreignpaymentamountunused, 0))`;
         const bodyColumns = filter.bodyFields.map((field) => `, BUILTIN.DF(txn.${field}) AS ${field}`).join('');
@@ -143,6 +161,7 @@ define(["require", "exports", "N/format", "N/query", "../file-cabinet/index.js"]
       JOIN account arAccount ON arAccount.id = accountingLine.account
       WHERE transactionLine.entity = ? AND txn.currency = ?
         AND accountingLine.posting = 'T' AND arAccount.accttype = 'AcctRec'
+        AND accountingLine.accountingbook = (SELECT primaryBook.id FROM accountingbook primaryBook WHERE primaryBook.isprimary = 'T')
         AND txn.trandate <= TO_DATE(?, 'YYYY-MM-DD')`,
             params: [filter.openOnly ? 'T' : 'F', filter.statementDate.iso, filter.entityId, filter.currencyId, filter.statementDate.iso],
         };
@@ -207,11 +226,94 @@ define(["require", "exports", "N/format", "N/query", "../file-cabinet/index.js"]
      */
     const adaptSourceToDraftData = (source, references) => {
         const labelFrom = (labels) => (interpolation, field) => labels[field] ?? interpolation;
-        return source
-            .replace(/<#[^>]*>|\$\{[^}]*\}/g, (construct) => construct.replace(/(?<![\w.])statements(?!\w)/g, `${DRAFT_DATA_ALIAS}.statements`))
+        const redirected = rewriteConstructCode(source, (kind) => kind === 'directive' || kind === 'interpolation', (code) => code.replace(new RegExp(BARE_STATEMENTS.source, 'g'), `${DRAFT_DATA_ALIAS}.statements`));
+        assertDraftCanFeed(redirected);
+        return redirected
             .replace(/\$\{\s*record@title\s*\}/g, 'Statement')
             .replace(new RegExp(`\\$\\{\\s*${references.statementVariable}\\.(\\w+)@label\\s*\\}`, 'g'), labelFrom(STATEMENT_LABELS))
             .replace(new RegExp(`\\$\\{\\s*${references.lineVariable}\\.(\\w+)@label\\s*\\}`, 'g'), labelFrom(LINE_LABELS));
+    };
+    // Without this, a template the rewrite can't feed (a legacy layout reading `record.lines`, or
+    // `statements` passed through a macro call or square-bracket tag) renders a plausible empty PDF.
+    const assertDraftCanFeed = (redirected) => {
+        const unredirected = findConstructs(redirected).find((construct) => construct.kind !== 'comment' && codeSegments(redirected.slice(construct.start, construct.end)).some((code) => BARE_STATEMENTS.test(code)));
+        if (unredirected !== undefined) {
+            const snippet = redirected.slice(unredirected.start, Math.min(unredirected.end, unredirected.start + 60));
+            throw new index_js_1.ValidationError(`this template reads \`statements\` inside \`${snippet}\`, which draft preview can't redirect to its rebuilt data; ${DRAFT_NOT_SUPPORTED}`);
+        }
+        if (!redirected.includes(`${DRAFT_DATA_ALIAS}.statements`)) {
+            throw new index_js_1.ValidationError(`this template reads statement data from \`record\` (legacy layout); ${DRAFT_NOT_SUPPORTED}`);
+        }
+    };
+    /** Applies `transform` to the code of matching FreeMarker constructs, leaving their string literals and all other text unchanged. */
+    const rewriteConstructCode = (source, applies, transform) => {
+        let rewritten = '';
+        let copiedUpTo = 0;
+        for (const construct of findConstructs(source)) {
+            if (!applies(construct.kind))
+                continue;
+            const parts = source.slice(construct.start, construct.end).split(STRING_LITERAL);
+            rewritten += source.slice(copiedUpTo, construct.start) + parts.map((part, index) => (index % 2 === 0 ? transform(part) : part)).join('');
+            copiedUpTo = construct.end;
+        }
+        return rewritten + source.slice(copiedUpTo);
+    };
+    const codeSegments = (constructText) => constructText.split(STRING_LITERAL).filter((_part, index) => index % 2 === 0);
+    /**
+     * FreeMarker tags, macro calls, square-bracket tags, interpolations and comments, in order. A tag ends
+     * at its closer only outside string literals and brackets, as FreeMarker reads `<#if (x > 0)>`.
+     */
+    const findConstructs = (source) => {
+        const constructs = [];
+        const opener = new RegExp(CONSTRUCT_OPENER.source, 'g');
+        for (let match = opener.exec(source); match !== null; match = opener.exec(source)) {
+            const kind = constructKindOf(match[0]);
+            const end = kind === 'comment'
+                ? endOfComment(source, match.index)
+                : endOfTag(source, match.index + match[0].length, CONSTRUCT_CLOSERS[kind]);
+            constructs.push({ kind, start: match.index, end });
+            opener.lastIndex = end;
+        }
+        return constructs;
+    };
+    const constructKindOf = (openerText) => {
+        if (openerText === '<#--')
+            return 'comment';
+        if (openerText === '${')
+            return 'interpolation';
+        if (openerText.startsWith('['))
+            return 'squareTag';
+        return openerText.includes('@') ? 'macro' : 'directive';
+    };
+    const endOfComment = (source, start) => {
+        const close = source.indexOf('-->', start + '<#--'.length);
+        return close === -1 ? source.length : close + '-->'.length;
+    };
+    const endOfTag = (source, from, closer) => {
+        let depth = 0;
+        let quote = null;
+        for (let position = from; position < source.length; position++) {
+            const character = source[position];
+            if (quote !== null) {
+                if (character === '\\')
+                    position++;
+                else if (character === quote)
+                    quote = null;
+            }
+            else if (character === '"' || character === "'") {
+                quote = character;
+            }
+            else if (depth === 0 && character === closer) {
+                return position + 1;
+            }
+            else if ('([{'.includes(character)) {
+                depth++;
+            }
+            else if (')]}'.includes(character)) {
+                depth = Math.max(0, depth - 1);
+            }
+        }
+        return source.length;
     };
     // ============ Formatting ============
     const parseStatementDate = (value, field) => {
