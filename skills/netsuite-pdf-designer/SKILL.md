@@ -61,7 +61,8 @@ the alias is wrong; stop and check it rather than linking a guessed host.
 - Roots: `record` (the transaction) plus `companyInformation`, `user`, `preferences` and `nsfont`,
   which NetSuite fills itself. `subsidiary` is **not** filled by NetSuite's render API; the RESTlet
   adds it from the transaction's subsidiary. Statement templates loop
-  `<#list statements as statement>` inside `<pdfset>`.
+  `<#list statements as statement>` inside `<pdfset>`; a draft statement render gets the customer
+  as `record` and `customer`, its subsidiary as `subsidiary`, and rebuilt `statements` data.
 - A missing field (`${record.nosuchfield}`) renders as an empty string, silently. A broken
   FreeMarker construct (unclosed `<#if>`, unknown `?built-in`) fails with `UNEXPECTED_ERROR` and no
   detail, which the RESTlet translates into a hint to run the validator. Malformed XML comes back
@@ -100,6 +101,7 @@ Exactly one of `id` / `scriptid`. Pass only the numeric id, never the `pdftempla
 rl --method POST --data '{"templateId": 123, "record": {"type": "invoice", "id": 456}}'    # saved (or "scriptId")
 rl --method POST --data @"$SP/draft.json"   # draft: {"source": "<?xml…", "templateId": 123, "record": {…}}
 rl --method POST --data '{"printType": "STATEMENT", "entityId": 789, "formId": 210}'       # saved statement
+rl --method POST --data @"$SP/draft.json"   # draft statement: {"printType": "STATEMENT", "source": "<?xml…", "entityId": 789}
 ```
 
 - **Transaction** (default when `printType` is absent): `record {type, id}` is required; `type` is
@@ -107,20 +109,27 @@ rl --method POST --data '{"printType": "STATEMENT", "entityId": 789, "formId": 2
   `salesorder`, `PurchOrd` → `purchaseorder`, `CashSale` → `cashsale`, `Estimate` → `estimate`,
   `VendBill` → `vendorbill`, `Check` → `check`). `source` makes it a draft; `templateId` alongside
   it is accepted and ignored.
-- **Statement** (saved only): `entityId` (customer) and `formId`, the id of an existing statement
-  form that prints with the template, are required; `statementDate`, `startDate`
-  (`MM/DD/YYYY` strings) and `openTransactionsOnly` (boolean) are optional. The form decides the
-  template. SuiteQL has no table that lists transaction forms, so ask the user for the form id
-  (Customization → Forms → Transaction Forms, type Statement; the id is in the form's URL).
+- **Statement**: `entityId` (customer) is required; `statementDate` (default today), `startDate`
+  (default none: the whole history) and `openTransactionsOnly` (boolean, default false) are
+  optional, dates in the user's NetSuite format (`MM/DD/YYYY` in CP's accounts).
+  - **Saved**: `formId`, the id of an existing statement form that prints with the template, is
+    required, and the form decides the template. SuiteQL has no table that lists transaction
+    forms, so ask the user for the form id (Customization → Forms → Transaction Forms, type
+    Statement; the id is in the form's URL).
+  - **Draft**: `source` and **no** `formId` (a `formId` next to `source` is refused). NetSuite can't
+    run a draft through its statement engine, so the RESTlet rebuilds the statement with SuiteQL
+    and the response adds `"approximate": true`. What is rebuilt and what isn't: see "Draft
+    statements" under Gotchas.
 
 ```json
 { "mode": "saved" | "draft", "printType": "TRANSACTION" | "STATEMENT",
-  "record": { "type": "invoice", "id": 456 } | { "entityId": 789, "formId": 210 },
-  "pdf": "<base64>", "pdfBytes": 41318, "xml": "<merged BFO markup>" }
+  "record": { "type": "invoice", "id": 456 } | { "entityId": 789, "formId": 210 } | { "entityId": 789 },
+  "pdf": "<base64>", "pdfBytes": 41318, "xml": "<merged BFO markup>",
+  "approximate": true }    // draft statements only
 ```
 
-A statement's `xml` is a `<pdfset>` holding one `<html>` child per statement; both local scripts
-accept it. Empty source, or the literal `null`/`undefined`, is refused (a shell pipeline lost its
+A saved statement's `xml` is a `<pdfset>` holding one `<html>` child per statement; a draft
+statement's keeps the source's `<pdf>` children. Both local scripts accept either. Empty source, or the literal `null`/`undefined`, is refused (a shell pipeline lost its
 input).
 
 ### PUT `{id}` or `{scriptid}` — backup
@@ -151,10 +160,15 @@ the backup file's contents (download it with the netsuite-file-cabinet skill) th
    Prefer a sample where the fields the template uses are filled in (read its `${record.…}` paths).
    For a statement, a customer with open invoices:
    `SELECT customer.id, customer.entityid, COUNT(txn.id) AS openinvoices FROM transaction txn JOIN customer ON customer.id = txn.entity WHERE txn.type = 'CustInvc' AND txn.status = 'A' GROUP BY customer.id, customer.entityid ORDER BY openinvoices DESC FETCH FIRST 5 ROWS ONLY`
-   (`ORDER BY COUNT(*)` fails with `UNEXPECTED_ERROR`; order by the alias),
-   plus the statement form id from the user.
-3. **Check what can be previewed.** Transactions: saved and draft. Statements: saved only; **draft
-   statement previews are not available yet**, so validate drafts and preview after saving. Other
+   (`ORDER BY COUNT(*)` fails with `UNEXPECTED_ERROR`; order by the alias). A saved statement
+   render also needs the statement form id from the user; a draft doesn't.
+3. **Check what can be previewed.** Transactions: saved and draft. Statements: saved (through a
+   form) and draft (rebuilt data, **approximate**). For a statement draft, build the body with
+   `jq -n --rawfile source "$SP/pdf-draft-<id>.xml" '{printType: "STATEMENT", source: $source, entityId: 789}'`
+   (add `statementDate` / `startDate` / `openTransactionsOnly` when the user asks), pass the banner
+   mode `"draft (approximate: statement data rebuilt with SuiteQL, not NetSuite's statement engine)"`,
+   and tell the user the numbers are rebuilt. When a form for the template exists, a saved render
+   through it is the reference to compare against. Other
    print types (packing slip, picking ticket, labels, price list, GL impact): no preview in this
    version; read, validate and save still work. **Check templates that loop over `records`** (the
    Print Checks batch list) can't be previewed either: before rendering, run
@@ -277,6 +291,21 @@ the backup file's contents (download it with the netsuite-file-cabinet skill) th
   draft (comment out halves with `<#-- -->`) and re-render.
 - Merged statement markup is `<pdfset>` with `<html>` children, not `<pdf>`; `bfo-to-html.sh`
   and `pdf-validate.sh --merged` both accept it.
+- **Draft statements** are rebuilt, not NetSuite's: AR lines in the customer's currency up to the
+  statement date (type name + `#` + number, charge or payment by sign, due date), a running
+  balance, a `Balance Forward` line from `startDate`, open-only mode, aging by days past due, the
+  default billing address, and any `line.custbody_*` field the template reads. In a sandbox test a
+  custom statement template's draft matched its saved render line for line. Known gaps: one statement in
+  the customer's currency (no consolidated or multi-currency statements); aging uses today's open
+  amounts even for a past `statementDate`; same-day transactions may print in a different order,
+  so balances within that day can differ (end-of-day balances agree); labels are NetSuite's English
+  ones; templates that read statement fields from `record` (the legacy single-statement layout) or
+  use `remittanceSlip` get the customer record or nothing there. To make the custom data work, the
+  RESTlet adapts the draft before rendering: `statements` points into its data, known
+  `${statement.…@label}` / `${line.…@label}` become their label text, `${record@title}` becomes
+  "Statement", and every `statement.…` / `line.…` path the template reads is filled (NetSuite
+  silently drops a directive that reads a missing key in custom data). The saved template's source
+  is never changed by this.
 - **Never `echo "$json"` in zsh**: it expands `\r\n` escapes inside JSON strings. Write responses
   to files and read them with jq. Build request bodies with `jq --rawfile source <file>`, never
   `--arg source "$(cat …)"`: a failed `$(…)` yields an empty string or `null`. Extract source with
@@ -304,7 +333,8 @@ and verify the result. No `INSTALL.md` there: ask the user where their `ai-tools
 ## Maintainers
 
 Source: the private `sdf-creative-planning` repo, `src/RESTlet/cp_pdf_template_rl.ts` and
-`src/netsuite_modules/pdf-template/index.ts`, with tests under `__tests__/pdf_template/`. Shipped
+`src/netsuite_modules/pdf-template/index.ts` (draft statement data in `statement-data.ts`), with
+tests under `__tests__/pdf_template/`. Shipped
 here via `netsuite/restlets/sync.sh`. Spec:
 `docs/superpowers/specs/2026-10-16-netsuite-pdf-designer-design.html` in that repo. Local scripts
 are tested by `tests/pdf-validate.test.sh`, `tests/bfo-to-html.test.sh` and
