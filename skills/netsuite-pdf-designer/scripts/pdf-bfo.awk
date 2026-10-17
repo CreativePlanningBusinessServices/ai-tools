@@ -1,4 +1,5 @@
-# pdf-bfo.awk — envelope, BFO allowlist and NetSuite pass of pdf-validate.sh. Input: data.tsv, then the FreeMarker-blanked copy.
+# pdf-bfo.awk — envelope, BFO allowlist and NetSuite pass of pdf-validate.sh. Input: data.tsv, then the FreeMarker-blanked copy
+# (or, with envelopeCountsOnly=1, the branch-blanked copy, reporting only the <head>/<body> counts).
 function locate(offset,   head, newlines, index_back) {
   head = substr(chunkText, 1, offset - 1); newlines = gsub(/\n/, "\n", head)
   if (newlines == 0) { foundLine = chunkLine; foundCol = chunkCol + offset - 1; return }
@@ -6,6 +7,9 @@ function locate(offset,   head, newlines, index_back) {
   foundLine = chunkLine + newlines; foundCol = offset - index_back
 }
 function report(severity, offset, rule, message) {
+  # <head>/<body> counts come from a second run over the branch-blanked copy (envelopeCountsOnly=1), so a template with
+  # one <pdf> per <#if>/<#else> arm counts one document; every other rule reads the copy that keeps each branch.
+  if ((rule ~ /^envelope\.(head|body)$/) != (envelopeCountsOnly == 1)) return
   locate(offset); gsub(/[\t\r\n]+/, " ", message)
   print severity "\t" foundLine "\t" foundCol "\t" rule "\t" message
 }

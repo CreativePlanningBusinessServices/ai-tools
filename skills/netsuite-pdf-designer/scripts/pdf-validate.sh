@@ -62,6 +62,9 @@ else
       -f "$script_dir/pdf-freemarker.awk" "$work/data.tsv" "$input_file" >> "$findings"
   fi
   awk -v declarationAfterFreemarker="$([ -f "$work/declaration-after-freemarker" ] && echo 1)" -f "$script_dir/pdf-bfo.awk" "$work/data.tsv" "$stripped" >> "$findings"
+  # <head>/<body> are counted on the copy xmllint reads (one branch); after a FreeMarker syntax error that copy can't be trusted.
+  envelope_copy="$xml_copy"; [ -f "$work/corrupt" ] && envelope_copy="$stripped"
+  awk -v envelopeCountsOnly=1 -f "$script_dir/pdf-bfo.awk" "$work/data.tsv" "$envelope_copy" >> "$findings"
 
   # XML pass: xmllint reads the branch-blanked copy behind a one-line prolog. Entity errors are all reported; for
   # structure only the first error is, since libxml2 cascades after it.

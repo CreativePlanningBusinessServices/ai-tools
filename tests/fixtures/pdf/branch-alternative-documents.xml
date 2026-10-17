@@ -1,0 +1,24 @@
+<?xml version="1.0"?><!DOCTYPE pdf PUBLIC "-//big.faceless.org//report" "report-1.1.dtd">
+<#if record??>
+<pdf>
+<head>
+	<link name="NotoSans" type="font" subtype="truetype" src="${nsfont.NotoSans_Regular}" src-bold="${nsfont.NotoSans_Bold}" bytes="2" />
+</head>
+<body padding="0.5in" size="Letter">
+<table style="width: 100%;">
+<#list record.lines as line>
+<tr><td>${line.datecol}</td><td>${line.description}</td><td align="right">${line.balance}</td></tr>
+</#list>
+</table>
+</body>
+</pdf>
+<#else>
+<pdf>
+<head>
+	<link name="NotoSans" type="font" subtype="truetype" src="${nsfont.NotoSans_Regular}" bytes="2" />
+</head>
+<body padding="0.5in" size="Letter">
+<p>Nothing to print.</p>
+</body>
+</pdf>
+</#if>
