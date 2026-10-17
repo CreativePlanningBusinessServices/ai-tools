@@ -1,0 +1,5 @@
+<?xml version="1.0"?><!DOCTYPE pdf PUBLIC "-//big.faceless.org//report" "report-1.1.dtd">
+<pdfset>
+<pdf><head></head><body size="A4"><p>Packet One</p></body></pdf>
+<pdf><head></head><body size="A4"><p>Packet Two</p></body></pdf>
+</pdfset>

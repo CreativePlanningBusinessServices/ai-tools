@@ -1,0 +1,15 @@
+<?xml version="1.0"?><!DOCTYPE pdf PUBLIC "-//big.faceless.org//report" "report-1.1.dtd">
+<pdf>
+<head>
+	<link name="NotoSans" type="font" subtype="truetype" src="${nsfont.NotoSans_Regular}" src-bold="${nsfont.NotoSans_Bold}" bytes="2" />
+</head>
+<body padding="0.5in" size="Letter">
+<table style="width: 100%;">
+<#list record.item as item>
+<#if item_index % 2 == 0><tr style="background-color:#eeeeee"><#else><tr></#if>
+	<td>${item.description}</td>
+</tr>
+</#list>
+</table>
+</body>
+</pdf>

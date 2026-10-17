@@ -1,0 +1,22 @@
+<?xml version="1.0"?><!DOCTYPE pdf PUBLIC "-//big.faceless.org//report" "report-1.1.dtd">
+<#if record??>
+<pdf>
+<head>
+	<link name="NotoSans" type="font" subtype="truetype" src="${nsfont.NotoSans_Regular}" bytes="2" />
+</head>
+<head>
+</head>
+<body padding="0.5in" size="Letter">
+<p>${record.tranid}</p>
+</body>
+</pdf>
+<#else>
+<pdf>
+<head>
+	<link name="NotoSans" type="font" subtype="truetype" src="${nsfont.NotoSans_Regular}" bytes="2" />
+</head>
+<body padding="0.5in" size="Letter">
+<p>Nothing to print.</p>
+</body>
+</pdf>
+</#if>

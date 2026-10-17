@@ -1,0 +1,13 @@
+<?xml version="1.0"?><!DOCTYPE pdf PUBLIC "-//big.faceless.org//report" "report-1.1.dtd">
+<pdf>
+<head>
+	<link name="NotoSans" type="font" subtype="truetype" src="${nsfont.NotoSans_Regular}" src-bold="${nsfont.NotoSans_Bold}" bytes="2" />
+<style type="text/css">
+	p.big { font-size: 2rem; }
+</style>
+</head>
+<body padding="0.5in" size="Letter">
+<blink>Overdue</blink>
+<table style="width: 100%; display:flex;"><tr><td>A</td><td>B</td></tr></table>
+</body>
+</pdf>

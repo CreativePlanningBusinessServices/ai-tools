@@ -1,0 +1,117 @@
+# pdf-freemarker.awk — FreeMarker pass of pdf-validate.sh. Input: data.tsv (B/D rows), then the template.
+# Prints findings as TSV, touches declarationFile when only FreeMarker precedes <?xml on line 1, and writes two copies with the template's lines and columns: strippedFile (FreeMarker spans
+# blanked, ${…} as x's, every branch kept, for the BFO pass) and xmlCopyFile (also blanks the bodies of non-first
+# branches — <#else>, <#elseif>, later <#case>/<#default>/<#on>, <#recover> — so alternative markup parses in xmllint).
+function blanks(count,   text) { text = ""; while (count > 512) { text = text SPACES; count -= 512 } return text substr(SPACES, 1, count) }
+function exes(count,   text) { text = ""; while (count > 512) { text = text EXES; count -= 512 } return text substr(EXES, 1, count) }
+function finding(severity, at_line, at_col, rule, message) { print severity "\t" at_line "\t" at_col "\t" rule "\t" message }
+function put(text) { out = out text; xmlOut = xmlOut (hiddenLevels ? blanks(length(text)) : text) }
+function emit(text) { put(mode == "interpolation" ? exes(length(text)) : blanks(length(text))); if (mode == "directive") body = body text }
+# FreeMarker 2.3.23+ accepts camelCase names: elseIf -> elseif (directives), hasContent -> has_content (built-ins)
+function camel_to_lower(name, separator) {
+  if (name !~ /^[a-z][a-zA-Z0-9]*[A-Z]/) return name
+  while (match(name, /[A-Z]/)) name = substr(name, 1, RSTART - 1) separator tolower(substr(name, RSTART, 1)) substr(name, RSTART + 1)
+  return name
+}
+function scan_expression(   ch, name) {
+  while (pos <= len) {
+    ch = substr(line, pos, 1)
+    if (quote != "") {
+      if (ch == "\\") { emit(substr(line, pos, 2)); pos += 2; continue }
+      if (ch == quote) quote = ""
+      emit(ch); pos++; continue
+    }
+    if (ch == "\"" || ch == "'") { quote = ch; emit(ch); pos++; continue }
+    if (ch == "?") {
+      if (substr(line, pos + 1, 1) == "?") { emit("??"); pos += 2; continue }
+      if (match(substr(line, pos + 1), /^[a-zA-Z_][a-zA-Z0-9_]*/)) {
+        name = camel_to_lower(substr(line, pos + 1, RLENGTH), "_")
+        if (!(name in builtin)) finding("WARN", FNR, pos, "freemarker.builtin", "?" name " is not a FreeMarker 2.3 built-in")
+      }
+    } else if (mode == "interpolation") {
+      if (ch == "{") braces++
+      else if (ch == "}" && --braces == 0) { put("x"); pos++; mode = ""; return }
+      else if (ch == "<" && substr(line, pos) ~ /^<([\/#@]|[a-zA-Z][a-zA-Z0-9_:.-]*([ \t\r\/>]|$))/) {
+        finding("ERROR", startLine, startCol, "freemarker.interpolation", "${ is never closed with }"); mode = ""; return
+      }
+    } else if (ch == "(") parens++
+    else if (ch == ")") parens--
+    else if (ch == ">" && parens <= 0) { put(" "); pos++; mode = ""; end_directive(); return }
+    emit(ch); pos++
+  }
+}
+function end_directive(   name, parents) {
+  if (kind == "@" || !match(body, /^[a-zA-Z_]+/)) return
+  name = camel_to_lower(substr(body, 1, RLENGTH), "")
+  if (!(name in directive)) { finding("ERROR", startLine, startCol, "freemarker.directive", "<#" name "> is not a FreeMarker directive"); return }
+  if (closing) { close_block(name); return }
+  if (name in allowedParents) {
+    parents = allowedParents[name]; gsub(/ /, "> or <#", parents)
+    if (index(" " allowedParents[name] " ", " " stackName[depth] " ") == 0)
+      finding("ERROR", startLine, startCol, "freemarker.misplaced", "<#" name "> must sit directly inside <#" parents ">")
+    else if (name ~ /^(case|default|on)$/ && !caseSeen[depth]) caseSeen[depth] = 1
+    else if (!alternate[depth]) { alternate[depth] = 1; hiddenLevels++ }
+    return
+  }
+  if (!(name in blockDirective) || body ~ /\/[ \t\r\n]*$/) return
+  if (name ~ /^(assign|global|local)$/ && body ~ /=/) return
+  depth++; stackName[depth] = name; stackLine[depth] = startLine; stackCol[depth] = startCol; alternate[depth] = 0; caseSeen[depth] = 0
+  if (name == "noparse") mode = "noparse"
+}
+function close_block(name,   level) {
+  if (name == "sep") return
+  for (level = depth; level > 0 && stackName[level] != name; level--) ;
+  if (level == 0) { finding("ERROR", startLine, startCol, "freemarker.stray", "</#" name "> has no matching <#" name ">"); return }
+  while (depth > level) {
+    finding("ERROR", stackLine[depth], stackCol[depth], "freemarker.unclosed", "<#" stackName[depth] "> is not closed before </#" name "> on line " startLine)
+    pop_level()
+  }
+  pop_level()
+}
+function pop_level() { if (alternate[depth]) hiddenLevels--; depth-- }
+BEGIN {
+  FS = "\t"; SPACES = sprintf("%512s", ""); EXES = SPACES; gsub(/ /, "x", EXES)
+  split("if list items macro function attempt switch compress escape noescape autoesc noautoesc outputformat noparse assign global local", names, " ")
+  for (i in names) blockDirective[names[i]] = 1
+  allowedParents["else"] = "if list"; allowedParents["elseif"] = "if"; allowedParents["recover"] = "attempt"
+  allowedParents["case"] = "switch"; allowedParents["default"] = "switch"; allowedParents["on"] = "switch"
+}
+FNR == NR { if ($1 == "B") builtin[$2] = 1; else if ($1 == "D") directive[$2] = 1; next }
+{
+  line = $0; len = length(line); out = ""; xmlOut = ""; pos = 1
+  while (pos <= len) {
+    if (mode == "comment") {
+      found = index(substr(line, pos), "-->")
+      if (!found) { put(blanks(len - pos + 1)); pos = len + 1 } else { put(blanks(found + 2)); pos += found + 2; mode = "" }
+      continue
+    }
+    if (mode == "noparse") {
+      if (!match(substr(line, pos), /<\/#no[pP]arse/)) { put(substr(line, pos)); pos = len + 1 }
+      else { put(substr(line, pos, RSTART - 1)); pos += RSTART - 1; mode = "" }
+      continue
+    }
+    if (mode == "directive" || mode == "interpolation") { scan_expression(); continue }
+    rest = substr(line, pos)
+    if (!match(rest, /<\/?[#@][a-zA-Z_-]|\$\{/)) { put(rest); if (FNR == 1) firstLineText = firstLineText rest; break }
+    put(substr(rest, 1, RSTART - 1)); if (FNR == 1) firstLineText = firstLineText substr(rest, 1, RSTART - 1)
+    pos += RSTART - 1; startLine = FNR; startCol = pos; quote = ""
+    if (substr(line, pos, 4) == "<#--") { mode = "comment"; put("    "); pos += 4 }
+    else if (substr(line, pos, 2) == "${") { mode = "interpolation"; braces = 1; put("xx"); pos += 2 }
+    else {
+      closing = (substr(line, pos + 1, 1) == "/"); kind = substr(line, pos + 1 + closing, 1)
+      mode = "directive"; body = ""; parens = 0; put(blanks(2 + closing)); pos += 2 + closing
+    }
+  }
+  if (mode == "directive") body = body "\n"
+  # FreeMarker output drops these spans, so <#assign …><?xml …?> still puts the declaration first
+  if (FNR == 1 && line !~ /^<\?xml/ && firstLineText ~ /^<\?xml[ \t]/) print "1" > declarationFile
+  print out > strippedFile; print xmlOut > xmlCopyFile
+}
+END {
+  if (mode == "comment") { finding("ERROR", startLine, startCol, "freemarker.comment", "<#-- is never closed with -->"); corrupt = 1 }
+  if (mode == "directive") { finding("ERROR", startLine, startCol, "freemarker.tag", "this FreeMarker tag never ends with >"); corrupt = 1 }
+  if (mode == "interpolation") finding("ERROR", startLine, startCol, "freemarker.interpolation", "${ is never closed with }")
+  for (; depth > 0; depth--)
+    finding("ERROR", stackLine[depth], stackCol[depth], "freemarker.unclosed", "<#" stackName[depth] "> is never closed with </#" stackName[depth] ">")
+  if (corrupt) print "corrupt" > corruptFile
+}
