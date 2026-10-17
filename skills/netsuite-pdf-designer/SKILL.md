@@ -111,7 +111,9 @@ rl --method POST --data @"$SP/draft.json"   # draft statement: {"printType": "ST
   it is accepted and ignored.
 - **Statement**: `entityId` (customer) is required; `statementDate` (default today), `startDate`
   (default none: the whole history) and `openTransactionsOnly` (boolean, default false) are
-  optional, dates in the user's NetSuite format (`MM/DD/YYYY` in CP's accounts).
+  optional, dates in the user's NetSuite format (`MM/DD/YYYY` in CP's accounts). Saved and draft
+  renders both refuse a date that doesn't parse, a `startDate` after the statement date, and an
+  `openTransactionsOnly` that isn't a JSON boolean.
   - **Saved**: `formId`, the id of an existing statement form that prints with the template, is
     required, and the form decides the template. SuiteQL has no table that lists transaction
     forms, so ask the user for the form id (Customization → Forms → Transaction Forms, type
@@ -140,8 +142,15 @@ rl --method PUT --data '{"id": 123}' > "$SP/backup-123.json"
 
 The RESTlet reads the current source itself and writes it to
 `/SuiteScripts/CreativePlanning/pdf-template-backups/<id>-<scriptid>-<yyyyMMdd-HHmmss>.xml`:
-`{"id": 123, "scriptid": "…", "backup": {"id": 2468, "path": "/SuiteScripts/…"}}`. Restore = save
-the backup file's contents (download it with the netsuite-file-cabinet skill) through step 6.
+`{"id": 123, "scriptid": "…", "backup": {"id": 2468, "path": "/SuiteScripts/…"}}`. The timestamp
+is in the account's (server's) time zone, not the user's local time.
+
+Restore = save the backup's contents through step 6:
+- the backup's file id is `backup.id` in the PUT response;
+- download it with the netsuite-file-cabinet skill (`--param id=<backup.id> --param contents=T`) and
+  write it with `jq -j .contents` (not `jq -r`) as the draft;
+- pass `stage --base` the source NetSuite holds **now** (a fresh GET, `jq -j .source`), not the old
+  base, or `stage` refuses it as stale.
 
 ## Workflow
 
@@ -189,12 +198,17 @@ the backup file's contents (download it with the netsuite-file-cabinet skill) th
    turn, after the explanatory text, so the cards sit at the bottom of the chat. The PDF is the
    real output; the HTML twin is for clicking and annotating (every element carries a `data-bfo`
    path into the merged XML). Page flow, repeated headers and fonts are exact only in the PDF.
+   Images that aren't "available without login" show as broken in the twin; check them in the PDF.
    Nothing opens the Browser pane automatically: writing the file, `show_pane` and a preview server
    all fail to, so don't try them. Where SendUserFile is unavailable, give the paths. Previews hold
    real customer data: they live only in the scratchpad and are never committed, attached, or
    published.
-5. **Edit loop.** The working copy is `$SP/pdf-draft-<id>.xml` (start as a copy of the base). After
-   each edit:
+5. **Edit loop.** The working copy is `$SP/pdf-draft-<id>.xml` (start as a copy of the base).
+   **Most NetSuite-saved sources are CRLF** (the starters are LF): keep them CRLF, edit with
+   whole-file substitutions (`perl -0777`, explicit `\r\n`) rather than line-anchored `sed`/`awk`,
+   and confirm with `diff` that the edit changed something before rendering. The body below is for
+   transactions; for a new template, leave `templateId` out. Statement drafts use step 3's body.
+   After each edit:
    ```bash
    bash "$PD/scripts/pdf-validate.sh" "$SP/pdf-draft-123.xml"              # fix every ERROR before rendering
    jq -n --rawfile source "$SP/pdf-draft-123.xml" '{source: $source, templateId: 123, record: {type: "invoice", id: 456}}' > "$SP/draft.json"
@@ -220,6 +234,9 @@ the backup file's contents (download it with the netsuite-file-cabinet skill) th
    user agrees.
 6. **Save** an existing custom template, only after an explicit yes that names the account
    ("save to <alias>"). Production is written only when the user names production for this save.
+   For previewable print types (transactions, statements), save only a draft whose most recent
+   draft render succeeded. Never save after an `{error}` render without telling the user and
+   getting their yes.
    - **SuiteCloud auth id** for that account: `suitecloud account:manageauth --list`, then
      `suitecloud account:manageauth --info <authid>` on each listed id; its Account ID must equal
      the alias's `accountId` (`netsuite-cli account list`). Browser-login ids are listed only with
@@ -250,7 +267,8 @@ the backup file's contents (download it with the netsuite-file-cabinet skill) th
    company header, page x of y footer, Letter, an item table with a `<thead>` of `@label`s,
    totals) or `references/starter-statement.xml` (the same frame over `statement.lines` with the
    aging row), or from a copy of an existing template. Work in `$SP/pdf-draft-new.xml`, preview
-   transaction drafts against a sample (step 5), then, after an explicit yes naming the account:
+   transaction drafts against a sample (step 5, no `templateId`) and statement drafts with step 3's
+   body, then, after an explicit yes naming the account:
    Find the auth id and `init` the project as in step 6 (production only when the user names it for
    this create).
    ```bash
@@ -299,9 +317,13 @@ the backup file's contents (download it with the netsuite-file-cabinet skill) th
   the customer's currency (no consolidated or multi-currency statements); aging uses today's open
   amounts even for a past `statementDate`; same-day transactions may print in a different order,
   so balances within that day can differ (end-of-day balances agree); labels are NetSuite's English
-  ones; templates that read statement fields from `record` (the legacy single-statement layout) or
-  use `remittanceSlip` get the customer record or nothing there. To make the custom data work, the
-  RESTlet adapts the draft before rendering: `statements` points into its data, known
+  ones; `remittanceSlip` prints nothing; on Multi-Book accounts only the primary accounting book is
+  read; and subcustomers' transactions are left out (only the customer's own). A legacy
+  single-statement layout (reads `record.lines`, never `statements`, as NetSuite's
+  `STDTMPLSTATEMENT` does) is refused with an `{error}`, as is a template that passes `statements`
+  through a macro call (`<@…>`) or a square-bracket tag (`[#…]`): preview those with a saved render
+  through a statement form (`formId`). To make the custom data work, the RESTlet adapts the draft
+  before rendering: `statements` (in FreeMarker code, not in string literals) points into its data, known
   `${statement.…@label}` / `${line.…@label}` become their label text, `${record@title}` becomes
   "Statement", and every `statement.…` / `line.…` path the template reads is filled (NetSuite
   silently drops a directive that reads a missing key in custom data). The saved template's source

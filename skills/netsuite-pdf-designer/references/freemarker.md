@@ -13,6 +13,7 @@ Sources (fetched 2026-10-16). A claim marked **unverified** has no fetched sourc
 - [ns-file] https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/subsect_156630695265.html (`<@filecabinet>`)
 - [ns-faq] https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_159984373188.html
 - [probe] NetSuite sandbox probe, 2026-10-15/16 (design spec section 2). It overrides documents.
+- [netsuite-probe-2026-10] NetSuite sandbox comparison of saved statement renders with the draft statement data, 2026-10 (design spec section 4).
 
 ## Processing order
 
@@ -31,7 +32,7 @@ On preview or print NetSuite parses FreeMarker, then BFO validates the XML, then
 | `preferences` | Setup > Company > Printing & Fax | auto-populated for keys like `preferences.RETURNFORM`; `preferences.dateformat`, `DATEFORMAT`, `NUMBERFORMAT` came back empty and `?keys` lists nothing [probe] |
 | `nsfont` | font file paths | auto-populated, e.g. `nsfont.NotoSans_Regular` [probe]; see bfo.md |
 | `customer` | statement templates only | `${customer.entityId}`, `${customer.subsidiary.legalname}` [ns-body] |
-| `statement` | statement documents | `${statement.amountDue}` [ns-body]; statement templates loop `<#list statements as statement>` inside `<pdfset>` [probe]. `statement.lines` is named in the design spec but not in a fetched NetSuite page: **unverified** |
+| `statement` | statement documents | `${statement.amountDue}` [ns-body]; statement templates loop `<#list statements as statement>` inside `<pdfset>` [probe], and each statement's lines with `<#list statement.lines as line>` [netsuite-probe-2026-10]. The legacy single-statement layout (NetSuite's own standard statement template) reads `record.lines` instead, one `<pdf>` per `<#if record??>`/`<#else>` arm [netsuite-probe-2026-10] |
 | `salesorder` | packing slips | [ns-body] |
 | `records` | multiple sources (label, check, statement templates) | [ns-body] |
 | `results` | joined saved-search results | `${results[0].customer.phone}`, `<#list results as row>` [ns-join] |
