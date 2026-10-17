@@ -1,4 +1,4 @@
-define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "../file-cabinet/index.js"], function (require, exports, log, query, record, render, index_js_1) {
+define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "../file-cabinet/index.js", "./statement-data.js"], function (require, exports, log, query, record, render, index_js_1, statement_data_js_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.formatStamp = exports.parseJsonObject = exports.parseTemplateRef = exports.renderTemplate = exports.backupTemplate = exports.describeTemplate = exports.FREEMARKER_HINT = exports.BACKUP_FOLDER = exports.ValidationError = void 0;
@@ -8,6 +8,7 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "../fi
     const BACKUP_KEYS = ['id', 'scriptid'];
     const TRANSACTION_RENDER_KEYS = ['templateId', 'scriptId', 'source', 'record', 'printType'];
     const STATEMENT_RENDER_KEYS = ['printType', 'entityId', 'formId', 'statementDate', 'startDate', 'openTransactionsOnly'];
+    const DRAFT_STATEMENT_RENDER_KEYS = ['printType', 'source', 'entityId', 'statementDate', 'startDate', 'openTransactionsOnly'];
     // ============ Describe ============
     const describeTemplate = (ref) => {
         const row = loadMetadata(ref);
@@ -71,7 +72,9 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "../fi
         if (printType !== 'TRANSACTION' && printType !== 'STATEMENT') {
             throw new index_js_1.ValidationError(`draft preview supports TRANSACTION and STATEMENT, got ${JSON.stringify(printType)}`);
         }
-        return translateRenderErrors(() => (printType === 'STATEMENT' ? renderStatement(request) : renderTransaction(request)));
+        if (printType === 'TRANSACTION')
+            return translateRenderErrors(() => renderTransaction(request));
+        return translateRenderErrors(() => ('source' in request ? renderDraftStatement(request) : renderStatement(request)));
     };
     exports.renderTemplate = renderTemplate;
     const translateRenderErrors = (operation) => {
@@ -143,6 +146,41 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "../fi
             pdf: pdfFile.getContents(),
             pdfBytes: pdfFile.size,
             xml: htmlFile.getContents(),
+        };
+    };
+    const renderDraftStatement = (body) => {
+        if ('formId' in body)
+            throw new index_js_1.ValidationError('formId is only for saved statements — a draft (source) renders against rebuilt statement data, not a form');
+        const request = asObject(body, DRAFT_STATEMENT_RENDER_KEYS);
+        const source = requireSource(request.source);
+        if (request.entityId === undefined)
+            throw new index_js_1.ValidationError('entityId is required for a STATEMENT render');
+        const entityId = requireId(request.entityId);
+        const draft = (0, statement_data_js_1.buildDraftStatement)({
+            entityId,
+            statementDate: request.statementDate,
+            startDate: request.startDate,
+            openTransactionsOnly: request.openTransactionsOnly === true,
+            source,
+        });
+        const renderer = render.create();
+        renderer.templateContent = draft.templateSource;
+        const customer = record.load({ type: record.Type.CUSTOMER, id: entityId });
+        renderer.addRecord({ templateName: 'record', record: customer });
+        renderer.addRecord({ templateName: 'customer', record: customer });
+        if (draft.subsidiaryId !== null) {
+            renderer.addRecord({ templateName: 'subsidiary', record: record.load({ type: record.Type.SUBSIDIARY, id: draft.subsidiaryId }) });
+        }
+        renderer.addCustomDataSource({ format: render.DataSource.OBJECT, ...draft.dataSource });
+        const pdfFile = renderer.renderAsPdf();
+        return {
+            mode: 'draft',
+            printType: 'STATEMENT',
+            record: { entityId },
+            pdf: pdfFile.getContents(),
+            pdfBytes: pdfFile.size,
+            xml: renderer.renderAsString(),
+            approximate: true,
         };
     };
     const requireSource = (source) => {

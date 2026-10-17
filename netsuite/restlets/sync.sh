@@ -11,7 +11,7 @@ package_dir="${SYNC_OUT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 js_root=FileCabinet/SuiteScripts/CreativePlanning
 xml_root=Objects/Scripts/RESTlet
 restlet_files=(RESTlet/cp_saved_search_rl.js RESTlet/cp_file_cabinet_rl.js RESTlet/cp_mr_driver_rl.js RESTlet/cp_email_template_rl.js RESTlet/cp_pdf_template_rl.js)
-js_files=("${restlet_files[@]}" netsuite_modules/saved-search-serializer/index.js netsuite_modules/file-cabinet/index.js netsuite_modules/email-template/index.js netsuite_modules/pdf-template/index.js)
+js_files=("${restlet_files[@]}" netsuite_modules/saved-search-serializer/index.js netsuite_modules/file-cabinet/index.js netsuite_modules/email-template/index.js netsuite_modules/pdf-template/index.js netsuite_modules/pdf-template/statement-data.js)
 xml_files=(customscript_cp_saved_search_rl.xml customscript_cp_file_cabinet_rl.xml customscript_cp_mr_driver_rl.xml customscript_cp_email_template_rl.xml customscript_cp_pdf_template_rl.xml)
 
 die() { echo "sync: $*" >&2; exit 1; }

@@ -27,7 +27,8 @@ echo 'define(["require", "exports"], function () {});' > "$out/netsuite_modules/
 echo 'define(["require", "exports", "N/log", "../netsuite_modules/email-template/index.js"], function () {});' > "$out/RESTlet/cp_email_template_rl.js"
 echo 'define(["require", "exports", "N/render", "../file-cabinet/index.js"], function () {});' > "$out/netsuite_modules/email-template/index.js"
 echo 'define(["require", "exports", "N/log", "../netsuite_modules/pdf-template/index.js"], function () {});' > "$out/RESTlet/cp_pdf_template_rl.js"
-echo 'define(["require", "exports", "N/render", "../file-cabinet/index.js"], function () {});' > "$out/netsuite_modules/pdf-template/index.js"
+echo 'define(["require", "exports", "N/render", "../file-cabinet/index.js", "./statement-data.js"], function () {});' > "$out/netsuite_modules/pdf-template/index.js"
+echo 'define(["require", "exports", "N/format", "N/query", "../file-cabinet/index.js"], function () {});' > "$out/netsuite_modules/pdf-template/statement-data.js"
 EOF
   printf 'FileCabinet/\nnode_modules/\n' > "$dir/.gitignore"
   fake_commit "$dir" base
