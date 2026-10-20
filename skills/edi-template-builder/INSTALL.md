@@ -88,7 +88,7 @@ In any Claude Code session, type:
 
 Claude will ask which mode you want (build a new template or revise an existing one) and what inputs you have ready.
 
-The first time you actually run a serialize step, the skill downloads the right `editester` binary for your platform (~70 MB) from Azure into the skill folder. This happens once and is silent thereafter.
+Outbound templates are translated through the **EDI Cosmos DB** connector's `edi_translate` tool, so that connector must be enabled in Claude. The first time you validate an **inbound** (360) template, the skill downloads the right `editester` binary for your platform (~70 MB) from Azure into the skill folder. This happens once and is silent thereafter.
 
 ## Troubleshooting
 
@@ -97,6 +97,8 @@ The first time you actually run a serialize step, the skill downloads the right 
 **A hook error mentioning `anonymize-on-read.sh` on every file read** — the old hook is still registered but its script is gone. Run step 3.1 and restart Claude Code.
 
 **`ensure-editester: download failed`** — your network can't reach `storageukgreadyedi.blob.core.windows.net`. Check the VPN / corporate proxy.
+
+**Claude says `edi_translate` isn't available** — the EDI Cosmos DB connector is disabled or hasn't refreshed its tool list. Enable it in Claude's connector settings, then restart Claude Code.
 
 **Claude doesn't seem to know the skill exists** — confirm `SKILL.md` is at `~/.claude/skills/edi-template-builder/SKILL.md`, then fully quit and reopen Claude Code.
 
@@ -107,9 +109,9 @@ The first time you actually run a serialize step, the skill downloads the right 
 ├── SKILL.md, INSTALL.md
 ├── commands/edi-template.md              ← the /edi-template slash command
 ├── scripts/                              ← cpbc-unique.sh, editester.sh, wrap-data.sh, ...
-├── docs/                                 ← template-structure, handlebars helpers, editester CLI
+├── docs/                                 ← template-structure, handlebars helpers, edi_translate, editester CLI (inbound)
 ├── templates/                            ← seed templates per carrier
-└── bin/                                  ← populated on first editester run (gitignored)
+└── bin/                                  ← populated on first inbound editester run (gitignored)
 ```
 
 Nothing is installed outside this folder.
