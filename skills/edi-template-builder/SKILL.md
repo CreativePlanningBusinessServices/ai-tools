@@ -1,21 +1,22 @@
 ---
 name: edi-template-builder
-description: Build and revise EDI benefits-feed templates (X12 834 enrollment, etc.) for insurance carriers. Use when the user mentions an EDI template, a benefits feed, provider spec ingestion, an 834 transaction set, a carrier-specific template, or vendor feedback on an existing template. Handles the full loop — gather spec, scan unique values, author or revise the template JSON, run editester serialize, validate against the spec, iterate.
+description: Build and revise EDI benefits-feed templates (X12 834 enrollment, etc.) for insurance carriers. Use when the user mentions an EDI template, a benefits feed, provider spec ingestion, an 834 transaction set, a carrier-specific template, or vendor feedback on an existing template. Handles the full loop — gather spec, scan unique values, author or revise the template JSON, translate it, validate against the spec, iterate.
 ---
 
 # EDI Benefits Template Builder
 
-You build and revise EDI benefits-feed templates that drive the `editester` serializer. A template is a JSON file (schema in [docs/template-structure.md](docs/template-structure.md)) that uses Handlebars expressions to map benefit-feed JSON records into X12 EDI segments.
+You build and revise EDI benefits-feed templates that drive the EDI translation engine (the serializer the pipeline runs). A template is a JSON file (schema in [docs/template-structure.md](docs/template-structure.md)) that uses Handlebars expressions to map benefit-feed JSON records into X12 EDI segments.
 
 ## Hard rules
 
 1. **For large feeds, inspect with `jq`/`grep` via Bash, not `Read`.** The `Read` tool has a ~256KB cap; production benefit feeds are commonly 500KB–1MB. Use `Read` only on small templates and short text files. For benefit-feed records use:
    ```bash
-   jq '.[] | .["Benefit Plans"][] | select(.["Benefit Plan ID"] == 123456789)' <data-path>
+   jq '.data[] | .["Benefit Plans"][] | select(.["Benefit Plan ID"] == 123456789)' <working-dir>/<job_id>.json
    ```
+   Job data saved from `edi_get_job_data` wraps the records in `data`; for a user-supplied file that is a bare array, start with `.[]` instead.
    The `cpbc-unique` script (Step 4 of the build flow) gives you the broad orientation; targeted `jq` queries cover the rest.
-2. **All scripts and the editester binary live inside this skill folder.** Resolve them by absolute path from the **skill base directory** printed when the skill loads (e.g. `~/.claude/skills/edi-template-builder`). `$CLAUDE_PLUGIN_ROOT` points there too *when it is set*, but it is empty for skills installed under `~/.claude/skills/` rather than as a packaged plugin — so wherever this doc writes `$CLAUDE_PLUGIN_ROOT/...`, substitute the skill base directory if the variable is empty. Do not assume anything is on `PATH` except `jq` and `curl`.
-3. **Data must be wrapped before serialization.** `editester serialize --data` takes a **file path** to a JSON file shaped `{ "data": [...], "today": "<ISO>" }` — never inline JSON (`--data "$(cat …)"` fails with `ENAMETOOLONG` on real feeds). Data fetched via `edi_get_job_data` is already wrapped — save the response to `<working-dir>/<job_id>.json` and pass that path. For local `.json` files, use `scripts/wrap-data.sh` to wrap (it prints the wrapped file's path).
+2. **All scripts live inside this skill folder** (and the `editester` binary, which is only used for inbound 360 templates). Resolve them by absolute path from the **skill base directory** printed when the skill loads (e.g. `~/.claude/skills/edi-template-builder`). `$CLAUDE_PLUGIN_ROOT` points there too *when it is set*, but it is empty for skills installed under `~/.claude/skills/` rather than as a packaged plugin — so wherever this doc writes `$CLAUDE_PLUGIN_ROOT/...`, substitute the skill base directory if the variable is empty. Do not assume anything is on `PATH` except `jq` and `curl`.
+3. **Outbound templates are translated with `mcp__claude_ai_EDI_Cosmos_DB__edi_translate`, never the local `editester serialize`.** The tool runs the deployed translation function — the engine the pipeline uses — so its output is what the pipeline will produce. The bundled CLI is out of date: it rejects the production XML (`xml_0.0.1`) template schema. How to call it is in Build flow [Step 7](#7-translate) and [docs/edi-translate.md](docs/edi-translate.md).
 4. **Output goes alongside the input file by default**, not into the skill folder. The skill is read-mostly — write template JSONs and `output.edi` files into the user's working directory (or whatever path they specify).
 
 ## House style for templates
@@ -32,7 +33,7 @@ For field-access conventions — numeric literals vs `numberFormat`, `_PARENT` v
 
 The first thing you do is decide which flow this is:
 
-**First, is this an inbound (360) feed?** Everything else in this skill is for **outbound** templates (Handlebars → X12/CSV via `editester serialize`). A **360 / inbound** feed is the reverse — the carrier *sends us* a "change file" CSV that we parse into UKG Ready via `editester deserialize`. It uses a completely different template schema (`parser` + `assembler`, no Handlebars, no segments).
+**First, is this an inbound (360) feed?** Everything else in this skill is for **outbound** templates (Handlebars → X12/CSV/XML, translated with `mcp__claude_ai_EDI_Cosmos_DB__edi_translate`). A **360 / inbound** feed is the reverse — the carrier *sends us* a "change file" CSV that we parse into UKG Ready via `editester deserialize`. It uses a completely different template schema (`parser` + `assembler`, no Handlebars, no segments).
 
 **The schedule's `direction` field is authoritative — check it before committing to a flow.** If the client has a CPBC account, pull the schedule first (Build flow Step 2) and read its `direction`/`feedType`. Treat it as inbound when the schedule has `direction: "inbound"`, the template `$schema` ends in `inboundtemplate.json`, or (no schedule yet) the spec describes a file the carrier sends *to us* (e.g. a deferral/loan "Daily Change File"). **A task labeled "Retirement (360)" is NOT automatically inbound** — retirement feeds are commonly *outbound* contribution CSVs with `direction: "outbound"`, `feedType: "financial"` (e.g. CPTPA), where comments like "report Plan ID X" / "two Match contributions" describe an outbound file we send. So when the task says "360" but a schedule exists, confirm against the schedule's `direction` rather than the task's Plan Type label. If it really is inbound, **stop and read [docs/inbound-360.md](docs/inbound-360.md)** — the build/revision steps below do not apply.
 
@@ -73,7 +74,7 @@ If the user gave a ClickUp task ID (e.g. "task 86abc123"), read it with `clickup
 1. **Organization** — `mcp__claude_ai_EDI_Cosmos_DB__edi_list_organizations` with the `shortname` filter (e.g. `KPAY12345678`). Note the organization `id` — every later Cosmos call takes it as `organizationId`.
 2. **Schedule** — `mcp__claude_ai_EDI_Cosmos_DB__edi_list_schedules` with `organizationId`. Note the schedule `id` and current `translationTemplateURL`.
 3. **Latest job** — `mcp__claude_ai_EDI_Cosmos_DB__edi_list_jobs` with `organizationId`, `scheduleId`, and `limit: 1` (results are sorted newest first). Note the job `id`.
-4. **Job data** — `mcp__claude_ai_EDI_Blob_Storage__edi_get_job_data` with `job_id`. The response is the job's real records, pre-wrapped as `{ "data": [...], "today": "<ISO>" }`. Save it directly to `<working-dir>/<job_id>.json` — skip `wrap-data.sh`.
+4. **Job data** — `mcp__claude_ai_EDI_Blob_Storage__edi_get_job_data` with `job_id`. The response is the job's records (anonymized), pre-wrapped as `{ "data": [...], "today": "<ISO>" }`. Save it directly to `<working-dir>/<job_id>.json`. You inspect it and build translation samples from it; keep the job `id`, which the full-feed check in Step 7 uses.
 
 If anything required is missing, ask before continuing.
 
@@ -114,7 +115,7 @@ While writing, refer to:
 - [docs/template-structure.md](docs/template-structure.md) for the JSON schema
 - [docs/cpbc-data-shape.md](docs/cpbc-data-shape.md) for the benefit-feed schema — member-scope vs Benefit Plan-scope fields, the `_PARENT` scope rule, and field-access conventions
 - [docs/handlebars-helpers.md](docs/handlebars-helpers.md) for every available Handlebars helper (dateFormat, compare, dateCompare, match, find, sum, replace, replaceAll, ssnFormat, phoneFormat, numberFormat, getDate, getDayOfMonth, add/sub/mul/div, and/or/not, toUpper/toLower, length)
-- [docs/editester.md](docs/editester.md) for serializer flags
+- [docs/edi-translate.md](docs/edi-translate.md) for the translate tool's inputs, defaults and errors
 - [docs/carrier-conventions.md](docs/carrier-conventions.md) — if the provider has a section there, apply its carrier-wide rules even when the spec is silent on them
 - The **House style** rules above
 
@@ -125,40 +126,31 @@ Common patterns:
 - Length attributes for fixed-width fields: `"attributes": {"length": {"min": 9, "max": 9, "padding": "0", "align": "right"}}`
 - **Conditionally emitting a single segment** (e.g. salary `ICM` only on subscribers) → use `ignore`, which is a **render-IF-truthy gate despite the name** — the segment renders only when the expression is non-empty, *not* skipped when truthy. Write the condition for when you want the segment to appear: `"ignore": "{{#compare [Subscriber Type] '==' 'Subscriber'}}{{#if [Member Pay Annual]}}true{{/if}}{{/compare}}"`. To suppress on a condition, invert it. Two traps that waste serialize iterations: (1) the natural reading ("ignore when X") is backwards — see the `ignore` row in [docs/template-structure.md](docs/template-structure.md); (2) `filter` does **not** gate emission — it filters an array property in place and still renders the segment once, so it can't stand in for `ignore`.
 
-### 7. Serialize
+### 7. Translate
 
-`scripts/editester.sh` downloads the platform-correct binary on first use. Always pass `EDITESTER_ALLOW_NETWORK=1` — the serializer needs to fetch the template schema on first run.
+Translate with `mcp__claude_ai_EDI_Cosmos_DB__edi_translate`. Pass the template as `templateContent`: the **full, unchanged text** of `<working-dir>/<provider>-template.json` (`cat` it). On every run also pass `today` set to the job data's `today`, so dates don't move between iterations. Inputs, defaults and error messages are in [docs/edi-translate.md](docs/edi-translate.md).
 
-`--data` takes a **file path**, not inline JSON. Do not use `--data "$(cat <file>)"` — the binary treats the whole feed as a filename and fails with `ENAMETOOLONG`.
-
-**If data came from `edi_get_job_data`** (already wrapped in `<job_id>.json`):
+**Iterate on a small sample.** Build `<working-dir>/sample.json`: a JSON array of 5–10 records that between them hit the template's branches (a subscriber with dependents, each coverage type, a waived coverage, …). Pick them with `jq`, e.g.
 ```bash
-EDITESTER_ALLOW_NETWORK=1 $CLAUDE_PLUGIN_ROOT/scripts/editester.sh serialize \
-  --template <working-dir>/<provider>-template.json \
-  --data <working-dir>/<job_id>.json \
-  --out <working-dir>/output.edi
+jq '[.data[0:3][], (.data[3:] | map(select(.["Relationship Code"] != "Self")))[0:2][]]' <working-dir>/<job_id>.json > <working-dir>/sample.json
 ```
+Call `edi_translate` with `data` = the array in `sample.json` and `templateContent`. The result has two content blocks: a header (`Translated output: 4,210 characters (complete). today=…`) and the output verbatim. Write the second block to `<working-dir>/output.edi` (`output.xml` for an XML template) and inspect it with `grep` / `awk` — split X12 into one segment per line first with `tr '~' '\n'`. Synthetic records for branch checks (Step 8) go through the same call: add them to the sample.
 
-**If data came from a local file** (needs wrapping first):
-```bash
-WRAPPED=$($CLAUDE_PLUGIN_ROOT/scripts/wrap-data.sh <data-path>)
-EDITESTER_ALLOW_NETWORK=1 $CLAUDE_PLUGIN_ROOT/scripts/editester.sh serialize \
-  --template <working-dir>/<provider>-template.json \
-  --data "$WRAPPED" \
-  --out <working-dir>/output.edi
-```
+**Then translate the full feed once, before delivering.** Call `edi_translate` with `organizationId`, `jobId` (the job from Step 2) and `templateContent`. The server reads that job's complete data itself, so nothing large passes through the conversation on the way in. The output is **real, unanonymized data**, and every page of it lands in the conversation, so don't save it to a file by default — writing a file means typing the whole output out again. Page through it: when the header says `TRUNCATED`, call again with the `offset` it gives and the same inputs until it says `(end of output)`. An error-free run means every record rendered; read the SE, GE and IEA counts from the last page. Content checks belong on the sample.
+
+A `Template error at rules[0].children[2]: …` error names the rule whose expression failed — fix that rule and translate again.
 
 ### 8. Validate against the spec
 
 Read the spec. Spot-check each requirement against `output.edi` using `grep` / `awk` to pull specific segments. Look for: required segments present, field positions correct, length/padding/alignment matches the spec, dates formatted as the spec requires, codes mapped per the spec (e.g. relationship → numeric code), envelope counts (SE, GE, IEA) accurate.
 
-**Spot-checking the live output only proves the branches the live data happens to exercise — that is necessary but not sufficient.** Before delivering, enumerate every conditional/computed branch in the template (each `{{#if}}`, each multi-key `add`/`sum`, each enumerated `match`/`find`, each optional field) and confirm each one is actually exercised by a non-trivial value. Watch especially for **summed deduction columns where one addend has zero activity in the sample** (e.g. `add [Deductions].[401K Loan]… [Deductions].[Company Loan]…` when only `Company Loan` has amounts) — the live feed proves `add(0, X) = X` but never the dormant key's path or the real sum, and a misspelled/wrong key renders silently blank. For any branch the live feed doesn't exercise (zero-activity deduction keys, absent term dates, a one-of-N code value no record uses), build synthetic records to verify it: clone a real record with `jq`, inject the triggering value, serialize that, and confirm the branch renders the expected output. Note in the delivery summary which branches were checked synthetically rather than against the live feed.
+**Spot-checking the live output only proves the branches the live data happens to exercise — that is necessary but not sufficient.** Before delivering, enumerate every conditional/computed branch in the template (each `{{#if}}`, each multi-key `add`/`sum`, each enumerated `match`/`find`, each optional field) and confirm each one is actually exercised by a non-trivial value. Watch especially for **summed deduction columns where one addend has zero activity in the sample** (e.g. `add [Deductions].[401K Loan]… [Deductions].[Company Loan]…` when only `Company Loan` has amounts) — the live feed proves `add(0, X) = X` but never the dormant key's path or the real sum, and a misspelled/wrong key renders silently blank. For any branch the live feed doesn't exercise (zero-activity deduction keys, absent term dates, a one-of-N code value no record uses), build synthetic records to verify it: clone a real record with `jq`, inject the triggering value, add it to the sample, translate, and confirm the branch renders the expected output. Note in the delivery summary which branches were checked synthetically rather than against the live feed.
 
 **Then check for the opposite blind spot: spec segments the template omits entirely.** Branch enumeration only validates segments the template already has — it can never surface one that was never authored. Situational/Optional segments are the trap: a Required-driven first pass skips them, the output serializes cleanly without them, and nothing fails until the carrier reviews the file (this is exactly how Principal's `ICM` salary segment shipped missing). So walk the spec's segment list and, for every segment marked **Situational/Optional**, ask: *does the live feed carry data that should populate it?* List the source field(s) per segment (e.g. `ICM` ← `Member Pay Annual`; member phone/email ← contact fields) and confirm each omission is deliberate, not overlooked. Watch for segments that *look* covered because a sibling was implemented — e.g. implementing the salary-effective-date `DTP*303` does **not** mean the salary-amount `ICM` is handled; they are different segments. Flag any genuinely ambiguous "should we send this?" call to Kelly rather than silently omitting.
 
 ### 9. Iterate
 
-If validation finds gaps, `Edit` the template JSON, re-run editester, re-validate. Loop until clean. After three failed iterations, stop and surface what's blocking — don't churn silently.
+If validation finds gaps, `Edit` the template JSON, translate the sample again, re-validate. Loop until clean. After three failed iterations, stop and surface what's blocking — don't churn silently.
 
 If the template has been uploaded and a job has run with it, also check the file the pipeline actually wrote — see [Checking a real run's generated file](#checking-a-real-runs-generated-file).
 
@@ -180,9 +172,9 @@ If the user gave a ClickUp task ID, pull task description + comments + threaded 
 
 `Read` the user-supplied template path.
 
-### 3. Optionally read sample data
+### 3. Get sample data
 
-If the user supplied a sample data file, inspect it (with `jq` if it is large — hard rule 1). If they didn't, proceed without it but warn that you won't be able to re-validate end-to-end after edits.
+If the user supplied a sample data file, inspect it (with `jq` if it is large — hard rule 1). If you know or can look up the organization and schedule, fetch the latest job's data as in Build flow Step 2 (items 1–4) and keep the job `id` for the full-feed check. If you have neither, proceed without data but warn that you won't be able to re-validate end-to-end after edits.
 
 ### 4. Parse feedback into a change list
 
@@ -198,15 +190,15 @@ Show the list to the user. Ask them to confirm before editing. Do not skip this 
 
 Use `Edit` (not full rewrites). One edit per change item keeps the diff readable. If a change requires modifying multiple segments, make multiple targeted edits. Any new or changed Handlebars must follow the **House style** rules above and the field-access conventions in [docs/cpbc-data-shape.md](docs/cpbc-data-shape.md). If the carrier has a section in [docs/carrier-conventions.md](docs/carrier-conventions.md), make sure the template still honors those rules — and if a feedback item conflicts with a documented carrier-wide rule, flag it to the user rather than silently overriding.
 
-### 6. Re-run editester
+### 6. Translate
 
-Same serialize as the build flow (Step 6 above), including `EDITESTER_ALLOW_NETWORK=1`. Skip if no sample data was provided.
+Same as Build flow [Step 7](#7-translate): iterate on a small sample, then translate the full feed once by `jobId`. Skip if there is no sample data.
 
 ### 7. Validate
 
 Spot-check each feedback item against the new EDI output (e.g. if the feedback was "pad SSN to 9", grep `REF\*0F` and confirm 9 characters).
 
-If a feedback item targets a condition that no record in the sample data exercises (e.g. terminated employees when no test record has a termination date), construct a synthetic record to validate it: clone a real record with `jq`, set the triggering field, serialize that, and confirm the changed branch renders correctly. Note in the delivery summary that this branch was checked synthetically rather than against the live feed.
+If a feedback item targets a condition that no record in the sample data exercises (e.g. terminated employees when no test record has a termination date), construct a synthetic record to validate it: clone a real record with `jq`, set the triggering field, add it to the sample, translate, and confirm the changed branch renders correctly. Note in the delivery summary that this branch was checked synthetically rather than against the live feed.
 
 If the revised template has been uploaded and a job has run with it, also check the file the pipeline actually wrote — see [Checking a real run's generated file](#checking-a-real-runs-generated-file).
 
@@ -220,12 +212,12 @@ Print:
 
 ## Checking a real run's generated file
 
-Local `editester` output only proves what the local template and the local binary produce. Once a job has run through translation, read the file the pipeline actually wrote instead of assuming it matches. A safe test run is `mcp__claude_ai_EDI_Cosmos_DB__edi_start_job` (translation-only, always `doNotSendToProvider`) after the template is uploaded with `mcp__claude_ai_EDI_Cosmos_DB__edi_upload_schedule_template`.
+Translating your local template proves what that template produces. Once a job has run through translation, read the file the pipeline actually wrote instead of assuming it matches. A safe test run is `mcp__claude_ai_EDI_Cosmos_DB__edi_start_job` (translation-only, always `doNotSendToProvider`) after the template is uploaded with `mcp__claude_ai_EDI_Cosmos_DB__edi_upload_schedule_template`.
 
 1. **Find the job** — `mcp__claude_ai_EDI_Cosmos_DB__edi_list_jobs` (`organizationId`, `scheduleId`, `limit: 1`). It has a generated file only when `generatedFileURL` is non-empty (status stage `translation` or later, name `complete`/`completed`). A job that failed at extraction or translation has none — read its `status.errorMessage` instead.
 2. **Fetch the file** — `mcp__claude_ai_EDI_Blob_Storage__edi_get_generated_file` with `job_id_or_url` set to the job's `generatedFileURL` (the job `id` also works for outbound jobs). The result has two content blocks: a header line (`Generated file <name>: 13,577 characters (complete).`) and the file itself, verbatim. Save the second block to `<working-dir>/<job_id>.generated.txt`. It is real, unanonymized data, same as job data.
 3. **Page large files** — one call returns at most `max_chars` characters (default 50,000, max 500,000). When the header says `TRUNCATED`, call again with the `offset` it gives and append each part in order until the header says `(end of file)`. Inspect the saved file with `grep` / `awk`, as with `output.edi` — don't pull a large file into context to read it.
-4. **Compare like with like** — serialize locally against *that same job's* data (`edi_get_job_data` with the same job ID) and `diff` the two files. Differences limited to run-date/time stamps and the interchange control number are expected: the pipeline ran with its own `today` and the job's `documentNumber`. To remove them, set `today` (the run date) and `documentNumber` in the wrapped data file to the job's values. Any other difference is real — either the deployed template is not the local one (re-fetch the job's `translationTemplateURL` with `edi_get_template_data` and diff it), or the pipeline's serializer behaves differently from the local binary. Report it rather than explaining it away.
+4. **Compare like with like** — call `mcp__claude_ai_EDI_Cosmos_DB__edi_translate` with `organizationId` and that job's `jobId` and **no** `templateContent`. It replays the job: the job's data, its `translationTemplateURL`, its `dateCreated` as `today` and its `documentNumber`. Save it (paging as in step 3) to `<working-dir>/<job_id>.replay.txt` and compare one segment per line: `diff <(tr '~' '\n' < <job_id>.generated.txt) <(tr '~' '\n' < <job_id>.replay.txt)`. Expect differences only in wall-clock stamps: every element that uses `{{dateFormat '…'}}` with no date argument renders the time of translation. That is usually ISA/GS/BGN dates and times (an XML `DateTime`), but grep the template for no-argument `dateFormat` — some templates stamp member segments too (e.g. a `DTP*303`). Any other difference is real — most often the template blob was overwritten after the job ran (the replay reads the current blob), so compare the job's template with `edi_get_template_data`. Report it rather than explaining it away.
 
 A `No generated file found` error means the blob does not exist under that name; a `Could not decrypt` error means the tool cannot read that file, which is expected for generated files from early 2025 and older — the error text gives the cause. For inbound (360) jobs the blob names are different — see [docs/inbound-360.md](docs/inbound-360.md).
 
@@ -261,6 +253,7 @@ If the comment needs formatting (headings, bullets, bold) or the file must appea
 ## What you do NOT do
 
 - Do not edit files in `$CLAUDE_PLUGIN_ROOT` itself (the skill is install-time read-only — except for `bin/` which `ensure-editester.sh` populates).
+- Do not translate outbound templates with the local `editester serialize`; use `mcp__claude_ai_EDI_Cosmos_DB__edi_translate`.
 - Do not commit anything or push branches on behalf of the user.
 - **Do not send messages or post comments on the user's behalf unless they explicitly direct you to post a specific comment in the current turn.** When directed, follow the [Posting back to ClickUp](#posting-back-to-clickup) recipe and post the agreed-upon text verbatim.
-- Do not download or install software other than what `ensure-editester.sh` handles (the editester binary).
+- Do not download or install software other than what `ensure-editester.sh` handles (the editester binary, needed only for inbound 360 templates).

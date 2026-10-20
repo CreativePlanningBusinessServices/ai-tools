@@ -36,7 +36,7 @@ A template is a JSON file that describes how to serialize input data into an EDI
 |---|---|---|
 | `$schema` | string | Optional schema reference. |
 | `name` | string | Human-readable name for the template. |
-| `version` | string | Serializer version to use. Must be `"0.0.1"`. |
+| `version` | string | Serializer version to use: `"0.0.1"` for the X12/delimited format this document describes. XML templates use `"xml_0.0.1"` with a different structure. |
 | `elementSeparator` | string | Character written between elements within a segment (e.g. `*`). |
 | `segmentSeparator` | string | Character written at the end of each segment (e.g. `~`). |
 | `componentSeparator` | string | Character used to separate components within a single element (e.g. `:`). |

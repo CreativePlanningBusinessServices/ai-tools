@@ -64,10 +64,10 @@ So **loans (change-file fields ~11–17), eligibility date, hardship suspension,
 
 ## Validate with `editester deserialize`
 
-`scripts/editester.sh` (same binary, `EDITESTER_ALLOW_NETWORK=1`). `--input` takes the raw change-file CSV path directly — no `wrap-data.sh`, no `--data`. Inspect each stage:
+`scripts/editester.sh` runs the bundled binary, which validates against its built-in copy of `inboundtemplate.json` offline — no `EDITESTER_ALLOW_NETWORK` needed (see [editester.md](editester.md) for the rare schema that isn't bundled). `--input` takes the raw change-file CSV path directly — no `wrap-data.sh`, no `--data`. Inspect each stage:
 
 ```bash
-EDITESTER_ALLOW_NETWORK=1 $CLAUDE_PLUGIN_ROOT/scripts/editester.sh deserialize \
+$CLAUDE_PLUGIN_ROOT/scripts/editester.sh deserialize \
   --template <tpl>.json --input <changefile>.csv --only-parse      # parsed rows
 # --only-assemble  → grouped members (before converter)
 # (no flag)        → final UploadRecord[] (what lands in UKG)

@@ -1,3 +1,5 @@
+> **Outbound templates don't use this CLI.** Translate them with `edi_translate` — see [edi-translate.md](edi-translate.md). The bundled `serialize` is out of date (it rejects the production XML template schema). The CLI is still the tool for inbound 360 templates (`deserialize`).
+
 ### CLI Usage
 
 **Serialize** &mdash; generate EDI output from a template and data:
