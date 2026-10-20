@@ -158,6 +158,24 @@ imported from the same account: `object:import --type workflow --scriptid ALL` i
 which is harmless). Internal ids: `SELECT internalid, scriptid, name, releasestatus FROM workflow`
 (the column is `internalid`; `id` does not exist on this table).
 
+- **Build every condition with the visual builder by default** (`<type>VISUAL_BUILDER</type>`),
+  so it reads and edits in the workflow editor. Use `<type>FORMULA</type>` only when the builder
+  cannot express the condition (arithmetic, SQL functions, comparing two computed values) or for
+  the create-time exception in the next bullet, and say why when you do. Shapes that deploy and
+  round-trip unchanged through `object:import`, each name in the formula declared once in
+  `<parameters>`:
+  - Field to typed text: `"Sales Rep:E-mail" = 'someone@example.com'`, parameter
+    `Sales Rep:E-mail` → `STDBODYSALESREP:STDENTITYEMAIL` (a join is `<field>:<field on the joined
+    record>`; an employee or user's email is `STDENTITYEMAIL`).
+  - Field to a record: `"User Role" IN ("Role1")`, parameter `Role1` with
+    `<selectrecordtype>-118</selectrecordtype>` and `<value>ADMINISTRATOR</value>`. The value is
+    an internal id except for standard roles (see "Select values" below).
+  - Empty check: `isEmpty("Sales Rep") = 'F'`, parameter `Sales Rep` → `STDBODYSALESREP`.
+  When a condition names one specific record (a person, a subsidiary), compare to the record
+  itself (`<selectrecordtype>` + internal id), not to a stand-in text field such as its email.
+  Internal ids can differ between accounts (sandboxes refreshed at different times), so when
+  migrating, look the same record up in the target account and write its id into the XML before
+  deploying (see "Select values" below and "Migrate between accounts").
 - **A new workflow starts with a formula condition, not the visual builder, when the start
   condition compares a select field to a record** (seen with "Subsidiary is X" on the workflow's
   own `<initcondition>`). The visual-builder form passes `project:validate` and then fails the
@@ -169,7 +187,9 @@ which is harmless). Internal ids: `SELECT internalid, scriptid, name, releasesta
 - **Select values in conditions carry internal ids.** An export writes `[ACCOUNT_SPECIFIC_VALUE]`
   in the `<value>` of a `<selectrecordtype>` parameter, and validation rejects it ("The object
   field value must not be ACCOUNT_SPECIFIC_VALUE"). Write the target account's internal id there,
-  and look it up again for every account you deploy to.
+  and look it up again for every account you deploy to: find the same record by name or email
+  (for example `SELECT id, entityid, email FROM employee WHERE email = '…'`) and never assume the
+  source account's id carries over.
 - **`project:adddependencies` is wrong for workflows.** It missed a field reached through a join
   (`STDBODYCUSTOMER:[scriptid=custentity_…]`) and added the workflow's own button actions as
   dependencies. Edit `manifest.xml` by hand instead: `WORKFLOW` as a required feature, the feature
