@@ -11,8 +11,9 @@ You build and revise EDI benefits-feed templates that drive the EDI translation 
 
 1. **For large feeds, inspect with `jq`/`grep` via Bash, not `Read`.** The `Read` tool has a ~256KB cap; production benefit feeds are commonly 500KB–1MB. Use `Read` only on small templates and short text files. For benefit-feed records use:
    ```bash
-   jq '.[] | .["Benefit Plans"][] | select(.["Benefit Plan ID"] == 123456789)' <data-path>
+   jq '.data[] | .["Benefit Plans"][] | select(.["Benefit Plan ID"] == 123456789)' <working-dir>/<job_id>.json
    ```
+   Job data saved from `edi_get_job_data` wraps the records in `data`; for a user-supplied file that is a bare array, start with `.[]` instead.
    The `cpbc-unique` script (Step 4 of the build flow) gives you the broad orientation; targeted `jq` queries cover the rest.
 2. **All scripts live inside this skill folder** (and the `editester` binary, which is only used for inbound 360 templates). Resolve them by absolute path from the **skill base directory** printed when the skill loads (e.g. `~/.claude/skills/edi-template-builder`). `$CLAUDE_PLUGIN_ROOT` points there too *when it is set*, but it is empty for skills installed under `~/.claude/skills/` rather than as a packaged plugin — so wherever this doc writes `$CLAUDE_PLUGIN_ROOT/...`, substitute the skill base directory if the variable is empty. Do not assume anything is on `PATH` except `jq` and `curl`.
 3. **Outbound templates are translated with `mcp__claude_ai_EDI_Cosmos_DB__edi_translate`, never the local `editester serialize`.** The tool runs the deployed translation function — the engine the pipeline uses — so its output is what the pipeline will produce. The bundled CLI is out of date: it rejects the production XML (`xml_0.0.1`) template schema. How to call it is in Build flow [Step 7](#7-translate) and [docs/edi-translate.md](docs/edi-translate.md).
@@ -73,7 +74,7 @@ If the user gave a ClickUp task ID (e.g. "task 86abc123"), read it with `clickup
 1. **Organization** — `mcp__claude_ai_EDI_Cosmos_DB__edi_list_organizations` with the `shortname` filter (e.g. `KPAY12345678`). Note the organization `id` — every later Cosmos call takes it as `organizationId`.
 2. **Schedule** — `mcp__claude_ai_EDI_Cosmos_DB__edi_list_schedules` with `organizationId`. Note the schedule `id` and current `translationTemplateURL`.
 3. **Latest job** — `mcp__claude_ai_EDI_Cosmos_DB__edi_list_jobs` with `organizationId`, `scheduleId`, and `limit: 1` (results are sorted newest first). Note the job `id`.
-4. **Job data** — `mcp__claude_ai_EDI_Blob_Storage__edi_get_job_data` with `job_id`. The response is the job's records (anonymized), pre-wrapped as `{ "data": [...], "today": "<ISO>" }`. Save it directly to `<working-dir>/<job_id>.json` — skip `wrap-data.sh`. You inspect it and build translation samples from it; keep the job `id`, which the full-feed check in Step 7 uses.
+4. **Job data** — `mcp__claude_ai_EDI_Blob_Storage__edi_get_job_data` with `job_id`. The response is the job's records (anonymized), pre-wrapped as `{ "data": [...], "today": "<ISO>" }`. Save it directly to `<working-dir>/<job_id>.json`. You inspect it and build translation samples from it; keep the job `id`, which the full-feed check in Step 7 uses.
 
 If anything required is missing, ask before continuing.
 

@@ -11,7 +11,7 @@
 
 The benefit-feed JSON that CPBC produces has a fixed structure. It does not vary by carrier — only the values change. Use this reference instead of inferring the schema from a sample file each run.
 
-After `wrap-data.sh`, editester receives `{ "data": [ ...member objects... ], "today": "<ISO>" }`. The serializer exposes the `data` array to the root template context under the name **`members`** — that is why the outermost `repetition` in a template is `"property": "members"`.
+Job data saved from `edi_get_job_data` is `{ "data": [ ...member objects... ], "today": "<ISO>" }`. The serializer receives the member array — `edi_translate`'s `data` input, or the job's own records when it translates by `jobId` — and exposes it to the root template context under the name **`members`**. That is why the outermost `repetition` in a template is `"property": "members"`.
 
 ---
 
