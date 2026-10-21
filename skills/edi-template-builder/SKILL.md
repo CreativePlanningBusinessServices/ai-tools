@@ -74,7 +74,7 @@ If the user gave a ClickUp task ID (e.g. "task 86abc123"), read it with `clickup
 1. **Organization** — `mcp__claude_ai_EDI_Cosmos_DB__edi_list_organizations` with the `shortname` filter (e.g. `KPAY12345678`). Note the organization `id` — every later Cosmos call takes it as `organizationId`.
 2. **Schedule** — `mcp__claude_ai_EDI_Cosmos_DB__edi_list_schedules` with `organizationId`. Note the schedule `id` and current `translationTemplateURL`.
 3. **Latest job** — `mcp__claude_ai_EDI_Cosmos_DB__edi_list_jobs` with `organizationId`, `scheduleId`, and `limit: 1` (results are sorted newest first). Note the job `id`.
-4. **Job data** — `mcp__claude_ai_EDI_Blob_Storage__edi_get_job_data` with `job_id`. The response is the job's records — **real, unanonymized data** — pre-wrapped as `{ "data": [...], "today": "<ISO>" }`. Save it directly to `<working-dir>/<job_id>.json`. You inspect it and build translation samples from it; keep the job `id`, which the full-feed check in Step 7 uses.
+4. **Job data** — `mcp__claude_ai_EDI_Blob_Storage__edi_get_job_data` with `job_id`. The response is the job's records pre-wrapped as `{ "data": [...], "today": "<ISO>" }`. Save it directly to `<working-dir>/<job_id>.json`. You inspect it and build translation samples from it; keep the job `id`, which the full-feed check in Step 7 uses.
 
 If anything required is missing, ask before continuing.
 
