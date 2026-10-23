@@ -1,8 +1,8 @@
 # Installing the CP RESTlets: runbook for an agent
 
-The four NetSuite skills (`netsuite-saved-search`, `netsuite-file-cabinet`, `netsuite-mr-driver`,
-`netsuite-email-designer`) send you here when their RESTlet is missing from an account, or when
-its deployment is undeployed or not released. This folder is the SDF package that holds all four
+The five NetSuite skills (`netsuite-saved-search`, `netsuite-file-cabinet`, `netsuite-mr-driver`,
+`netsuite-email-designer`, `netsuite-pdf-designer`) send you here when their RESTlet is missing from an account, or when
+its deployment is undeployed or not released. This folder is the SDF package that holds all five
 RESTlets; it installs with the SuiteCloud CLI, and the same steps upgrade or repair an existing
 install. The steps for a person doing this by hand are in the repo README.
 
@@ -12,14 +12,14 @@ Nothing below step 1 that touches the account runs until the user has said yes f
 
 - the account: the `netsuite-cli` alias, its account id (`netsuite-cli account list`), and whether
   that's production or a sandbox (a sandbox id ends in `_SB<n>`; a bare number is production);
-- what gets installed: the package is all-or-nothing, so it's all four CP RESTlets (saved search,
-  File Cabinet, Map/Reduce driver, email template), not only the one the task needs. They arrive
+- what gets installed: the package is all-or-nothing, so it's all five CP RESTlets (saved search,
+  File Cabinet, Map/Reduce driver, email template, PDF template), not only the one the task needs. They arrive
   as scripts named "CP | …" with their files under `/SuiteScripts/CreativePlanning/`. The
-  Map/Reduce driver is released to Administrator only; the other three to all internal roles;
-- which of the four are already there (read-only, so run it before asking):
+  Map/Reduce driver is released to Administrator only; the other four to all internal roles;
+- which of the five are already there (read-only, so run it before asking):
 
   ```bash
-  netsuite-cli suiteql --account <alias> "SELECT scriptid FROM script WHERE scriptid IN ('customscript_cp_saved_search_rl', 'customscript_cp_file_cabinet_rl', 'customscript_cp_mr_driver_rl', 'customscript_cp_email_template_rl')"
+  netsuite-cli suiteql --account <alias> "SELECT scriptid FROM script WHERE scriptid IN ('customscript_cp_saved_search_rl', 'customscript_cp_file_cabinet_rl', 'customscript_cp_mr_driver_rl', 'customscript_cp_email_template_rl', 'customscript_cp_pdf_template_rl')"
   ```
 
   For each one that is, the deploy sets its deployment back to deployed and Released and replaces
@@ -64,9 +64,9 @@ suitecloud project:deploy
 ```
 
 Run the real deploy only if validation finished without errors (its warning about `<allroles>`
-is expected) and every object line in the preview names one of the four scripts or its
-deployment, like these two for each of `saved_search`, `file_cabinet`, `mr_driver` and
-`email_template`:
+is expected) and every object line in the preview names one of the five scripts or its
+deployment, like these two for each of `saved_search`, `file_cabinet`, `mr_driver`,
+`email_template` and `pdf_template`:
 
 ```
 Update object -- customscript_cp_saved_search_rl (restlet)

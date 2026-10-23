@@ -1,0 +1,25 @@
+<?xml version="1.0"?><!DOCTYPE pdf PUBLIC "-//big.faceless.org//report" "report-1.1.dtd">
+<pdf>
+<head>
+	<link name="NotoSans" type="font" subtype="truetype" src="${nsfont.NotoSans_Regular}" src-bold="${nsfont.NotoSans_Bold}" bytes="2" />
+</head>
+<body padding="0.5in" size="Letter">
+<table style="width: 100%;"><tr>
+	<td>1</td>
+</tr>
+<tr>
+	<td>2</td>
+</tr>
+<tr>
+	<td>3</td>
+</tr>
+<tr>
+	<td>4</td>
+</tr>
+<tr>
+	<td>Total
+	<td align="right">${record.total}</td>
+</tr>
+</table>
+</body>
+</pdf>

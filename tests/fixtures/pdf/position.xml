@@ -1,0 +1,11 @@
+<?xml version="1.0"?><!DOCTYPE pdf PUBLIC "-//big.faceless.org//report" "report-1.1.dtd">
+<pdf>
+<head>
+	<link name="NotoSans" type="font" subtype="truetype" src="${nsfont.NotoSans_Regular}" src-bold="${nsfont.NotoSans_Bold}" bytes="2" />
+</head>
+<body padding="0.5in" size="Letter">
+<div style="position: absolute; top: 0pt;"><p>Stamp</p></div>
+<div style="position: relative;"><div style="position:absolute; top: 10pt;"><p>Inside</p></div></div>
+<p style="position:relative">Fine</p>
+</body>
+</pdf>

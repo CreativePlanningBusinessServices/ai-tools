@@ -15,7 +15,7 @@ if [ "${#js_files[@]}" -eq 0 ]; then
   echo "verify: no files listed in $package_dir/deploy.xml"
   exit 1
 fi
-expected_scripts="customscript_cp_email_template_rl customscript_cp_file_cabinet_rl customscript_cp_mr_driver_rl customscript_cp_saved_search_rl "
+expected_scripts="customscript_cp_email_template_rl customscript_cp_file_cabinet_rl customscript_cp_mr_driver_rl customscript_cp_pdf_template_rl customscript_cp_saved_search_rl "
 failures=0
 
 check() { # <label> <status>
@@ -27,14 +27,14 @@ restlet() { # <name> <restlet call args...>
     --script "customscript_cp_${name}_rl" --deploy "customdeploy_cp_${name}_rl" "$@" 2>&1
 }
 
-script_rows="$(netsuite-cli suiteql --account "$alias_name" "SELECT scriptid FROM script WHERE scriptid IN ('customscript_cp_saved_search_rl', 'customscript_cp_file_cabinet_rl', 'customscript_cp_mr_driver_rl', 'customscript_cp_email_template_rl')" 2>&1)"
+script_rows="$(netsuite-cli suiteql --account "$alias_name" "SELECT scriptid FROM script WHERE scriptid IN ('customscript_cp_saved_search_rl', 'customscript_cp_file_cabinet_rl', 'customscript_cp_mr_driver_rl', 'customscript_cp_email_template_rl', 'customscript_cp_pdf_template_rl')" 2>&1)"
 if ! printf '%s' "$script_rows" | jq -e '.items' > /dev/null 2>&1; then
   echo "verify: couldn't query account '$alias_name' with netsuite-cli: $(printf '%s' "$script_rows" | head -n 1)"
   exit 1
 fi
 installed="$(printf '%s' "$script_rows" | jq -r '.items[].scriptid' | sort | tr '\n' ' ')"
 [ "$installed" = "$expected_scripts" ]
-check "all four scripts installed (found: ${installed:-none})" $?
+check "all five scripts installed (found: ${installed:-none})" $?
 
 restlet file_cabinet --method GET --param "folder=/" | jq -e '.folders | type == "array"' > /dev/null 2>&1
 check "file cabinet: list the root folder" $?
@@ -56,6 +56,19 @@ if [ -n "$template_id" ]; then
   check "email template: describe template $template_id" $?
 else
   check "email template: describe (no active email template in the account to describe)" 1
+fi
+
+first_pdf_template_id() {
+  netsuite-cli suiteql --account "$alias_name" "SELECT id FROM advancedpdftemplate WHERE inactive = 'F' AND UPPER(scriptid) LIKE '$1%' ORDER BY id FETCH FIRST 1 ROWS ONLY" 2> /dev/null | jq -r '.items[0].id // empty' 2> /dev/null
+}
+# A fresh account may have only standard templates; describe one of those instead.
+pdf_template_id="$(first_pdf_template_id CUSTTMPL)"
+[ -n "$pdf_template_id" ] || pdf_template_id="$(first_pdf_template_id STDTMPL)"
+if [ -n "$pdf_template_id" ]; then
+  restlet pdf_template --method GET --param "id=$pdf_template_id" | jq -e 'has("source") and (has("error") | not)' > /dev/null 2>&1
+  check "pdf template: describe template $pdf_template_id" $?
+else
+  check "pdf template: describe (no active PDF template in the account to describe)" 1
 fi
 
 deployed="$(mktemp)"

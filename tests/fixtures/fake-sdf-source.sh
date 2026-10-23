@@ -5,7 +5,7 @@ make_fake_source() {
   local dir="$1"
   mkdir -p "$dir/Objects/Scripts/RESTlet"
   git -C "$dir" init -q -b main
-  for name in saved_search file_cabinet mr_driver email_template; do
+  for name in saved_search file_cabinet mr_driver email_template pdf_template; do
     printf '<restlet scriptid="customscript_cp_%s_rl"/>\n' "$name" \
       > "$dir/Objects/Scripts/RESTlet/customscript_cp_${name}_rl.xml"
   done
@@ -18,7 +18,7 @@ EOF
 EOF
   cat > "$dir/build.sh" <<'EOF'
 out=FileCabinet/SuiteScripts/CreativePlanning
-mkdir -p "$out/RESTlet" "$out/netsuite_modules/saved-search-serializer" "$out/netsuite_modules/file-cabinet" "$out/netsuite_modules/email-template"
+mkdir -p "$out/RESTlet" "$out/netsuite_modules/saved-search-serializer" "$out/netsuite_modules/file-cabinet" "$out/netsuite_modules/email-template" "$out/netsuite_modules/pdf-template"
 echo 'define(["require", "exports", "N/log", "../netsuite_modules/saved-search-serializer/index.js"], function () {});' > "$out/RESTlet/cp_saved_search_rl.js"
 echo 'define(["require", "exports", "N/log", "../netsuite_modules/file-cabinet/index.js"], function () {});' > "$out/RESTlet/cp_file_cabinet_rl.js"
 echo 'define(["require", "exports", "N/log", "N/task"], function () {});' > "$out/RESTlet/cp_mr_driver_rl.js"
@@ -26,6 +26,9 @@ echo 'define(["require", "exports"], function () {});' > "$out/netsuite_modules/
 echo 'define(["require", "exports"], function () {});' > "$out/netsuite_modules/file-cabinet/index.js"
 echo 'define(["require", "exports", "N/log", "../netsuite_modules/email-template/index.js"], function () {});' > "$out/RESTlet/cp_email_template_rl.js"
 echo 'define(["require", "exports", "N/render", "../file-cabinet/index.js"], function () {});' > "$out/netsuite_modules/email-template/index.js"
+echo 'define(["require", "exports", "N/log", "../netsuite_modules/pdf-template/index.js"], function () {});' > "$out/RESTlet/cp_pdf_template_rl.js"
+echo 'define(["require", "exports", "N/render", "../file-cabinet/index.js", "./statement-data.js"], function () {});' > "$out/netsuite_modules/pdf-template/index.js"
+echo 'define(["require", "exports", "N/format", "N/query", "../file-cabinet/index.js"], function () {});' > "$out/netsuite_modules/pdf-template/statement-data.js"
 EOF
   printf 'FileCabinet/\nnode_modules/\n' > "$dir/.gitignore"
   fake_commit "$dir" base

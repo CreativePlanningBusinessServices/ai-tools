@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Test double for netsuite-cli used by verify.test.sh. STUB_MODE picks the account's state:
-#   ok (default) | missing-script | mismatch | auth-fail
+#   ok (default) | missing-script | mismatch | auth-fail | standard-only
 mode="${STUB_MODE:-ok}"
 args="$*"
 if [ "$mode" = auth-fail ]; then
@@ -12,12 +12,25 @@ case "$args" in
     if [ "$mode" = missing-script ]; then
       echo '{"items":[{"scriptid":"customscript_cp_saved_search_rl"},{"scriptid":"customscript_cp_file_cabinet_rl"}]}'
     else
-      echo '{"items":[{"scriptid":"customscript_cp_saved_search_rl"},{"scriptid":"customscript_cp_file_cabinet_rl"},{"scriptid":"customscript_cp_mr_driver_rl"},{"scriptid":"customscript_cp_email_template_rl"}]}'
+      echo '{"items":[{"scriptid":"customscript_cp_saved_search_rl"},{"scriptid":"customscript_cp_file_cabinet_rl"},{"scriptid":"customscript_cp_mr_driver_rl"},{"scriptid":"customscript_cp_email_template_rl"},{"scriptid":"customscript_cp_pdf_template_rl"}]}'
     fi ;;
   suiteql*"FROM emailtemplate"*)
     echo '{"items":[{"id":"7"}]}' ;;
   *customscript_cp_email_template_rl*"id=7"*)
     echo '{"id":7,"name":"Example","storage":"inline","mediaItem":null,"subject":"Hi","body":"<p>Hi</p>"}' ;;
+  suiteql*"FROM advancedpdftemplate"*)
+    if [ "$mode" = standard-only ]; then
+      case "$args" in
+        *"LIKE 'STDTMPL%'"*) echo '{"items":[{"id":"11"}]}' ;;
+        *) echo '{"items":[]}' ;;
+      esac
+    else
+      echo '{"items":[{"id":"9"}]}'
+    fi ;;
+  *customscript_cp_pdf_template_rl*"id=11"*)
+    echo '{"id":11,"scriptid":"STDTMPL_EXAMPLE","name":"Standard","printType":"TRANSACTION","tranType":"CustInvc","isPreferred":false,"isInactive":false,"isStandard":true,"source":"<pdf></pdf>"}' ;;
+  *customscript_cp_pdf_template_rl*"id=9"*)
+    echo '{"id":9,"scriptid":"CUSTTMPL_EXAMPLE","name":"Example","printType":"TRANSACTION","tranType":"CustInvc","isPreferred":false,"isInactive":false,"isStandard":false,"source":"<pdf></pdf>"}' ;;
   suiteql*"FROM savedsearch"*)
     echo '{"items":[{"id":"42"}]}' ;;
   *customscript_cp_file_cabinet_rl*"folder=/"*)
