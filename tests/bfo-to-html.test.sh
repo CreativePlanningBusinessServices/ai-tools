@@ -25,6 +25,7 @@ for leftover in "<macrolist" "<pdf" "<link name=" "<macro " "<pbr" "<pagenumber"
   assert_not_contains "$twin" "$leftover" "no $leftover element is left"
 done
 assert_contains "$twin" 'class="bfo-pbr"' "<pbr/> becomes a bfo-pbr element"
+assert_contains "$twin" ':where(.bfo-sheet th:not([align])) { text-align: left; }' "a <th> without align is left-aligned, as BFO draws it"
 assert_contains "$twin" '<span class="bfo-pagenumber">1</span> of <span class="bfo-totalpages">N</span>' "the page number shows 1 and the total N"
 assert_contains "$twin" "INV60699</span>" "the barcode shows its value"
 assert_contains "$twin" "code128" "the barcode shows its type"

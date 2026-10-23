@@ -12,7 +12,7 @@ Sources (fetched 2026-10-16):
 - [ns-barcodes] https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_N2868543.html
 - [ns-fonts] https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/bridgehead_3963046048.html
 - [ns-pagebreaks] https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/bridgehead_4418819945.html
-- [probe] NetSuite sandbox probe, 2026-10-15/16 (design spec section 2). Where it disagrees with a document, the probe wins.
+- [probe] NetSuite sandbox probe, 2026-10-15/16 (design spec section 2), extended by the 2026-10-23 skill QA run (table nesting, `position` placement, `position:fixed`). Where it disagrees with a document, the probe wins.
 
 Versions: BFO's reference is for 1.1.x; NetSuite's help lists BFO 1.2.10 (https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_N2862977.html). Treat BFO documentation as "documented", and only [probe] items as "tested in NetSuite".
 
@@ -67,6 +67,7 @@ Versions: BFO's reference is for 1.1.x; NetSuite's help lists BFO 1.2.10 (https:
 ## Tables
 
 - Cells use `colspan`/`rowspan`; `<th>` is styled like `<td>` and has no extra behaviour [bfo-userguide "Tables"].
+- Nest strictly: `<tr>` directly inside `<table>`, `<thead>`, `<tbody>` or `<tfoot>`; `<td>`/`<th>` directly inside `<tr>`; `<thead>`/`<tbody>`/`<tfoot>` directly inside `<table>`. Each of these elsewhere (a `<tr>` in `<body>` or a `<p>`, a `<td>` straight in `<table>`) failed the render with UNEXPECTED_ERROR [probe]. Rows a `<#macro>` emits are fine when the macro is called inside a table [probe].
 - `border` on `<table>` is the table's outer border; use `cellborder` for every cell. `cellspacing` is not supported: use `cellmargin` [bfo-userguide; ns-editor]. `cellpadding` exists [bfo-tags `table`].
 - `table-layout="fixed"` sizes columns only from `width` and needs an explicit table `width`, else it falls back to `auto` [bfo-userguide "Table Layout algorithms"]. NetSuite's own example: `<table table-layout="fixed" width="200"><tr><td width="60%">` [ns-html4].
 - Repeating headers: put header rows in `<thead>` (and totals in `<tfoot>`); they repeat on every page the table spans and have no effect otherwise. At most one of each per table; loose rows go into an implicit `<tbody>` [bfo-tags `tbody`].
@@ -80,7 +81,7 @@ Versions: BFO's reference is for 1.1.x; NetSuite's help lists BFO 1.2.10 (https:
 - Bare text directly in `body`, `li` or `td` gets an anonymous `<p>`; `div` is not on that list [bfo-userguide "Anonymous Paragraphs"]. In a NetSuite sandbox, `<div>FLEX-A</div>` drew nothing and `<p>` around it drew [probe]. Wrap text in `p`, `span` or a cell.
 - `display` is `block`, `inline` or `none` only; the default is block, not inline [bfo-tags `display`; bfo-userguide, CSS2 differences 9.2.5]. Flex and grid are ignored: children stack [probe].
 - `float="left|right"` makes a block inline and wraps text around it [bfo-userguide "Float positioning"].
-- `position:relative` offsets with `left`/`top` (not `right`/`bottom`) [bfo-userguide, CSS2 differences 9.4]. `position:absolute` is relative to its parent and is not allowed as a child of `<body>` [bfo-tags `position`]. In a NetSuite sandbox it failed the render (UNEXPECTED_ERROR) on a top-level `div`/`p` and worked inside a `position:relative` parent [probe].
+- `position:relative` offsets with `left`/`top` (not `right`/`bottom`) [bfo-userguide, CSS2 differences 9.4]. `position:absolute` is relative to its parent and is not allowed as a child of `<body>` [bfo-tags `position`]. In a NetSuite sandbox it failed the render (UNEXPECTED_ERROR) on a `div`/`p` directly inside `<body>`, and rendered everywhere else tried: inside a table cell, inside a plain `div`, inside a `position:relative` parent [probe]. `position:fixed` failed the render, inline and in a `<style>` rule [probe].
 - `max-width`, `max-height`, `z-index`, `word-spacing`, `text-shadow`, `font-size-adjust` are ignored [bfo-userguide, CSS2 differences]. `border-radius` is ignored [probe]; BFO's `corner-radius` exists [bfo-tags], not render-tested here.
 - Units: `pt`, `mm`, `in`, `em`, `%` and bare numbers (points) appear in BFO's pages; `px` appears in NetSuite's font sample [ns-fonts] but is **unverified** in BFO's pages. `rem` is ignored [probe]. See `lengthUnits` in the JSON.
 
@@ -114,8 +115,10 @@ Versions: BFO's reference is for 1.1.x; NetSuite's help lists BFO 1.2.10 (https:
 | `border-radius` | ignored | [probe] |
 | `rem` units | ignored (use em, pt) | [probe] |
 | Text directly in `<div>` | not drawn | [probe] |
-| `position:absolute` with no relative ancestor | render fails, UNEXPECTED_ERROR | [probe] |
-| `position:absolute` as a child of body | not allowed | [bfo-tags] |
+| `position:absolute` on a direct child of `<body>` | render fails, UNEXPECTED_ERROR | [probe], [bfo-tags] |
+| `position:absolute` nested in a cell or block, relative parent or not | renders | [probe] |
+| `position:fixed` | render fails, UNEXPECTED_ERROR | [probe] |
+| `<tr>`, `<td>`, `<th>`, `<thead>` outside their parent | render fails, UNEXPECTED_ERROR | [probe] |
 | `&nbsp;` | NOT a problem: NetSuite help says unrendered, sandbox renders it (a production invoice template) | [probe] |
 | `cellspacing` | not supported, use `cellmargin` | [ns-editor] |
 | Percentage body width | "no size specified" error | [ns-editor] |

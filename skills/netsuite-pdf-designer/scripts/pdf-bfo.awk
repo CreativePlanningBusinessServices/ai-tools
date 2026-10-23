@@ -1,5 +1,6 @@
-# pdf-bfo.awk — envelope, BFO allowlist and NetSuite pass of pdf-validate.sh. Input: data.tsv, then the FreeMarker-blanked copy
-# (or, with envelopeCountsOnly=1, the branch-blanked copy, reporting only the <head>/<body> counts).
+# pdf-bfo.awk — envelope, BFO allowlist and NetSuite pass of pdf-validate.sh. Input: data.tsv (plus the FreeMarker pass's
+# M rows, macro and function bodies), then the FreeMarker-blanked copy (or, with structureOnly=1, the branch-blanked
+# copy, reporting only the <head>/<body> counts and table nesting).
 function locate(offset,   head, newlines, index_back) {
   head = substr(chunkText, 1, offset - 1); newlines = gsub(/\n/, "\n", head)
   if (newlines == 0) { foundLine = chunkLine; foundCol = chunkCol + offset - 1; return }
@@ -7,9 +8,9 @@ function locate(offset,   head, newlines, index_back) {
   foundLine = chunkLine + newlines; foundCol = offset - index_back
 }
 function report(severity, offset, rule, message) {
-  # <head>/<body> counts come from a second run over the branch-blanked copy (envelopeCountsOnly=1), so a template with
-  # one <pdf> per <#if>/<#else> arm counts one document; every other rule reads the copy that keeps each branch.
-  if ((rule ~ /^envelope\.(head|body)$/) != (envelopeCountsOnly == 1)) return
+  # <head>/<body> counts and table nesting come from a second run over the branch-blanked copy (structureOnly=1), so
+  # one <pdf> or <tr> opener per <#if>/<#else> arm counts once; every other rule reads the copy that keeps each branch.
+  if ((rule ~ /^(envelope\.(head|body)|bfo\.table)$/) != (structureOnly == 1)) return
   locate(offset); gsub(/[\t\r\n]+/, " ", message)
   print severity "\t" foundLine "\t" foundCol "\t" rule "\t" message
 }
@@ -38,11 +39,11 @@ function check_value(property, value, offset, inline,   keyword, known, effect, 
   if (property == "background-image" || property == "src") { check_image(value, offset); return }
   value = tolower(value); sub(/!important/, "", value); keyword = trim(value); sub(/[ \t\r\n,].*/, "", keyword)
   known = (property, keyword) in valueStatus
-  if (known && valueStatus[property, keyword] == "supported") { if (property == "position" && keyword == "relative") ownRelative = 1 }
+  if (known && valueStatus[property, keyword] == "supported") { }
   else if (known && property == "position" && keyword == "absolute") {
-    # spec 6 makes this a WARN although the data says breaks: a NetSuite sandbox only tested the top-level case
-    if (!inline) report("WARN", offset, "bfo.position", "position:absolute in a <style> rule: selectors are not matched, so make sure the element has a position:relative ancestor (absolute without one failed the sandbox render)")
-    else if (relativeAncestors == 0) report("WARN", offset, "bfo.position", "position:absolute with no position:relative ancestor failed the sandbox render (UNEXPECTED_ERROR); only style attributes are checked, not <style> rules")
+    # Sandbox probes: absolute fails the render only on a direct child of <body>; nested anywhere else it renders.
+    if (!inline) report("WARN", offset, "bfo.position", "position:absolute in a <style> rule: selectors are not matched, so make sure no element it applies to sits directly inside <body> (that fails the render)")
+    else if (stackSize && stack[stackSize] == "body") report("ERROR", offset, "bfo.position", "position:absolute on a direct child of <body> fails the render (UNEXPECTED_ERROR); put it inside a block or table cell, or use a background macro")
   } else if (known) {
     effect = valueEffect[property, keyword]
     report(severity_of(effect), offset, "bfo.css-value", property ":" keyword " is " valueStatus[property, keyword] " in BFO (" effect ")")
@@ -91,7 +92,7 @@ function check_stylesheet(text,   comment, start, match_at, ch, prelude, at_rule
     start += closing_brace
   }
 }
-function process_tag(   name, name_length, self_closing, depth, status, check_attributes, scan, scan_base, attribute, equals, attribute_name, quote_at, attribute_value, value_offset, attribute_status) {
+function process_tag(   name, name_length, junk_at, self_closing, depth, status, check_attributes, scan, scan_base, attribute_start, attribute_length, attribute, equals, attribute_name, quote_at, attribute_value, value_offset, attribute_status) {
   chunkText = tagText; chunkLine = tagLine; chunkCol = tagCol
   if (tagText ~ /^<\?xml[ \t\r\n]/) { if (tagLine == 1 && (tagCol == 1 || declarationAfterFreemarker)) sawDeclaration = 1; return }
   if (tagText ~ /^<!DOCTYPE/) {
@@ -105,12 +106,15 @@ function process_tag(   name, name_length, self_closing, depth, status, check_at
     name = substr(tagText, 3); sub(/[ \t\r\n>].*/, "", name)
     for (depth = stackSize; depth > 0 && stack[depth] != name; depth--) ;
     if (depth == 0) return
-    for (; stackSize >= depth; stackSize--) relativeAncestors -= relative[stackSize]
+    stackSize = depth - 1
     if (name == "style" && inStyle) { inStyle = 0; chunkLine = styleLine; chunkCol = styleCol; check_stylesheet(styleText) }
     return
   }
   match(tagText, /^<[^ \t\r\n\/>]+/); name_length = RLENGTH - 1; name = substr(tagText, 2, name_length)
-  self_closing = (tagText ~ /\/[ \t\r\n]*>$/); depth = stackSize; ownRelative = 0
+  if ((junk_at = match(name, /[^A-Za-z0-9_.:-]/)) > 1) {
+    name = substr(name, 1, junk_at - 1); report_tag_text(substr(tagText, junk_at + 1, name_length - junk_at + 1), junk_at + 1, name)
+  }
+  self_closing = (tagText ~ /\/[ \t\r\n]*>$/); depth = stackSize
   if (depth == 0 && !rootName) {
     rootName = name
     if (name != "pdf" && name != "pdfset") report("ERROR", 1, "envelope.root", "root element is <" name ">; it must be <pdf> or <pdfset>")
@@ -122,6 +126,10 @@ function process_tag(   name, name_length, self_closing, depth, status, check_at
     if (name == "head") { headCount[documents]++; if (!headLine) { headLine = tagLine; headCol = tagCol } }
     if (name == "body") bodyCount[documents]++
   }
+  # An HTML void element left open (<input>) is already an XML error; don't blame every cell after it on it too.
+  if ((name in tableParent) && index(" " tableParent[name] " ", " " stack[stackSize] " ") == 0 && !in_macro(tagLine, tagCol) \
+      && stack[stackSize] !~ /^(area|base|br|col|hr|img|input|link|meta|source|wbr)$/)
+    report("ERROR", 1, "bfo.table", "<" name "> must sit directly inside " tableParentText[name] ", not " (stackSize ? "<" stack[stackSize] ">" : "outside every element") "; NetSuite fails the render")
   status = (name in elementStatus) ? elementStatus[name] : "unknown"; check_attributes = (status == "supported" || status == "partial" || status == "unsupported")
   if (status == "unknown" || status == "unverified") {
     if (!(name in elementReported)) report("WARN", 1, "bfo.element", "<" name "> is " (status == "unknown" ? "not in the BFO data (unknown)" : "unverified in BFO") "; it may be dropped")
@@ -129,8 +137,10 @@ function process_tag(   name, name_length, self_closing, depth, status, check_at
   } else if (status != "supported") report(severity_of(elementEffect[name]), 1, "bfo.element", "<" name "> is " status " in BFO (" elementEffect[name] ")")
   scan = substr(tagText, name_length + 2); scan_base = name_length + 1
   while (match(scan, /[^ \t\r\n=\/>"\047]+[ \t\r\n]*=[ \t\r\n]*("[^"]*"|\047[^\047]*\047)/)) {
-    attribute = substr(scan, RSTART, RLENGTH); attribute_offset = scan_base + RSTART
-    scan_base += RSTART + RLENGTH - 1; scan = substr(scan, RSTART + RLENGTH)
+    attribute_start = RSTART; attribute_length = RLENGTH
+    check_tag_gap(substr(scan, 1, attribute_start - 1), scan_base + 1, name)
+    attribute = substr(scan, attribute_start, attribute_length); attribute_offset = scan_base + attribute_start
+    scan_base += attribute_start + attribute_length - 1; scan = substr(scan, attribute_start + attribute_length)
     equals = index(attribute, "="); attribute_name = trim(substr(attribute, 1, equals - 1))
     quote_at = match(substr(attribute, equals + 1), /["\047]/); value_offset = attribute_offset + equals + quote_at
     attribute_value = substr(attribute, equals + quote_at + 1, length(attribute) - equals - quote_at - 1)
@@ -144,9 +154,26 @@ function process_tag(   name, name_length, self_closing, depth, status, check_at
     if (attribute_name == "style") check_declarations(attribute_value, value_offset, 1)
     else if (attribute_name in cssStatus || (name == "img" && attribute_name == "src")) check_value(attribute_name, attribute_value, attribute_offset, 1)
   }
+  sub(/\/?[ \t\r\n]*>$/, "", scan); check_tag_gap(scan, scan_base + 1, name)
   if (self_closing) return
-  stack[++stackSize] = name; relative[stackSize] = ownRelative; relativeAncestors += ownRelative; divTextReported[stackSize] = 0
+  stack[++stackSize] = name; divTextReported[stackSize] = 0
   if (name == "style") { inStyle = 1; styleText = ""; locate(length(tagText) + 1); styleLine = foundLine; styleCol = foundCol }
+}
+# Text between a tag's attributes (a {TOKEN} placeholder) is not XML. Spans of x's are ${…} the FreeMarker pass blanked.
+function check_tag_gap(text, offset, name) {
+  if (text ~ /^[ \t\r\n]*(x+[ \t\r\n]*)?$/) return
+  report_tag_text(trim(text), offset + match(text, /[^ \t\r\n]/) - 1, name)
+}
+function report_tag_text(text, offset, name,   hint) {
+  hint = text ~ /^\{/ ? " (a {TOKEN} placeholder must be replaced before NetSuite sees the template)" : ""
+  if (length(text) > 40) text = substr(text, 1, 37) "..."
+  report("ERROR", offset, "xml.tag-text", "\"" text "\" inside the <" name "> tag is not a name=\"value\" attribute, so the XML does not parse; NetSuite fails the render" hint)
+}
+function in_macro(at_line, at_col,   range) {
+  for (range = 1; range <= macroCount; range++)
+    if ((at_line > macroStartLine[range] || (at_line == macroStartLine[range] && at_col > macroStartCol[range])) \
+        && (at_line < macroEndLine[range] || (at_line == macroEndLine[range] && at_col < macroEndCol[range]))) return 1
+  return 0
 }
 function start_document(name) { documents++; documentDepth = (rootName == "pdfset"); documentName[documents] = name; documentLine[documents] = tagLine; documentCol[documents] = tagCol }
 function handle_text(text, at_col,   lead) {
@@ -156,7 +183,14 @@ function handle_text(text, at_col,   lead) {
     report("WARN", lead, "netsuite.div-text", "text directly inside <div> is not drawn; wrap it in <p>, <span> or a table cell")
   }
 }
-BEGIN { FS = "\t" }
+BEGIN {
+  FS = "\t"
+  # Sandbox probes: each of these outside its parent fails the render with UNEXPECTED_ERROR.
+  tableParent["tr"] = "table thead tbody tfoot"; tableParentText["tr"] = "<table>, <thead>, <tbody> or <tfoot>"
+  tableParent["td"] = tableParent["th"] = "tr"; tableParentText["td"] = tableParentText["th"] = "<tr>"
+  tableParent["thead"] = tableParent["tbody"] = tableParent["tfoot"] = "table"
+  tableParentText["thead"] = tableParentText["tbody"] = tableParentText["tfoot"] = "<table>"
+}
 FNR == NR {
   if ($1 == "E") { elementStatus[$2] = $3; elementEffect[$2] = $4 }
   else if ($1 == "A") { attributeStatus[$2, $3] = $4; attributeEffect[$2, $3] = $5; knownAttribute[$3] = 1 }
@@ -165,6 +199,7 @@ FNR == NR {
   else if ($1 == "V") { valueStatus[$2, $3] = $4; valueEffect[$2, $3] = $5; hasValues[$2] = 1 }
   else if ($1 == "U") unitStatus[$2] = $3
   else if ($1 == "S" && $2 ~ /^:/) badSelector[$2] = 1
+  else if ($1 == "M") { macroCount++; macroStartLine[macroCount] = $2; macroStartCol[macroCount] = $3; macroEndLine[macroCount] = $4; macroEndCol[macroCount] = $5 }
   next
 }
 {

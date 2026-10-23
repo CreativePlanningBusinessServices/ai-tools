@@ -48,8 +48,8 @@ jq -r '
 jq -r '"<?xml version=\"1.0\"?><!DOCTYPE pdf [" + ([.entities[] | select(IN("amp", "lt", "gt", "quot", "apos") | not)
   | "<!ENTITY \(.) \"&#160;\">"] | join("")) + "]>"' "$data_file" > "$work/prolog.xml"
 
-stripped="$work/stripped.xml"; xml_copy="$work/xml-copy.xml"; findings="$work/findings.tsv"
-: > "$stripped"; : > "$xml_copy"; : > "$findings"
+stripped="$work/stripped.xml"; xml_copy="$work/xml-copy.xml"; findings="$work/findings.tsv"; macros="$work/macros.tsv"
+: > "$stripped"; : > "$xml_copy"; : > "$findings"; : > "$macros"
 if ! grep -q '[^[:space:]]' "$input_file"; then
   printf 'ERROR\t1\t1\tenvelope.empty\tthe template is empty\n' > "$findings"
 else
@@ -58,13 +58,16 @@ else
   else
     # FreeMarker pass: writes $stripped (FreeMarker blanked, every branch kept) and $xml_copy (non-first branches blanked
     # too), both with the source's lines and columns.
+    # Macro and function bodies go to $macros, so the BFO pass skips its nesting checks inside them.
     awk -v strippedFile="$stripped" -v xmlCopyFile="$xml_copy" -v corruptFile="$work/corrupt" -v declarationFile="$work/declaration-after-freemarker" \
-      -f "$script_dir/pdf-freemarker.awk" "$work/data.tsv" "$input_file" >> "$findings"
+      -v macroFile="$macros" -f "$script_dir/pdf-freemarker.awk" "$work/data.tsv" "$input_file" >> "$findings"
   fi
-  awk -v declarationAfterFreemarker="$([ -f "$work/declaration-after-freemarker" ] && echo 1)" -f "$script_dir/pdf-bfo.awk" "$work/data.tsv" "$stripped" >> "$findings"
-  # <head>/<body> are counted on the copy xmllint reads (one branch); after a FreeMarker syntax error that copy can't be trusted.
-  envelope_copy="$xml_copy"; [ -f "$work/corrupt" ] && envelope_copy="$stripped"
-  awk -v envelopeCountsOnly=1 -f "$script_dir/pdf-bfo.awk" "$work/data.tsv" "$envelope_copy" >> "$findings"
+  cat "$work/data.tsv" "$macros" > "$work/bfo-data.tsv"
+  awk -v declarationAfterFreemarker="$([ -f "$work/declaration-after-freemarker" ] && echo 1)" -f "$script_dir/pdf-bfo.awk" "$work/bfo-data.tsv" "$stripped" >> "$findings"
+  # <head>/<body> and table nesting are checked on the copy xmllint reads (one branch); after a FreeMarker syntax error
+  # that copy can't be trusted.
+  structure_copy="$xml_copy"; [ -f "$work/corrupt" ] && structure_copy="$stripped"
+  awk -v structureOnly=1 -f "$script_dir/pdf-bfo.awk" "$work/bfo-data.tsv" "$structure_copy" >> "$findings"
 
   # XML pass: xmllint reads the branch-blanked copy behind a one-line prolog. Entity errors are all reported; for
   # structure only the first error is, since libxml2 cascades after it.
@@ -82,7 +85,8 @@ else
 fi
 
 tab="$(printf '\t')"
-sort -s -t "$tab" -k2,2n -k3,3n "$findings" > "$work/sorted.tsv"
+# One declaration can repeat a finding (two 500ms values in one transition); report it once.
+sort -s -t "$tab" -k2,2n -k3,3n "$findings" | awk '!seen[$0]++' > "$work/sorted.tsv"
 error_count="$(grep -c "^ERROR$tab" "$work/sorted.tsv")"
 warning_count="$(grep -c "^WARN$tab" "$work/sorted.tsv")"
 if [ "$json" -eq 1 ]; then

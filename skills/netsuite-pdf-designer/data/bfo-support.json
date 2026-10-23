@@ -4316,14 +4316,15 @@
       "values": {
         "relative": "supported",
         "absolute": "partial",
-        "fixed": "unverified",
+        "fixed": "unsupported",
         "sticky": "unverified"
       },
-      "note": "absolute is placed relative to its parent and cannot be a child of body. In a NetSuite sandbox, absolute on a top-level div or p failed the render (UNEXPECTED_ERROR); inside a position:relative parent it worked. fixed and sticky are not BFO values (use a background-macro for fixed placement).",
+      "note": "absolute is placed relative to its parent and cannot be a child of body. In a NetSuite sandbox (2026-10), absolute on a direct child of body failed the render (UNEXPECTED_ERROR); inside a table cell, a div or a position:relative parent it rendered. fixed failed the render both inline and in a <style> rule. sticky is not a BFO value (use a background-macro for fixed placement).",
       "source": "netsuite-probe-2026-10",
       "effect": "breaks",
       "valueEffects": {
-        "absolute": "breaks"
+        "absolute": "breaks",
+        "fixed": "breaks"
       }
     },
     "top": {
@@ -4940,11 +4941,15 @@
       "source": "netsuite-probe-2026-10"
     },
     {
-      "text": "position:absolute with no position:relative ancestor failed the render with UNEXPECTED_ERROR.",
+      "text": "position:absolute on a direct child of <body> failed the render with UNEXPECTED_ERROR; nested in a table cell or a block it rendered, with or without a position:relative parent. position:fixed failed the render.",
       "source": "netsuite-probe-2026-10"
     },
     {
       "text": "display:flex, display:grid, border-radius and rem units are silently ignored.",
+      "source": "netsuite-probe-2026-10"
+    },
+    {
+      "text": "A <tr>, <td>, <th> or <thead> outside its <table> or <tr> (a stray row in <body> or a <p>, a cell straight in <table>) failed the render with UNEXPECTED_ERROR; rows emitted by a <#macro> called inside a table rendered.",
       "source": "netsuite-probe-2026-10"
     }
   ],

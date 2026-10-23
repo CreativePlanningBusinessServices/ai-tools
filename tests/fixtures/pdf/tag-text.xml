@@ -1,0 +1,11 @@
+<?xml version="1.0"?><!DOCTYPE pdf PUBLIC "-//big.faceless.org//report" "report-1.1.dtd">
+<pdf>
+<head>
+	<link name="NotoSans" type="font" subtype="truetype" src="${nsfont.NotoSans_Regular}" src-bold="${nsfont.NotoSans_Bold}" bytes="2" />
+</head>
+<body padding="0.5in" size="Letter">
+<table><tr{ROW_FLAG}><td>Token in the tag name</td></tr></table>
+<p class="note"{NOTE_FLAG} align="left">Token between attributes</p>
+<p class="${record.memo}" style="color: {TEXT_COLOR};">Tokens inside values are text</p>
+</body>
+</pdf>

@@ -42,7 +42,7 @@ assert_eq "$(jq -r '.css.display.values | has("grid")' "$data")" true "css.displ
 assert_eq "$(jq -r '.css.display.values.flex' "$data")" unsupported "display:flex is unsupported (sandbox probe)"
 assert_eq "$(jq -r '.css["border-radius"].status' "$data")" unsupported "border-radius is unsupported (sandbox probe)"
 assert_eq "$(jq -r '.css["background-image"].status' "$data")" supported "background-image is supported (sandbox probe)"
-assert_eq "$(jq -r '.css.position.values.absolute' "$data")" partial "position:absolute is partial (needs a relative ancestor)"
+assert_eq "$(jq -r '.css.position.values.absolute' "$data")" partial "position:absolute is partial (fails directly inside <body>)"
 assert_eq "$(jq -r '.lengthUnits.unsupported | index("rem") != null' "$data")" true "rem is listed as an unsupported unit"
 
 missing_effect="$(jq -r '.css | to_entries[] | select((.value.status == "unsupported" or .value.status == "partial") and ((.value.effect // "") | IN("ignored","breaks","unknown") | not)) | .key' "$data")"

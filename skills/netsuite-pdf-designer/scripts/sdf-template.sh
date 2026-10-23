@@ -133,6 +133,10 @@ command_deploy() {
   [ -n "$authid" ] || refuse "project.json has no defaultAuthId"
   echo "deploying with auth id $authid"
   [ "$authid" = "$intended_authid" ] || refuse "project.json targets $authid, not $intended_authid; nothing was deployed"
+  grep -qF "<path>~/$templates_folder/$scriptid.template.xml</path>" "$project_dir/deploy.xml" \
+    || refuse "nothing is staged for $scriptid (a refused stage or create leaves nothing to deploy); run stage or create first"
+  # stage and create validated the draft, but the staged copy can be edited after them; check what NetSuite would get.
+  validate_draft "$project_dir/$templates_folder/$scriptid.template.xml" deployed
 
   local preview preview_status
   preview="$(cd "$project_dir" && suitecloud project:deploy --dryrun 2>&1)"; preview_status=$?
