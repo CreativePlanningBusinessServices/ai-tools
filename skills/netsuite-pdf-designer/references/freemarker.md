@@ -67,8 +67,10 @@ search uses [probe-print-types]:
 - A joined column is `result.<join>.<fieldid>` (`${result.customer.entityid}`). The bare
   `result.<fieldid>` works too while no other column has that name. `result.customer_entityid`
   prints empty.
-- Formula columns are `result.formulatext`, `result.formulanumeric` and so on. A second column of
-  the same formula type is `result.formulatext_1`.
+- Formula columns are `result.formulatext`, `result.formulanumeric` and so on. Later columns of
+  the same formula type are numbered by position among them: `result.formulacurrency_1`,
+  `_2` and so on. Their `@label` carries the same number: a custom label "1-30 Days" prints as
+  "1-30 Days 1", so type header text into the template for those columns.
 - A summary search's grouped and summed columns read by their plain names (`result.entity`,
   `result.amount`).
 - `${result.x@label}` prints the column's **custom label** and is empty when the search sets none.
