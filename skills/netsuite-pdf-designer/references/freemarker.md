@@ -14,6 +14,7 @@ Sources (fetched 2026-10-16). A claim marked **unverified** has no fetched sourc
 - [ns-faq] https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_159984373188.html
 - [probe] NetSuite sandbox probe, 2026-10-15/16 (design spec section 2). It overrides documents.
 - [netsuite-probe-2026-10] NetSuite sandbox comparison of saved statement renders with the draft statement data, 2026-10 (design spec section 4).
+- [probe-print-types] NetSuite sandbox probe of the other print types and render functions, 2026-10-24 (print-types design spec section 2).
 
 ## Processing order
 
@@ -38,6 +39,42 @@ On preview or print NetSuite parses FreeMarker, then BFO validates the XML, then
 | `results` | joined saved-search results | `${results[0].customer.phone}`, `<#list results as row>` [ns-join] |
 
 Restrictions: subrecords are not supported except the inventory detail values; address records have their own syntax; fields on a joined record must come from records directly joined to the transaction [ns-sublist; ns-join].
+
+### Roots by print type
+
+Each print type is handed its own data; a template that reads another type's data prints blank
+there. `pdf-validate.sh --printtype` warns about that (`netsuite.roots`).
+
+| Print type | Reads | Preview in the skill |
+|---|---|---|
+| `TRANSACTION` | `record` (the transaction) | saved and draft |
+| `TRANSACTION`, custom records | `record` (the custom record; `${record@title}` is the record type's name) | saved and draft [probe-print-types] |
+| `STATEMENT` | `statements` (`statement.lines`), `customer`, `record` | saved through a form; draft approximate |
+| `SEARCH` | `results`, one row per search result | saved and draft [probe-print-types] |
+| `PICKINGTICKET` | `record` (the sales order) | not yet |
+| `PACKINGSLIP` | `record` (the item fulfillment), `salesorder`, `returnForm` | not yet |
+| `SHIPPINGLABEL`, `MAILINGLABEL`, `ITEMLABEL` | `records[…]` (one entry per label) and `startlabel` | not yet |
+| `GLIMPACT` | `record.line` (accounting lines), `label` (captions) | not yet |
+| Print Checks (`TRANSACTION`, Check) | `<#list records as check>` | never (a batch, not one record) |
+
+### Saved-search results
+
+Probed in a NetSuite sandbox by rendering through `addSearchResults`, the path a script printing a
+search uses [probe-print-types]:
+
+- A column is `result.<fieldid>`, lower case as in the search column: `${result.internalid}`
+  (`result.internalId` and `result.id` print empty).
+- A joined column is `result.<join>.<fieldid>` (`${result.customer.entityid}`). The bare
+  `result.<fieldid>` works too while no other column has that name. `result.customer_entityid`
+  prints empty.
+- Formula columns are `result.formulatext`, `result.formulanumeric` and so on. A second column of
+  the same formula type is `result.formulatext_1`.
+- A summary search's grouped and summed columns read by their plain names (`result.entity`,
+  `result.amount`).
+- `${result.x@label}` prints the column's **custom label** and is empty when the search sets none.
+  Type header text into the template, or give the search's columns custom labels.
+- Values arrive as display text, already formatted: `$2,600.00`, dates in the user's format.
+- A wrong column name prints nothing, silently, like a missing record field.
 
 ## Sublists
 

@@ -1,6 +1,6 @@
 ---
 name: netsuite-pdf-designer
-description: Use when a task needs to view, preview, validate, edit, redesign, or create a NetSuite Advanced PDF/HTML template — a template URL (pdftemplate.nl?id=…), id, scriptid (CUSTTMPL_…/STDTMPL…) or name, "what does this invoice PDF look like", "move the PO number", "add a column to the statement", "build a new invoice template", "will this render in NetSuite?" — in any account where Creative Planning's cp_pdf_template_rl RESTlet is installed. Covers the RESTlet's JSON contract (called via netsuite-cli restlet call), previewing the real PDF against a real record, NetSuite's FreeMarker and the BFO HTML/CSS subset, a local validator, and saving or creating templates through a scratch SDF project (bash, awk, jq, xmllint; no Python or Node).
+description: Use when a task needs to view, preview, validate, edit, redesign, or create a NetSuite Advanced PDF/HTML template — a template URL (pdftemplate.nl?id=…), id, scriptid (CUSTTMPL_…/STDTMPL…) or name, "what does this invoice PDF look like", "move the PO number", "add a column to the statement", "build a new invoice template", "a PDF of this saved search", "a printout for this custom record", "will this render in NetSuite?" — in any account where Creative Planning's cp_pdf_template_rl RESTlet is installed. Covers the RESTlet's JSON contract (called via netsuite-cli restlet call), previewing the real PDF against a real record or saved search results, NetSuite's FreeMarker and the BFO HTML/CSS subset, a local validator, and saving or creating templates through a scratch SDF project (bash, awk, jq, xmllint; no Python or Node).
 ---
 
 # Advanced PDF/HTML templates via the cp_pdf_template_rl RESTlet
@@ -63,6 +63,9 @@ the alias is wrong; stop and check it rather than linking a guessed host.
   adds it from the transaction's subsidiary. Statement templates loop
   `<#list statements as statement>` inside `<pdfset>`; a draft statement render gets the customer
   as `record` and `customer`, its subsidiary as `subsidiary`, and rebuilt `statements` data.
+  Saved-search (`SEARCH`) templates list `results`, one row per search result
+  (`references/freemarker.md` → Saved-search results). Each other print type reads its own data
+  (`references/freemarker.md` → Roots); a template saved under the wrong type prints blank.
 - A missing field (`${record.nosuchfield}`) renders as an empty string, silently. A broken
   FreeMarker construct (unclosed `<#if>`, unknown `?built-in`) fails with `UNEXPECTED_ERROR` and no
   detail, which the RESTlet translates into a hint to run the validator. So do a `<tr>` or `<td>`
@@ -103,6 +106,7 @@ rl --method POST --data '{"templateId": 123, "record": {"type": "invoice", "id":
 rl --method POST --data @"$SP/draft.json"   # draft: {"source": "<?xml…", "templateId": 123, "record": {…}}
 rl --method POST --data '{"printType": "STATEMENT", "entityId": 789, "formId": 210}'       # saved statement
 rl --method POST --data @"$SP/draft.json"   # draft statement: {"printType": "STATEMENT", "source": "<?xml…", "entityId": 789}
+rl --method POST --data '{"printType": "SEARCH", "templateId": 453, "searchId": "customsearch_cp_balances", "limit": 50}'   # saved search
 ```
 
 - **Transaction** (default when `printType` is absent): `record {type, id}` is required; `type` is
@@ -110,6 +114,19 @@ rl --method POST --data @"$SP/draft.json"   # draft statement: {"printType": "ST
   `salesorder`, `PurchOrd` → `purchaseorder`, `CashSale` → `cashsale`, `Estimate` → `estimate`,
   `VendBill` → `vendorbill`, `Check` → `check`). `source` makes it a draft; `templateId` alongside
   it is accepted and ignored.
+  - **Custom records** use the same body: `type` is any record type `record.load` accepts, custom
+    record script ids included (`{"type": "customrecord_cp_example", "id": 10}`). `${record@title}`
+    prints the record type's name. NetSuite's own errors pass through: "The record type [X] is
+    invalid." or "That record does not exist."
+- **Search**: `searchId` (required: a saved search's internal id or script id), `limit` (default
+  50, at most 1000) and `resultsAlias` (default `results`, the name the template lists over:
+  `<#list results as result>`), with `templateId` / `scriptId` (saved) or `source` (draft). The
+  RESTlet loads the saved search, takes its first `limit` rows and renders the template against
+  them. This is the same render path a script printing the search uses, so the preview is exact.
+  `record` in the response is `{"searchId": …, "searchType": "customer", "resultCount": 50,
+  "truncated": true}`; `truncated` means the search had more rows than were shown. `record` is not
+  accepted.
+- Other print types answer `<printType> has no preview yet — supported: TRANSACTION, STATEMENT, SEARCH`.
 - **Statement**: `entityId` (customer) is required; `statementDate` (default today), `startDate`
   (default none: the whole history) and `openTransactionsOnly` (boolean, default false) are
   optional, dates in the user's NetSuite format (`MM/DD/YYYY` in CP's accounts). Saved and draft
@@ -125,8 +142,9 @@ rl --method POST --data @"$SP/draft.json"   # draft statement: {"printType": "ST
     statements" under Gotchas.
 
 ```json
-{ "mode": "saved" | "draft", "printType": "TRANSACTION" | "STATEMENT",
-  "record": { "type": "invoice", "id": 456 } | { "entityId": 789, "formId": 210 } | { "entityId": 789 },
+{ "mode": "saved" | "draft", "printType": "TRANSACTION" | "STATEMENT" | "SEARCH",
+  "record": { "type": "invoice", "id": 456 } | { "entityId": 789, "formId": 210 } | { "entityId": 789 }
+          | { "searchId": "customsearch_…", "searchType": "customer", "resultCount": 50, "truncated": false },
   "pdf": "<base64>", "pdfBytes": 41318, "xml": "<merged BFO markup>",
   "approximate": true }    // draft statements only
 ```
@@ -164,6 +182,25 @@ Restore = step 6 with the backup's contents as the draft:
    `GET` it, keep the source as `$SP/pdf-base-<id>.xml` (with `jq -j`), and tell the user the name,
    print and transaction type, whether it's the preferred template, and the source size. For a
    standard template, say that saving will create a custom copy.
+
+   **Choosing the print type for a new template.** An existing template's `printType` comes from
+   its GET. A new one needs a type before anything else: `create --printtype` fixes it, it decides
+   where NetSuite offers the template (a form's picking-ticket slot lists only `PICKINGTICKET`
+   templates), and it decides which data a preview supplies. Map the request:
+
+   | The user asks for | `--printtype` | `--trantype` |
+   |---|---|---|
+   | an invoice, credit memo, estimate, sales order, purchase order, cash sale, bill, check… | `TRANSACTION` | the upper-cased `tranType` (`CUSTINVC`, `CUSTCRED`, `SALESORD`…) |
+   | a statement | `STATEMENT` | — |
+   | a PDF of saved search results | `SEARCH` | — |
+   | a picking ticket / a packing slip | `PICKINGTICKET` / `PACKINGSLIP` | — |
+   | a shipping / mailing / item label | `SHIPPINGLABEL` / `MAILINGLABEL` / `ITEMLABEL` | — |
+   | a GL impact page / a bill of materials / a price list | `GLIMPACT` / `BOM` / `PRICELIST` | — |
+   | a custom record's printout | `TRANSACTION` | none; ask which record type it's for |
+
+   When the request doesn't say ("a label", "a printout"), ask. A copy of an existing template
+   takes that template's type. Only `TRANSACTION` (custom records included), `STATEMENT` and
+   `SEARCH` can be previewed in this version (step 3).
 2. **Pick a sample record** of the template's `tranType`. If the user named one, use it. Otherwise
    list five recent candidates that have lines and ask the user to choose:
    ```bash
@@ -174,15 +211,24 @@ Restore = step 6 with the backup's contents as the draft:
    `SELECT customer.id, customer.entityid, COUNT(txn.id) AS openinvoices FROM transaction txn JOIN customer ON customer.id = txn.entity WHERE txn.type = 'CustInvc' AND txn.status = 'A' GROUP BY customer.id, customer.entityid ORDER BY openinvoices DESC FETCH FIRST 5 ROWS ONLY`
    (`ORDER BY COUNT(*)` fails with `UNEXPECTED_ERROR`; order by the alias). A saved statement
    render also needs the statement form id from the user; a draft doesn't.
-3. **Check what can be previewed.** Transactions: saved and draft. Statements: saved (through a
+   For a `SEARCH` template, the sample is a saved search: ask which one, and use the
+   netsuite-saved-search skill to find candidates. Prefer a search whose columns have custom
+   labels, because `${result.x@label}` prints only a custom label (blank otherwise).
+   For a custom record, list recent ones with
+   `SELECT id, name FROM <customrecord_scriptid> ORDER BY id DESC FETCH FIRST 5 ROWS ONLY`, and
+   read its `custrecord_…` field ids from `netsuite-cli`'s record schema.
+3. **Check what can be previewed.** Transactions and custom records: saved and draft. Saved
+   searches: saved and draft, against the search's first rows (exact). Statements: saved (through a
    form) and draft (rebuilt data, **approximate**). For a statement draft, build the body with
    `jq -n --rawfile source "$SP/pdf-draft-<id>.xml" '{printType: "STATEMENT", source: $source, entityId: 789}'`
    (add `statementDate` / `startDate` / `openTransactionsOnly` when the user asks), label the
    preview `draft (approximate: statement data rebuilt with SuiteQL, not NetSuite's statement engine)`
    in its caption, and tell the user the numbers are rebuilt. When a form for the template exists, a saved render
-   through it is the reference to compare against. Other
-   print types (packing slip, picking ticket, labels, price list, GL impact): no preview in this
-   version; read, validate and save still work. **Check templates that loop over `records`** (the
+   through it is the reference to compare against. For a saved search, the body is
+   `{printType: "SEARCH", templateId: 453, searchId: "customsearch_…"}` (or `source` for a draft).
+   Mention `truncated: true` when the search had more rows than the preview shows. Other print types
+   (packing slip, picking ticket, labels, price list, GL impact, bill of materials): no preview in
+   this version; read, validate and save still work. **Check templates that loop over `records`** (the
    Print Checks batch list) can't be previewed either: before rendering, run
    `grep -Eq '<#list[[:space:]]+records[[:space:]]' "$SP/pdf-base-<id>.xml"` and, on a match, say
    so instead of calling the RESTlet (which refuses them too, naming Print Checks). Validate and
@@ -213,7 +259,7 @@ Restore = step 6 with the backup's contents as the draft:
    transactions; for a new template, leave `templateId` out. Statement drafts use step 3's body.
    After each edit:
    ```bash
-   bash "$PD/scripts/pdf-validate.sh" "$SP/pdf-draft-123.xml"              # fix every ERROR before rendering
+   bash "$PD/scripts/pdf-validate.sh" --printtype TRANSACTION "$SP/pdf-draft-123.xml"   # the template's printType; fix every ERROR before rendering
    jq -n --rawfile source "$SP/pdf-draft-123.xml" '{source: $source, templateId: 123, record: {type: "invoice", id: 456}}' > "$SP/draft.json"
    rl --method POST --data @"$SP/draft.json" > "$SP/render-123.json" \
      && { jq -e 'has("error") | not' "$SP/render-123.json" >/dev/null || { jq -r .error "$SP/render-123.json"; false; }; } \
@@ -240,7 +286,10 @@ Restore = step 6 with the backup's contents as the draft:
    may drop an element it doesn't know (`bfo.element`: check the PDF), text in a `<div>` won't draw
    (`netsuite.div-text`), an absolute position in a `<style>` rule couldn't be checked
    (`bfo.position`), non-Latin text needs the nsfont link (`netsuite.nsfont`), or an image may not
-   load (`netsuite.image-http`, `netsuite.image-host`). A clean or WARN-only result is not proof:
+   load (`netsuite.image-http`, `netsuite.image-host`). `netsuite.roots` (only with `--printtype`)
+   means the source reads data this print type never gets, such as `results` in a `TRANSACTION`
+   template, so it would print blank: confirm the print type with the user before rendering or
+   saving. A clean or WARN-only result is not proof:
    the draft render is the test. Apply fixes only once the user agrees.
 6. **Save** an existing custom template, only after an explicit yes that names the account
    ("save to <alias>"). Production is written only when the user names production for this save.
@@ -282,9 +331,11 @@ Restore = step 6 with the backup's contents as the draft:
 8. **Create.** Start from `references/starter-transaction.xml` (invoice-style layout: logo and
    company header, page x of y footer, Letter, an item table with a `<thead>` of `@label`s,
    totals) or `references/starter-statement.xml` (the same frame over `statement.lines` with the
-   aging row), or from a copy of an existing template. Work in `$SP/pdf-draft-new.xml`, preview
-   transaction drafts against a sample (step 5, no `templateId`) and statement drafts with step 3's
-   body, then, after an explicit yes naming the account:
+   aging row), or from a copy of an existing template. Pick the print type first (step 1). Work in
+   `$SP/pdf-draft-new.xml`, run `pdf-validate.sh --printtype <that type>` on it, and preview
+   transaction and custom-record drafts against a sample (step 5, no `templateId`), statement drafts
+   with step 3's body, and saved-search drafts with `source` and a `searchId`. Then, after an
+   explicit yes naming the account:
    Find the auth id and `init` the project as in step 6 (production only when the user names it for
    this create).
    ```bash
