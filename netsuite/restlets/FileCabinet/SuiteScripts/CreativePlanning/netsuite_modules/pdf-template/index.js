@@ -1,7 +1,7 @@
-define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "../file-cabinet/index.js", "./statement-data.js"], function (require, exports, log, query, record, render, index_js_1, statement_data_js_1) {
+define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/search", "../file-cabinet/index.js", "./statement-data.js"], function (require, exports, log, query, record, render, search, index_js_1, statement_data_js_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.formatStamp = exports.parseJsonObject = exports.parseTemplateRef = exports.renderTemplate = exports.backupTemplate = exports.describeTemplate = exports.PRINT_CHECKS_REFUSAL = exports.FREEMARKER_HINT = exports.BACKUP_FOLDER = exports.ValidationError = void 0;
+    exports.formatStamp = exports.parseJsonObject = exports.parseTemplateRef = exports.renderTemplate = exports.backupTemplate = exports.describeTemplate = exports.SEARCH_MAX_LIMIT = exports.SEARCH_DEFAULT_LIMIT = exports.PRINT_CHECKS_REFUSAL = exports.FREEMARKER_HINT = exports.BACKUP_FOLDER = exports.ValidationError = void 0;
     Object.defineProperty(exports, "ValidationError", { enumerable: true, get: function () { return index_js_1.ValidationError; } });
     exports.BACKUP_FOLDER = '/SuiteScripts/CreativePlanning/pdf-template-backups';
     exports.FREEMARKER_HINT = 'NetSuite hit a FreeMarker or layout error but gives no detail — run pdf-validate.sh on the draft. Common causes: an unclosed <#if>/<#list>, an unknown ?built-in, a ${…} left open, a <tr> or <td> outside its <table> or <tr>, position:absolute on a direct child of <body>, position:fixed.';
@@ -12,6 +12,9 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "../fi
     const TRANSACTION_RENDER_KEYS = ['templateId', 'scriptId', 'source', 'record', 'printType'];
     const STATEMENT_RENDER_KEYS = ['printType', 'entityId', 'formId', 'statementDate', 'startDate', 'openTransactionsOnly'];
     const DRAFT_STATEMENT_RENDER_KEYS = ['printType', 'source', 'entityId', 'statementDate', 'startDate', 'openTransactionsOnly'];
+    const SEARCH_RENDER_KEYS = ['printType', 'templateId', 'scriptId', 'source', 'searchId', 'limit', 'resultsAlias'];
+    exports.SEARCH_DEFAULT_LIMIT = 50;
+    exports.SEARCH_MAX_LIMIT = 1000;
     // ============ Describe ============
     const describeTemplate = (ref) => {
         const row = loadMetadata(ref);
@@ -72,12 +75,13 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "../fi
     const renderTemplate = (body) => {
         const request = (0, exports.parseJsonObject)(body);
         const printType = request.printType ?? 'TRANSACTION';
-        if (printType !== 'TRANSACTION' && printType !== 'STATEMENT') {
-            throw new index_js_1.ValidationError(`draft preview supports TRANSACTION and STATEMENT, got ${JSON.stringify(printType)}`);
-        }
         if (printType === 'TRANSACTION')
             return translateRenderErrors(() => renderTransaction(request));
-        return translateRenderErrors(() => ('source' in request ? renderDraftStatement(request) : renderStatement(request)));
+        if (printType === 'STATEMENT')
+            return translateRenderErrors(() => ('source' in request ? renderDraftStatement(request) : renderStatement(request)));
+        if (printType === 'SEARCH')
+            return translateRenderErrors(() => renderSearch(request));
+        throw new index_js_1.ValidationError(`${String(printType)} has no preview yet — supported: TRANSACTION, STATEMENT, SEARCH`);
     };
     exports.renderTemplate = renderTemplate;
     const translateRenderErrors = (operation) => {
@@ -181,6 +185,38 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "../fi
             approximate: true,
         };
     };
+    // addSearchResults takes search.Result objects, so this one path uses N/search rather than SuiteQL.
+    const renderSearch = (body) => {
+        const request = asObject(body, SEARCH_RENDER_KEYS);
+        const isDraft = 'source' in request;
+        const source = isDraft ? requireSource(request.source) : '';
+        const templateRef = isDraft ? null : parseSavedTemplateRef(request);
+        const searchId = requireSearchId(request.searchId);
+        const limit = requireLimit(request.limit);
+        const resultsAlias = requireResultsAlias(request.resultsAlias);
+        const savedSearch = search.load({ id: searchId });
+        // One row past the limit tells whether the search had more; getRange can't go past 1000.
+        const fetched = savedSearch.run().getRange({ start: 0, end: Math.min(limit + 1, exports.SEARCH_MAX_LIMIT) });
+        const truncated = fetched.length > limit || (limit === exports.SEARCH_MAX_LIMIT && fetched.length === exports.SEARCH_MAX_LIMIT);
+        const rows = fetched.slice(0, limit);
+        const renderer = render.create();
+        if (templateRef === null)
+            renderer.templateContent = source;
+        else if ('id' in templateRef)
+            renderer.setTemplateById({ id: templateRef.id });
+        else
+            renderer.setTemplateByScriptId({ scriptId: templateRef.scriptid });
+        renderer.addSearchResults({ templateName: resultsAlias, searchResult: rows });
+        const pdfFile = renderer.renderAsPdf();
+        return {
+            mode: isDraft ? 'draft' : 'saved',
+            printType: 'SEARCH',
+            record: { searchId, searchType: String(savedSearch.searchType), resultCount: rows.length, truncated },
+            pdf: pdfFile.getContents(),
+            pdfBytes: pdfFile.size,
+            xml: renderer.renderAsString(),
+        };
+    };
     // Accounts without subsidiaries (non-OneWorld) leave the field empty, so the root is skipped.
     const addSubsidiaryRoot = (renderer, owner) => {
         const subsidiaryId = owner.getValue({ fieldId: 'subsidiary' });
@@ -207,6 +243,30 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "../fi
             throw new index_js_1.ValidationError('record {type, id} is required, e.g. {"type": "invoice", "id": 456}');
         }
         return { type: reference.type.trim(), id: requireId(reference.id) };
+    };
+    const requireSearchId = (value) => {
+        const trimmed = typeof value === 'string' ? value.trim() : value;
+        const searchId = typeof trimmed === 'string' && /^\d+$/.test(trimmed) ? Number(trimmed) : trimmed;
+        if (typeof searchId === 'number' && Number.isInteger(searchId) && searchId > 0)
+            return searchId;
+        if (typeof searchId === 'string' && searchId !== '')
+            return searchId;
+        throw new index_js_1.ValidationError('searchId is required: a saved search internal id or script id (customsearch_…)');
+    };
+    const requireLimit = (value) => {
+        if (value === undefined)
+            return exports.SEARCH_DEFAULT_LIMIT;
+        const limit = typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : value;
+        if (typeof limit === 'number' && Number.isInteger(limit) && limit >= 1 && limit <= exports.SEARCH_MAX_LIMIT)
+            return limit;
+        throw new index_js_1.ValidationError(`limit must be a whole number from 1 to ${exports.SEARCH_MAX_LIMIT}, got ${JSON.stringify(value)}`);
+    };
+    const requireResultsAlias = (value) => {
+        if (value === undefined)
+            return 'results';
+        if (typeof value === 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(value))
+            return value;
+        throw new index_js_1.ValidationError(`resultsAlias must be a FreeMarker name like results, got ${JSON.stringify(value)}`);
     };
     // ============ Request parsing helpers ============
     const parseTemplateRef = (params) => {

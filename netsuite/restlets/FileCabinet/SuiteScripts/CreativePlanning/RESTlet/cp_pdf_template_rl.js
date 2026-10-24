@@ -7,7 +7,9 @@
  * Version: 1.0
  * Description: Describe, render and back up advanced PDF/HTML templates over JSON. GET ?id= or
  *   ?scriptid= returns the template metadata plus its raw source; PUT backs the template's current
- *   source up to the File Cabinet; POST renders a saved or draft template (transaction or statement) to PDF plus merged XML/HTML. Called by netsuite-cli
+ *   source up to the File Cabinet; POST renders a saved or draft template to PDF plus merged XML/HTML against a
+ *   transaction or any record type record.load accepts (custom records included), a statement, or a saved search's
+ *   results. Called by netsuite-cli
  *   via `restlet call`; contract in the netsuite-pdf-designer skill. See
  *   docs/superpowers/specs/2026-10-16-netsuite-pdf-designer-design.html.
  */
