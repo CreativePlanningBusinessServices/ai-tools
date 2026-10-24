@@ -10,7 +10,7 @@ Claude Code skills and NetSuite scripts maintained by Creative Planning.
 | `skills/netsuite-file-cabinet` | Read, download, list, create, edit and delete File Cabinet files |
 | `skills/netsuite-mr-driver` | Trigger Map/Reduce scripts and poll their progress |
 | `skills/netsuite-email-designer` | Preview, edit, save and create email templates, with an email-client compatibility check |
-| `skills/netsuite-pdf-designer` | Preview, validate, edit, save and create Advanced PDF/HTML templates (invoices, statements and other transaction PDFs), with a BFO/FreeMarker validator and an HTML twin of each preview |
+| `skills/netsuite-pdf-designer` | Preview, validate, edit, save and create Advanced PDF/HTML templates (invoices, statements and other transaction PDFs), with a BFO/FreeMarker validator |
 | `netsuite/restlets` | The five RESTlets those skills call, ready to deploy into an account |
 | `skills/edi-template-builder` | Build and revise EDI benefits-feed templates (X12 834 and others) |
 | `skills/suitecloud-cli` | When and how to use the SuiteCloud CLI for NetSuite object definitions (forms, records, fields, scripts…), and how to set up its machine-to-machine auth from an existing netsuite-cli account |
@@ -29,7 +29,7 @@ install, in [`skills/edi-template-builder/INSTALL.md`](skills/edi-template-build
 - To install the RESTlets, and for `netsuite-pdf-designer` to save or create templates: the SuiteCloud CLI
   (`npm install -g @oracle/suitecloud-cli`). NetSuite has no API that writes PDF templates, so saves deploy
   through SDF.
-- For `netsuite-pdf-designer`: `xmllint` and `xsltproc` (both ship with macOS)
+- For `netsuite-pdf-designer`: `xmllint` (ships with macOS)
 
 ## Install the skills
 
