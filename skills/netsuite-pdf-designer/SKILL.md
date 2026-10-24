@@ -1,6 +1,6 @@
 ---
 name: netsuite-pdf-designer
-description: Use when a task needs to view, preview, validate, edit, redesign, or create a NetSuite Advanced PDF/HTML template — a template URL (pdftemplate.nl?id=…), id, scriptid (CUSTTMPL_…/STDTMPL…) or name, "what does this invoice PDF look like", "move the PO number", "add a column to the statement", "build a new invoice template", "will this render in NetSuite?" — in any account where Creative Planning's cp_pdf_template_rl RESTlet is installed. Covers the RESTlet's JSON contract (called via netsuite-cli restlet call), previewing the real PDF plus a clickable HTML twin against a real record, NetSuite's FreeMarker and the BFO HTML/CSS subset, a local validator, and saving or creating templates through a scratch SDF project (bash, awk, jq, xmllint, xsltproc; no Python or Node).
+description: Use when a task needs to view, preview, validate, edit, redesign, or create a NetSuite Advanced PDF/HTML template — a template URL (pdftemplate.nl?id=…), id, scriptid (CUSTTMPL_…/STDTMPL…) or name, "what does this invoice PDF look like", "move the PO number", "add a column to the statement", "build a new invoice template", "will this render in NetSuite?" — in any account where Creative Planning's cp_pdf_template_rl RESTlet is installed. Covers the RESTlet's JSON contract (called via netsuite-cli restlet call), previewing the real PDF against a real record, NetSuite's FreeMarker and the BFO HTML/CSS subset, a local validator, and saving or creating templates through a scratch SDF project (bash, awk, jq, xmllint; no Python or Node).
 ---
 
 # Advanced PDF/HTML templates via the cp_pdf_template_rl RESTlet
@@ -132,8 +132,8 @@ rl --method POST --data @"$SP/draft.json"   # draft statement: {"printType": "ST
 ```
 
 A saved statement's `xml` is a `<pdfset>` holding one `<html>` child per statement; a draft
-statement's keeps the source's `<pdf>` children. Both local scripts accept either. Empty source, or the literal `null`/`undefined`, is refused (a shell pipeline lost its
-input).
+statement's keeps the source's `<pdf>` children. `pdf-validate.sh --merged` accepts either. Empty
+source, or the literal `null`/`undefined`, is refused (a shell pipeline lost its input).
 
 ### PUT `{id}` or `{scriptid}` — backup
 
@@ -177,9 +177,9 @@ Restore = step 6 with the backup's contents as the draft:
 3. **Check what can be previewed.** Transactions: saved and draft. Statements: saved (through a
    form) and draft (rebuilt data, **approximate**). For a statement draft, build the body with
    `jq -n --rawfile source "$SP/pdf-draft-<id>.xml" '{printType: "STATEMENT", source: $source, entityId: 789}'`
-   (add `statementDate` / `startDate` / `openTransactionsOnly` when the user asks), pass the banner
-   mode `"draft (approximate: statement data rebuilt with SuiteQL, not NetSuite's statement engine)"`,
-   and tell the user the numbers are rebuilt. When a form for the template exists, a saved render
+   (add `statementDate` / `startDate` / `openTransactionsOnly` when the user asks), label the
+   preview `draft (approximate: statement data rebuilt with SuiteQL, not NetSuite's statement engine)`
+   in its caption, and tell the user the numbers are rebuilt. When a form for the template exists, a saved render
    through it is the reference to compare against. Other
    print types (packing slip, picking ticket, labels, price list, GL impact): no preview in this
    version; read, validate and save still work. **Check templates that loop over `records`** (the
@@ -187,27 +187,23 @@ Restore = step 6 with the backup's contents as the draft:
    `grep -Eq '<#list[[:space:]]+records[[:space:]]' "$SP/pdf-base-<id>.xml"` and, on a match, say
    so instead of calling the RESTlet (which refuses them too, naming Print Checks). Validate and
    save still work for them.
-4. **Preview.** `POST` (saved mode first), then write the PDF and the HTML twin:
+4. **Preview.** `POST` (saved mode first), then write the PDF, keeping the merged markup for the
+   validator:
    ```bash
    rl --method POST --data '{"templateId": 123, "record": {"type": "invoice", "id": 456}}' > "$SP/render-123.json" \
      && { jq -e 'has("error") | not' "$SP/render-123.json" >/dev/null || { jq -r .error "$SP/render-123.json"; false; }; } \
      && jq -j .pdf "$SP/render-123.json" | base64 -D > "$SP/pdf-preview-123.pdf" \
      && jq -j .xml "$SP/render-123.json" > "$SP/merged-123.xml"
-   bash "$PD/scripts/bfo-to-html.sh" "$SP/merged-123.xml" "$SP/pdf-preview-123.html"
-   bash "$PD/scripts/preview-banner.sh" "$SP/pdf-preview-123.html" "<template name>" "<alias>" "<sample, e.g. invoice INV123>" saved
    ```
-   Stop on an `{error}`: report it and send nothing. If `bfo-to-html.sh` fails, still send the PDF
-   and report the error.
-   Send **both** files together with SendUserFile (render display) as the **last** action of the
-   turn, after the explanatory text, so the cards sit at the bottom of the chat. When one turn
-   produces several previews, send them all in that one call and name each in the caption. The PDF is the
-   real output; the HTML twin is for clicking and annotating (every element carries a `data-bfo`
-   path into the merged XML). Page flow, repeated headers and fonts are exact only in the PDF.
-   Images that aren't "available without login" show as broken in the twin; check them in the PDF.
-   Nothing opens the Browser pane automatically: writing the file, `show_pane` and a preview server
-   all fail to, so don't try them. Where SendUserFile is unavailable, give the paths. Previews hold
-   real customer data: they live only in the scratchpad and are never committed, attached, or
-   published.
+   Stop on an `{error}`: report it and send nothing. Look at the PDF yourself (Read tool) before
+   sending it, so what you tell the user matches what it shows.
+   Send it with SendUserFile (render display) as the **last** action of the turn, after the
+   explanatory text, so the card sits at the bottom of the chat. The caption names the template,
+   the account, the sample record and the mode (`saved`, `draft`, or step 3's approximate label).
+   When one turn produces several previews, send them all in that one call and name each in the
+   caption. The user can mark up the PDF in Claude and send it back to point at what to change.
+   Where SendUserFile is unavailable, give the path. Previews hold real customer data: they live
+   only in the scratchpad and are never committed, attached, or published.
 5. **Edit loop.** The working copy is `$SP/pdf-draft-<id>.xml` (start as a copy of the base).
    **Most NetSuite-saved sources are CRLF** (the starters are LF), and some mix CRLF and LF lines:
    match the endings of the lines you edit. The Edit tool and whole-file substitutions
@@ -224,12 +220,13 @@ Restore = step 6 with the backup's contents as the draft:
      && jq -j .xml "$SP/render-123.json" > "$SP/merged-123.xml"
    bash "$PD/scripts/pdf-validate.sh" --merged "$SP/merged-123.xml"        # markup FreeMarker produced
    ```
-   then PDF, twin and banner (mode `draft`) as in step 4, and re-send both. Say in one line what
-   changed. Keep the FreeMarker out of the conversation; name changes in plain words. Point out
-   blanks that come from the sample record (no ship-to, no PO number) rather than the template, so
-   they aren't "fixed" in the wrong place. When the user annotates the twin, the `data-bfo` path
-   locates the element in the merged XML; find the matching source element by structure and text
-   (FreeMarker loops and `<#if>`s mean the paths don't map one to one).
+   then write the PDF as in step 4 (mode `draft`) and re-send it. Say in one line what changed.
+   Keep the FreeMarker out of the conversation; name changes in plain words. Point out blanks that
+   come from the sample record (no ship-to, no PO number) rather than the template, so they aren't
+   "fixed" in the wrong place. When the user marks up the PDF, find the marked element in the
+   source by its printed text and its place in the layout (a header or footer macro, a table row,
+   a totals cell); text inside a FreeMarker loop or `<#if>` comes from one source element however
+   often it prints.
 
    **Triage the validator in plain words**, as the email designer does with its compatibility
    check: for each finding, say what will look different or fail and where, and propose a fix.
@@ -330,8 +327,8 @@ Restore = step 6 with the backup's contents as the draft:
 - `UNEXPECTED_ERROR` with no detail: run `pdf-validate.sh` on the draft; it catches the causes
   listed under "How NetSuite renders PDF templates". If it's clean, bisect the draft (comment out
   halves with `<#-- -->`) and re-render.
-- Merged statement markup is `<pdfset>` with `<html>` children, not `<pdf>`; `bfo-to-html.sh`
-  and `pdf-validate.sh --merged` both accept it.
+- Merged statement markup is `<pdfset>` with `<html>` children, not `<pdf>`;
+  `pdf-validate.sh --merged` accepts it.
 - **Draft statements** are rebuilt, not NetSuite's: AR lines in the customer's currency up to the
   statement date (type name + `#` + number, charge or payment by sign, due date), a running
   balance, a `Balance Forward` line from `startDate`, open-only mode, aging by days past due, the
@@ -382,5 +379,4 @@ Source: the private `sdf-creative-planning` repo, `src/RESTlet/cp_pdf_template_r
 tests under `__tests__/pdf_template/`. Shipped
 here via `netsuite/restlets/sync.sh`. Spec:
 `docs/superpowers/specs/2026-10-16-netsuite-pdf-designer-design.html` in that repo. Local scripts
-are tested by `tests/pdf-validate.test.sh`, `tests/bfo-to-html.test.sh` and
-`tests/sdf-template.test.sh` (`tests/run.sh` runs all); the allowlist is `data/bfo-support.json`.
+are tested by `tests/pdf-validate.test.sh` and `tests/sdf-template.test.sh` (`tests/run.sh` runs all); the allowlist is `data/bfo-support.json`.

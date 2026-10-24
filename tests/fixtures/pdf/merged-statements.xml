@@ -1,5 +1,0 @@
-<?xml version="1.0"?><!DOCTYPE pdf PUBLIC "-//big.faceless.org//report" "report-1.1.dtd">
-<pdfset>
-<html><head><link name="NotoSans" type="font" subtype="truetype" src="file:///fonts/NotoSans-Regular.ttf" bytes="2" /><macrolist><macro id="nlfooter"><p>Statement Footer <pagenumber/> of <totalpages/></p></macro></macrolist></head><body footer="nlfooter" padding="0.5in" size="Letter"><table><tr><td>Statement One Cell</td></tr></table></body></html>
-<html><head><link name="NotoSans" type="font" subtype="truetype" src="file:///fonts/NotoSans-Regular.ttf" bytes="2" /></head><body padding="0.5in" size="Letter"><table><tr><td>Statement Two Cell</td></tr></table></body></html>
-</pdfset>
