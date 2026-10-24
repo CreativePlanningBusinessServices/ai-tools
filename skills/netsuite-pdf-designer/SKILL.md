@@ -107,6 +107,10 @@ rl --method POST --data @"$SP/draft.json"   # draft: {"source": "<?xml…", "tem
 rl --method POST --data '{"printType": "STATEMENT", "entityId": 789, "formId": 210}'       # saved statement
 rl --method POST --data @"$SP/draft.json"   # draft statement: {"printType": "STATEMENT", "source": "<?xml…", "entityId": 789}
 rl --method POST --data '{"printType": "SEARCH", "templateId": 453, "searchId": "customsearch_cp_balances", "limit": 50}'   # saved search
+rl --method POST --data '{"printType": "TRANSACTION", "native": true, "record": {"type": "invoice", "id": 456}, "formId": 159}'   # what the form prints
+rl --method POST --data '{"printType": "PICKINGTICKET", "templateId": 8, "record": {"type": "salesorder", "id": 789}}'           # picking ticket
+rl --method POST --data '{"printType": "PACKINGSLIP", "templateId": 41, "record": {"type": "itemfulfillment", "id": 987}}'      # packing slip
+rl --method POST --data @"$SP/raw.json"   # raw BFO XML, no data: {"xml": "<?xml…"}
 ```
 
 - **Transaction** (default when `printType` is absent): `record {type, id}` is required; `type` is
@@ -126,7 +130,29 @@ rl --method POST --data '{"printType": "SEARCH", "templateId": 453, "searchId": 
   `record` in the response is `{"searchId": …, "searchType": "customer", "resultCount": 50,
   "truncated": true}`; `truncated` means the search had more rows than were shown. `record` is not
   accepted.
-- Other print types answer `<printType> has no preview yet — supported: TRANSACTION, STATEMENT, SEARCH`.
+- **Native** (`"native": true`, JSON `true` only): NetSuite's own print through a form, with no
+  template in the body (`templateId`, `scriptId` and `source` are refused); `mode` is `native`.
+  - Transactions: `record` plus an optional `formId` (without it, the record's own form decides,
+    as the Email button's "attach PDF" does). Returns the PDF and the merged `xml`.
+  - Picking tickets (`formId`, `shipgroup`, `location` optional) and packing slips (`formId`
+    optional): PDF only, `xml` is `null`.
+  - A form that isn't set to an advanced template prints NetSuite's basic layout, so a native
+    render shows what the form prints, not necessarily the template being edited.
+- **Picking ticket** (`PICKINGTICKET`): `record` is the sales order (`salesorder` only). Saved and
+  draft render the template with the sales order as `record`.
+- **Packing slip** (`PACKINGSLIP`): `record` is an `itemfulfillment` (loaded as `record`, its
+  created-from sales order as `salesorder`) or a `salesorder` alone, which stands in for the
+  fulfillment and makes the result `"approximate": true`. A fulfillment with no created-from sales
+  order is refused. `returnForm` is never supplied, so the template's return-form section stays
+  hidden; when the source reads it, `notes` says so.
+- In picking tickets and packing slips, `${record@title}` would print the loaded record's type
+  ("Sales Order"), so the RESTlet swaps in "Picking Ticket" / "Packing Slip" on its copy of the
+  source and lists that in `adaptations` (the saved template is never changed).
+- **Raw XML** (`{"xml": "<?xml…"}`, nothing else): renders BFO markup as is, with no record and no
+  FreeMarker, through `render.xmlToPdf`; `mode` and `printType` are `raw` / `RAW`, `record` is
+  `null`. The input must be an `<?xml …?>` document with a `<pdf>` or `<pdfset>` root and no
+  `<#`/`${` (use `source` for a template).
+- Other print types answer `<printType> has no preview yet — supported: TRANSACTION, STATEMENT, SEARCH, PICKINGTICKET, PACKINGSLIP`.
 - **Statement**: `entityId` (customer) is required; `statementDate` (default today), `startDate`
   (default none: the whole history) and `openTransactionsOnly` (boolean, default false) are
   optional, dates in the user's NetSuite format (`MM/DD/YYYY` in CP's accounts). Saved and draft
@@ -142,11 +168,14 @@ rl --method POST --data '{"printType": "SEARCH", "templateId": 453, "searchId": 
     statements" under Gotchas.
 
 ```json
-{ "mode": "saved" | "draft", "printType": "TRANSACTION" | "STATEMENT" | "SEARCH",
-  "record": { "type": "invoice", "id": 456 } | { "entityId": 789, "formId": 210 } | { "entityId": 789 }
-          | { "searchId": "customsearch_…", "searchType": "customer", "resultCount": 50, "truncated": false },
-  "pdf": "<base64>", "pdfBytes": 41318, "xml": "<merged BFO markup>",
-  "approximate": true }    // draft statements only
+{ "mode": "saved" | "draft" | "native" | "raw",
+  "printType": "TRANSACTION" | "STATEMENT" | "SEARCH" | "PICKINGTICKET" | "PACKINGSLIP" | "RAW",
+  "record": { "type": "invoice", "id": 456, "formId": 159 } | { "entityId": 789, "formId": 210 } | { "entityId": 789 }
+          | { "searchId": "customsearch_…", "searchType": "customer", "resultCount": 50, "truncated": false } | null,
+  "pdf": "<base64>", "pdfBytes": 41318, "xml": "<merged BFO markup>" | null,
+  "approximate": true,                     // draft statements; a packing slip from a sales order
+  "notes": ["returnForm isn't supplied…"], // when something the template reads isn't previewed
+  "adaptations": ["title: Packing Slip"] } // what the RESTlet changed on its copy of the source
 ```
 
 A saved statement's `xml` is a `<pdfset>` holding one `<html>` child per statement; a draft
@@ -202,8 +231,8 @@ Restore = step 6 with the backup's contents as the draft:
    takes that template's type. The custom-record row is unconfirmed: no account has been checked
    for how its custom-record templates are stored. Before creating one, GET a template the account
    already uses for that record (or ask how it's printed today, usually by a script), and take its
-   print type. Only `TRANSACTION` (custom records included), `STATEMENT` and
-   `SEARCH` can be previewed in this version (step 3).
+   print type. `TRANSACTION` (custom records included), `STATEMENT`, `SEARCH`, `PICKINGTICKET`
+   and `PACKINGSLIP` can be previewed in this version (step 3).
 2. **Pick a sample record** of the template's `tranType`. If the user named one, use it. Otherwise
    list five recent candidates that have lines and ask the user to choose:
    ```bash
@@ -220,8 +249,20 @@ Restore = step 6 with the backup's contents as the draft:
    For a custom record, list recent ones with
    `SELECT id, name FROM <customrecord_scriptid> ORDER BY id DESC FETCH FIRST 5 ROWS ONLY`, and
    read its `custrecord_…` field ids from `netsuite-cli`'s record schema.
+   For a picking ticket, a sales order waiting to be fulfilled:
+   `SELECT txn.id, txn.tranid, txn.trandate FROM transaction txn WHERE txn.type = 'SalesOrd' AND txn.status IN ('B', 'D', 'E') ORDER BY txn.id DESC FETCH FIRST 5 ROWS ONLY`.
+   For a packing slip, a recent fulfillment and its sales order:
+   `SELECT txn.id, txn.tranid, txn.trandate, txn.createdfrom, BUILTIN.DF(txn.createdfrom) AS salesorder FROM transaction txn WHERE txn.type = 'ItemShip' ORDER BY txn.id DESC FETCH FIRST 5 ROWS ONLY`.
+   If the account has no fulfillments, use a sales order and say the preview is approximate.
 3. **Check what can be previewed.** Transactions and custom records: saved and draft. Saved
-   searches: saved and draft, against the search's first rows (exact). Statements: saved (through a
+   searches: saved and draft, against the search's first rows (exact). Picking tickets and packing
+   slips: saved and draft (a packing slip from a sales order alone is approximate), plus native.
+   **Native** (`native: true`) answers "what will NetSuite actually print or attach": run it when
+   the user asks that, or to compare with the template. A form without an advanced template prints
+   NetSuite's basic layout, which is not the template being edited; say so when the native PDF
+   doesn't look like the template. **Raw XML** is for sketching a layout before there's data and
+   for re-rendering merged XML you edited by hand. A change found that way still goes into the
+   FreeMarker source. Statements: saved (through a
    form) and draft (rebuilt data, **approximate**). For a statement draft, build the body with
    `jq -n --rawfile source "$SP/pdf-draft-<id>.xml" '{printType: "STATEMENT", source: $source, entityId: 789}'`
    (add `statementDate` / `startDate` / `openTransactionsOnly` when the user asks), label the
@@ -230,8 +271,8 @@ Restore = step 6 with the backup's contents as the draft:
    through it is the reference to compare against. For a saved search, the body is
    `{printType: "SEARCH", templateId: 453, searchId: "customsearch_…"}` (or `source` for a draft).
    Mention `truncated: true` when the search had more rows than the preview shows. Other print types
-   (packing slip, picking ticket, labels, price list, GL impact, bill of materials): no preview in
-   this version; read, validate and save still work. **Check templates that loop over `records`** (the
+   (labels, price list, GL impact, bill of materials): no preview in this version; read, validate
+   and save still work. **Check templates that loop over `records`** (the
    Print Checks batch list) can't be previewed either: before rendering, run
    `grep -Eq '<#list[[:space:]]+records[[:space:]]' "$SP/pdf-base-<id>.xml"` and, on a match, say
    so instead of calling the RESTlet (which refuses them too, naming Print Checks). Validate and
@@ -248,7 +289,11 @@ Restore = step 6 with the backup's contents as the draft:
    sending it, so what you tell the user matches what it shows.
    Send it with SendUserFile (render display) as the **last** action of the turn, after the
    explanatory text, so the card sits at the bottom of the chat. The caption names the template,
-   the account, the sample record and the mode (`saved`, `draft`, or step 3's approximate label).
+   the account, the sample record and the mode: `saved`, `draft`, step 3's approximate statement
+   label, `native (what the form prints)`, `draft (approximate: sales order stands in for the
+   fulfillment)` or `raw (BFO markup, no data)`. Report any `notes` and `adaptations` in one line
+   each. A result with `xml: null` (native picking tickets and packing slips) has no merged markup,
+   so skip `pdf-validate.sh --merged` for it.
    When one turn produces several previews, send them all in that one call and name each in the
    caption. The user can mark up the PDF in Claude and send it back to point at what to change.
    Where SendUserFile is unavailable, give the path. Previews hold real customer data: they live
