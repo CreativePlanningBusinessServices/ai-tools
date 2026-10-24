@@ -1,25 +1,32 @@
 #!/usr/bin/env bash
 # pdf-validate.sh — checks a NetSuite Advanced PDF/HTML template (FreeMarker + BFO XML) before it reaches NetSuite.
-# usage: pdf-validate.sh [--merged] [--json] [--data <bfo-support.json>] <file>
+# usage: pdf-validate.sh [--merged] [--json] [--data <bfo-support.json>] [--printtype <type>] <file>
 # Prints "ERROR|WARN <line>:<col> <rule> <message>" per finding and a summary; exit 0 = no ERROR, 1 = ERROR, 2 = usage/input.
 set -uo pipefail
 
-usage() { echo "usage: pdf-validate.sh [--merged] [--json] [--data <bfo-support.json>] <file>" >&2; exit 2; }
+usage() { echo "usage: pdf-validate.sh [--merged] [--json] [--data <bfo-support.json>] [--printtype <type>] <file>" >&2; exit 2; }
 
 script_dir="$(cd "$(dirname "$0")" && pwd)"
 data_file="$script_dir/../data/bfo-support.json"
-merged=0; json=0; input_file=""
+print_types=" TRANSACTION STATEMENT SEARCH PICKINGTICKET PACKINGSLIP SHIPPINGLABEL MAILINGLABEL ITEMLABEL GLIMPACT PRICELIST BOM "
+merged=0; json=0; input_file=""; print_type=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --merged) merged=1 ;;
     --json) json=1 ;;
     --data) [ $# -ge 2 ] || usage; data_file="$2"; shift ;;
+    --printtype) [ $# -ge 2 ] || usage; print_type="$(printf '%s' "$2" | tr '[:lower:]' '[:upper:]')"; shift ;;
     -*) usage ;;
     *) [ -z "$input_file" ] || usage; input_file="$1" ;;
   esac
   shift
 done
 [ -n "$input_file" ] || usage
+if [ -n "$print_type" ]; then
+  case "$print_types" in *" $print_type "*) ;; *) echo "pdf-validate: --printtype must be one of$print_types" >&2; usage ;; esac
+  # The check reads FreeMarker roots, which merged markup no longer has.
+  [ "$merged" -eq 0 ] || { echo "pdf-validate: --printtype checks a template source, not --merged output" >&2; usage; }
+fi
 if [ ! -f "$input_file" ] || [ ! -r "$input_file" ]; then echo "pdf-validate: cannot read $input_file" >&2; exit 2; fi
 command -v xmllint >/dev/null 2>&1 || { echo "pdf-validate: xmllint is required" >&2; exit 2; }
 
@@ -61,6 +68,7 @@ else
     # Macro and function bodies go to $macros, so the BFO pass skips its nesting checks inside them.
     awk -v strippedFile="$stripped" -v xmlCopyFile="$xml_copy" -v corruptFile="$work/corrupt" -v declarationFile="$work/declaration-after-freemarker" \
       -v macroFile="$macros" -f "$script_dir/pdf-freemarker.awk" "$work/data.tsv" "$input_file" >> "$findings"
+    [ -z "$print_type" ] || awk -v printType="$print_type" -f "$script_dir/pdf-roots.awk" "$input_file" >> "$findings"
   fi
   cat "$work/data.tsv" "$macros" > "$work/bfo-data.tsv"
   awk -v declarationAfterFreemarker="$([ -f "$work/declaration-after-freemarker" ] && echo 1)" -f "$script_dir/pdf-bfo.awk" "$work/bfo-data.tsv" "$stripped" >> "$findings"
