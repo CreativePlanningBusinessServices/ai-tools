@@ -47,7 +47,7 @@ there. `pdf-validate.sh --printtype` warns about that (`netsuite.roots`).
 
 | Print type | Reads | Preview in the skill |
 |---|---|---|
-| `TRANSACTION` | `record` (the transaction) | saved and draft |
+| `TRANSACTION` | `record` (the transaction); also `results` when a saved search is joined to the template (NetSuite's joined-search syntax, see the `results` row above) [ns-join] | saved and draft (a joined search isn't supplied by the preview, so `results` prints empty) |
 | `TRANSACTION`, custom records | `record` (the custom record; `${record@title}` is the record type's name) | saved and draft [probe-print-types] |
 | `STATEMENT` | `statements` (`statement.lines`), `customer`, `record` | saved through a form; draft approximate |
 | `SEARCH` | `results`, one row per search result | saved and draft [probe-print-types] |

@@ -15,7 +15,7 @@ while [ $# -gt 0 ]; do
     --merged) merged=1 ;;
     --json) json=1 ;;
     --data) [ $# -ge 2 ] || usage; data_file="$2"; shift ;;
-    --printtype) [ $# -ge 2 ] || usage; print_type="$(printf '%s' "$2" | tr '[:lower:]' '[:upper:]')"; shift ;;
+    --printtype) [ $# -ge 2 ] && [ -n "$2" ] || usage; print_type="$(printf '%s' "$2" | tr '[:lower:]' '[:upper:]')"; shift ;;
     -*) usage ;;
     *) [ -z "$input_file" ] || usage; input_file="$1" ;;
   esac

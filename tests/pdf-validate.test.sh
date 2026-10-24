@@ -93,9 +93,17 @@ assert_line '^ERROR 9:11 bfo\.css-value position:fixed is unsupported in BFO \(b
 
 # --printtype: the source must read only data its print type receives
 roots_count() { printf '%s\n' "$output" | grep -c 'netsuite\.roots'; }
-run_validator --printtype TRANSACTION "$fixtures/roots-search.xml"
+run_validator --printtype STATEMENT "$fixtures/roots-search.xml"
 assert_eq "$status" 0 "a roots warning never changes the exit code"
-assert_line '^WARN 7:8 netsuite\.roots this template reads results, which NetSuite gives only to SEARCH templates; as TRANSACTION it would print blank — check the print type$' "results in a TRANSACTION template is reported where the loop opens"
+assert_line '^WARN 7:8 netsuite\.roots this template reads results, which NetSuite gives only to SEARCH or TRANSACTION templates; as STATEMENT it would print blank — check the print type$' "results in a STATEMENT template is reported where the loop opens"
+run_validator --printtype TRANSACTION "$fixtures/roots-joined-results.xml"
+assert_eq "$(roots_count)" 0 "results in a TRANSACTION template is NetSuite's joined saved search, not a warning"
+run_validator --printtype STATEMENT "$fixtures/roots-search-sorted.xml"
+assert_eq "$(roots_count)" 1 "results read through ?sort_by or ?has_content is still a SEARCH signal"
+run_validator --printtype TRANSACTION "$fixtures/roots-prose.xml"
+assert_eq "$(roots_count)" 0 "statements, records[3] and startlabel in plain text are not FreeMarker reads"
+run_validator --printtype "" "$fixtures/good.xml"
+assert_eq "$status" 2 "an empty --printtype is a usage error, not a skipped check"
 run_validator --printtype search "$fixtures/roots-search.xml"
 assert_eq "$(roots_count)" 0 "a lowercase --printtype is accepted and results fits SEARCH"
 run_validator "$fixtures/roots-search.xml"

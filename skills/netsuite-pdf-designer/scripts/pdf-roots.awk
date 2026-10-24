@@ -28,17 +28,21 @@ function check_signal(signal, line,   pattern_index, column, types) {
     return
   }
 }
-function add_signal(shown, types, first_pattern, second_pattern) {
+function add_signal(shown, types, first_pattern, second_pattern, third_pattern) {
   signalCount++; signalShown[signalCount] = shown; signalTypes[signalCount] = types
   signalPattern[signalCount, 1] = first_pattern; patternCount[signalCount] = 1
-  if (second_pattern != "") { signalPattern[signalCount, 2] = second_pattern; patternCount[signalCount] = 2 }
+  if (second_pattern != "") signalPattern[signalCount, ++patternCount[signalCount]] = second_pattern
+  if (third_pattern != "") signalPattern[signalCount, ++patternCount[signalCount]] = third_pattern
 }
 BEGIN {
-  add_signal("results", "SEARCH", "<#list[[:space:]]+results[[:space:]]+as")
-  add_signal("records[…] / startlabel", "SHIPPINGLABEL MAILINGLABEL ITEMLABEL", "(^|[^A-Za-z0-9_.])records\\[", "(^|[^A-Za-z0-9_.])startlabel([^A-Za-z0-9_]|$)")
+  # Bare words that also turn up in prose ("your statements") only count inside ${…} or a <#…> directive.
+  in_freemarker = "(\\$\\{|<#[^>]*[^A-Za-z0-9_.])"
+  # A transaction template may read a saved search joined in its setup as results too (NetSuite's joined-search syntax).
+  add_signal("results", "SEARCH TRANSACTION", "<#list[[:space:]]+results[[:space:]?]", "results\\?(has_content|size)", "results\\[")
+  add_signal("records[…] / startlabel", "SHIPPINGLABEL MAILINGLABEL ITEMLABEL", in_freemarker "records\\[", in_freemarker "startlabel([^A-Za-z0-9_]|$)")
   add_signal("<#list records> (Print Checks)", "TRANSACTION", "<#list[[:space:]]+records[[:space:]]+as")
   add_signal("salesorder", "PACKINGSLIP", "(^|[^A-Za-z0-9_.])salesorder\\.")
-  add_signal("statements", "STATEMENT", "(^|[^A-Za-z0-9_.])statements([^A-Za-z0-9_]|$)", "statement\\.lines")
+  add_signal("statements", "STATEMENT", "<#list[[:space:]]+statements[[:space:]?]", "statement\\.lines", in_freemarker "statements\\[")
   add_signal("accounting lines", "GLIMPACT", "accountingtransaction_")
 }
 {

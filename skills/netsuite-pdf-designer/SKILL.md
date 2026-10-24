@@ -196,10 +196,13 @@ Restore = step 6 with the backup's contents as the draft:
    | a picking ticket / a packing slip | `PICKINGTICKET` / `PACKINGSLIP` | — |
    | a shipping / mailing / item label | `SHIPPINGLABEL` / `MAILINGLABEL` / `ITEMLABEL` | — |
    | a GL impact page / a bill of materials / a price list | `GLIMPACT` / `BOM` / `PRICELIST` | — |
-   | a custom record's printout | `TRANSACTION` | none; ask which record type it's for |
+   | a custom record's printout | `TRANSACTION` (unconfirmed) | none; ask which record type it's for |
 
    When the request doesn't say ("a label", "a printout"), ask. A copy of an existing template
-   takes that template's type. Only `TRANSACTION` (custom records included), `STATEMENT` and
+   takes that template's type. The custom-record row is unconfirmed: no account has been checked
+   for how its custom-record templates are stored. Before creating one, GET a template the account
+   already uses for that record (or ask how it's printed today, usually by a script), and take its
+   print type. Only `TRANSACTION` (custom records included), `STATEMENT` and
    `SEARCH` can be previewed in this version (step 3).
 2. **Pick a sample record** of the template's `tranType`. If the user named one, use it. Otherwise
    list five recent candidates that have lines and ask the user to choose:
@@ -287,9 +290,9 @@ Restore = step 6 with the backup's contents as the draft:
    (`netsuite.div-text`), an absolute position in a `<style>` rule couldn't be checked
    (`bfo.position`), non-Latin text needs the nsfont link (`netsuite.nsfont`), or an image may not
    load (`netsuite.image-http`, `netsuite.image-host`). `netsuite.roots` (only with `--printtype`)
-   means the source reads data this print type never gets, such as `results` in a `TRANSACTION`
-   template, so it would print blank: confirm the print type with the user before rendering or
-   saving. A clean or WARN-only result is not proof:
+   means the source reads data this print type never gets, such as `salesorder` (packing-slip
+   data) in an invoice template, so it would print blank: confirm the print type with the user
+   before rendering or saving. A clean or WARN-only result is not proof:
    the draft render is the test. Apply fixes only once the user agrees.
 6. **Save** an existing custom template, only after an explicit yes that names the account
    ("save to <alias>"). Production is written only when the user names production for this save.
