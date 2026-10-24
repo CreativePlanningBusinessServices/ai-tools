@@ -1,0 +1,14 @@
+<?xml version="1.0"?><!DOCTYPE pdf PUBLIC "-//big.faceless.org//report" "report-1.1.dtd">
+<pdf>
+<head>
+	<link name="NotoSans" type="font" subtype="truetype" src="${nsfont.NotoSans_Regular}" src-bold="${nsfont.NotoSans_Bold}" bytes="2" />
+	<#macro itemRow item><tr><td>${item.description}</td></tr></#macro>
+</head>
+<body padding="0.5in" size="Letter">
+<p>Before</p><tr><td>Stray row</td></tr>
+<table><td>Cell without a row</td></table>
+<p><thead><tr><th>Header outside a table</th></tr></thead></p>
+<table><thead><tr><th>H</th></tr></thead><tbody><tr><td>B</td></tr></tbody><tfoot><tr><td>F</td></tr></tfoot></table>
+<table><#list record.item as item><@itemRow item=item/></#list></table>
+</body>
+</pdf>

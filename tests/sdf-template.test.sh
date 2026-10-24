@@ -142,6 +142,25 @@ deploy_log_count() { grep -c 'project:deploy' "$FAKE_SUITECLOUD_LOG"; }
 real_deploys() { grep 'project:deploy' "$FAKE_SUITECLOUD_LOG" | grep -vc -- '--dryrun'; }
 printf '%s\n' '✔ Step 6: CUSTOM_OBJECT_VALIDATION --- custtmpl_cp_x (advancedpdftemplate)' \
   '✔ Step 19: CUSTOM_OBJECT_UPDATE --- custtmpl_cp_x (advancedpdftemplate)' > "$FAKE_SUITECLOUD_DRYRUN"
+
+# the refused create above left nothing staged
+: > "$FAKE_SUITECLOUD_LOG"
+run_helper deploy "$project" custtmpl_cp_x --expect Update --authid 1234567_SB1
+assert_eq "$status" 1 "deploy refuses when nothing is staged"
+assert_contains "$output" "nothing is staged for custtmpl_cp_x" "deploy says nothing is staged"
+assert_eq "$(deploy_log_count)" 0 "an empty stage never calls project:deploy"
+
+# the staged source is validated again: it may have been edited after create
+run_helper create "$project" custtmpl_cp_x "$tmp/draft.xml" --title T --printtype TRANSACTION --trantype CUSTINVC
+staged_source="$project/Objects/Templates/custtmpl_cp_x.template.xml"
+cp "$fixtures/fm-unclosed-if.xml" "$staged_source"
+: > "$FAKE_SUITECLOUD_LOG"
+run_helper deploy "$project" custtmpl_cp_x --expect Update --authid 1234567_SB1
+assert_eq "$status" 1 "deploy refuses a staged source that fails the validator"
+assert_contains "$output" "freemarker.unclosed" "deploy passes the validator's ERROR lines through"
+assert_eq "$(deploy_log_count)" 0 "an invalid staged source never calls project:deploy"
+cp "$tmp/draft.xml" "$staged_source"
+
 : > "$FAKE_SUITECLOUD_LOG"
 run_helper deploy "$project" custtmpl_cp_x --expect Update --authid 1234567_SB1
 assert_eq "$status" 0 "deploy with a matching dry run exits 0"

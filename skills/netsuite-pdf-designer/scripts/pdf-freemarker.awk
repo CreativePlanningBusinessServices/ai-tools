@@ -2,6 +2,7 @@
 # Prints findings as TSV, touches declarationFile when only FreeMarker precedes <?xml on line 1, and writes two copies with the template's lines and columns: strippedFile (FreeMarker spans
 # blanked, ${…} as x's, every branch kept, for the BFO pass) and xmlCopyFile (also blanks the bodies of non-first
 # branches — <#else>, <#elseif>, later <#case>/<#default>/<#on>, <#recover> — so alternative markup parses in xmllint).
+# Macro and function bodies go to macroFile as "M<TAB>startLine<TAB>startCol<TAB>endLine<TAB>endCol" rows.
 function blanks(count,   text) { text = ""; while (count > 512) { text = text SPACES; count -= 512 } return text substr(SPACES, 1, count) }
 function exes(count,   text) { text = ""; while (count > 512) { text = text EXES; count -= 512 } return text substr(EXES, 1, count) }
 function finding(severity, at_line, at_col, rule, message) { print severity "\t" at_line "\t" at_col "\t" rule "\t" message }
@@ -26,7 +27,8 @@ function scan_expression(   ch, name) {
       if (substr(line, pos + 1, 1) == "?") { emit("??"); pos += 2; continue }
       if (match(substr(line, pos + 1), /^[a-zA-Z_][a-zA-Z0-9_]*/)) {
         name = camel_to_lower(substr(line, pos + 1, RLENGTH), "_")
-        if (!(name in builtin)) finding("WARN", FNR, pos, "freemarker.builtin", "?" name " is not a FreeMarker 2.3 built-in")
+        if (!(name in builtin) && name !~ /^iso(_utc|_local)?(_h|_m|_ms)?(_nz|_fz)?$/)
+          finding("ERROR", FNR, pos, "freemarker.builtin", "?" name " is not a FreeMarker 2.3 built-in; NetSuite fails the render")
       }
     } else if (mode == "interpolation") {
       if (ch == "{") braces++
@@ -68,7 +70,12 @@ function close_block(name,   level) {
   }
   pop_level()
 }
-function pop_level() { if (alternate[depth]) hiddenLevels--; depth-- }
+# A macro or function body is markup out of context (a <tr> defined for a table elsewhere); the BFO pass skips its
+# nesting checks inside these ranges.
+function pop_level() {
+  if (stackName[depth] ~ /^(macro|function)$/) print "M\t" stackLine[depth] "\t" stackCol[depth] "\t" startLine "\t" startCol > macroFile
+  if (alternate[depth]) hiddenLevels--; depth--
+}
 BEGIN {
   FS = "\t"; SPACES = sprintf("%512s", ""); EXES = SPACES; gsub(/ /, "x", EXES)
   split("if list items macro function attempt switch compress escape noescape autoesc noautoesc outputformat noparse assign global local", names, " ")
@@ -111,7 +118,9 @@ END {
   if (mode == "comment") { finding("ERROR", startLine, startCol, "freemarker.comment", "<#-- is never closed with -->"); corrupt = 1 }
   if (mode == "directive") { finding("ERROR", startLine, startCol, "freemarker.tag", "this FreeMarker tag never ends with >"); corrupt = 1 }
   if (mode == "interpolation") finding("ERROR", startLine, startCol, "freemarker.interpolation", "${ is never closed with }")
-  for (; depth > 0; depth--)
+  for (; depth > 0; depth--) {
     finding("ERROR", stackLine[depth], stackCol[depth], "freemarker.unclosed", "<#" stackName[depth] "> is never closed with </#" stackName[depth] ">")
+    if (stackName[depth] ~ /^(macro|function)$/) print "M\t" stackLine[depth] "\t" stackCol[depth] "\t" FNR + 1 "\t1" > macroFile
+  }
   if (corrupt) print "corrupt" > corruptFile
 }

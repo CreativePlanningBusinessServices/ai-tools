@@ -65,8 +65,9 @@ the alias is wrong; stop and check it rather than linking a guessed host.
   as `record` and `customer`, its subsidiary as `subsidiary`, and rebuilt `statements` data.
 - A missing field (`${record.nosuchfield}`) renders as an empty string, silently. A broken
   FreeMarker construct (unclosed `<#if>`, unknown `?built-in`) fails with `UNEXPECTED_ERROR` and no
-  detail, which the RESTlet translates into a hint to run the validator. Malformed XML comes back
-  with a clear "Error Parsing XML" message.
+  detail, which the RESTlet translates into a hint to run the validator. So do a `<tr>` or `<td>`
+  outside its `<table>` or `<tr>`, `position:absolute` directly inside `<body>`, and
+  `position:fixed`. Malformed XML usually comes back with a clear "Error Parsing XML" message.
 - Unsupported tags and CSS that parse (`display:flex`, `grid`, `border-radius`, `rem`) are ignored
   silently. `scripts/pdf-validate.sh` catches these, plus FreeMarker structure and XML errors.
 - A draft render of a template's own source gives the same PDF as the saved render, so draft
@@ -145,10 +146,12 @@ The RESTlet reads the current source itself and writes it to
 `{"id": 123, "scriptid": "…", "backup": {"id": 2468, "path": "/SuiteScripts/…"}}`. The timestamp
 is in the account's (server's) time zone, not the user's local time.
 
-Restore = save the backup's contents through step 6:
+Restore = step 6 with the backup's contents as the draft:
 - the backup's file id is `backup.id` in the PUT response;
 - download it with the netsuite-file-cabinet skill (`--param id=<backup.id> --param contents=T`) and
   write it with `jq -j .contents` (not `jq -r`) as the draft;
+- draft-render it (step 5) like any other draft, and back up the current state before staging, as
+  step 6 always does, so the restore itself can be undone;
 - pass `stage --base` the source NetSuite holds **now** (a fresh GET, `jq -j .source`), not the old
   base, or `stage` refuses it as stale.
 
@@ -182,7 +185,8 @@ Restore = save the backup's contents through step 6:
    version; read, validate and save still work. **Check templates that loop over `records`** (the
    Print Checks batch list) can't be previewed either: before rendering, run
    `grep -Eq '<#list[[:space:]]+records[[:space:]]' "$SP/pdf-base-<id>.xml"` and, on a match, say
-   so instead of calling the RESTlet. Validate and save still work for them.
+   so instead of calling the RESTlet (which refuses them too, naming Print Checks). Validate and
+   save still work for them.
 4. **Preview.** `POST` (saved mode first), then write the PDF and the HTML twin:
    ```bash
    rl --method POST --data '{"templateId": 123, "record": {"type": "invoice", "id": 456}}' > "$SP/render-123.json" \
@@ -195,7 +199,8 @@ Restore = save the backup's contents through step 6:
    Stop on an `{error}`: report it and send nothing. If `bfo-to-html.sh` fails, still send the PDF
    and report the error.
    Send **both** files together with SendUserFile (render display) as the **last** action of the
-   turn, after the explanatory text, so the cards sit at the bottom of the chat. The PDF is the
+   turn, after the explanatory text, so the cards sit at the bottom of the chat. When one turn
+   produces several previews, send them all in that one call and name each in the caption. The PDF is the
    real output; the HTML twin is for clicking and annotating (every element carries a `data-bfo`
    path into the merged XML). Page flow, repeated headers and fonts are exact only in the PDF.
    Images that aren't "available without login" show as broken in the twin; check them in the PDF.
@@ -204,9 +209,11 @@ Restore = save the backup's contents through step 6:
    real customer data: they live only in the scratchpad and are never committed, attached, or
    published.
 5. **Edit loop.** The working copy is `$SP/pdf-draft-<id>.xml` (start as a copy of the base).
-   **Most NetSuite-saved sources are CRLF** (the starters are LF): keep them CRLF, edit with
-   whole-file substitutions (`perl -0777`, explicit `\r\n`) rather than line-anchored `sed`/`awk`,
-   and confirm with `diff` that the edit changed something before rendering. The body below is for
+   **Most NetSuite-saved sources are CRLF** (the starters are LF), and some mix CRLF and LF lines:
+   match the endings of the lines you edit. The Edit tool and whole-file substitutions
+   (`perl -0777`, explicit `\r\n`) keep them; line-anchored `sed` silently matches nothing on a CRLF
+   line, and `awk` writes LF lines and adds a final newline the source didn't have. Confirm with
+   `diff` that the edit changed something before rendering. The body below is for
    transactions; for a new template, leave `templateId` out. Statement drafts use step 3's body.
    After each edit:
    ```bash
@@ -226,12 +233,18 @@ Restore = save the backup's contents through step 6:
 
    **Triage the validator in plain words**, as the email designer does with its compatibility
    check: for each finding, say what will look different or fail and where, and propose a fix.
-   `ERROR` (envelope, FreeMarker structure, XML, unsupported element) means NetSuite will refuse
-   or fail the render, and `sdf-template.sh` refuses to save it. `WARN` means BFO ignores or only
-   partly supports something (`bfo.css`, `bfo.css-value`, `bfo.unit`), text in a `<div>` won't
-   draw (`netsuite.div-text`), an absolute position may break the render (`bfo.position`), or an
-   image may not load (`netsuite.image-http`, `netsuite.image-host`). Apply fixes only once the
-   user agrees.
+   `ERROR` means NetSuite will refuse or fail the render, and `sdf-template.sh` refuses to save it:
+   the envelope, FreeMarker structure, an unknown `?built-in` (`freemarker.builtin`), XML (`xml.*`;
+   `xml.tag-text` is text such as a `{TOKEN}` inside a tag, and XML structure errors come one at a
+   time, so run the validator again after fixing one), a table element outside its parent
+   (`bfo.table`), `position:absolute` directly inside `<body>` (`bfo.position`), and CSS that
+   breaks the render (`bfo.css-value … (breaks)`, e.g. `position:fixed`). `WARN` means BFO ignores
+   or only partly supports something (`bfo.css`, `bfo.css-value`, `bfo.unit`, `bfo.attribute`),
+   may drop an element it doesn't know (`bfo.element`: check the PDF), text in a `<div>` won't draw
+   (`netsuite.div-text`), an absolute position in a `<style>` rule couldn't be checked
+   (`bfo.position`), non-Latin text needs the nsfont link (`netsuite.nsfont`), or an image may not
+   load (`netsuite.image-http`, `netsuite.image-host`). A clean or WARN-only result is not proof:
+   the draft render is the test. Apply fixes only once the user agrees.
 6. **Save** an existing custom template, only after an explicit yes that names the account
    ("save to <alias>"). Production is written only when the user names production for this save.
    For previewable print types (transactions, statements), save only a draft whose most recent
@@ -239,9 +252,10 @@ Restore = save the backup's contents through step 6:
    getting their yes.
    - **SuiteCloud auth id** for that account: `suitecloud account:manageauth --list`, then
      `suitecloud account:manageauth --info <authid>` on each listed id; its Account ID must equal
-     the alias's `accountId` (`netsuite-cli account list`). Browser-login ids are listed only with
-     `SUITECLOUD_CI` unset, certificate (M2M) ids only with it set. None match: follow the
-     suitecloud-cli skill's "Authenticate an account netsuite-cli already knows" recipe first.
+     the alias's `accountId` (`netsuite-cli account list`). Some CLI versions list browser-login ids
+     only with `SUITECLOUD_CI` unset and certificate (M2M) ids only with it set: if the id you need
+     is missing, list again with the other setting. None match: follow the suitecloud-cli skill's
+     "Authenticate an account netsuite-cli already knows" recipe first.
    - Then, with `PROJ="$SP/sdf-<alias>"` and the template's scriptid:
    ```bash
    bash "$PD/scripts/sdf-template.sh" init <authid> "$PROJ"          # once per account; reuses an existing one
@@ -251,9 +265,13 @@ Restore = save the backup's contents through step 6:
    rl --method GET --param id=123 > "$SP/get-123.json" && jq -j .source "$SP/get-123.json" | cmp - "$SP/pdf-draft-123.xml"
    ```
    `--authid` is the auth id of the account the user named; `deploy` refuses when `project.json`
-   targets any other, when the dry run shows anything but `Update` of that one scriptid, or when
-   the draft has a validator ERROR. `stage` refuses when the template changed in NetSuite since the
-   base was read: re-read it, merge, and try again (`--force` only if the user says to overwrite).
+   targets any other, when nothing is staged for that scriptid (a refused `stage` or `create`
+   leaves nothing), when the staged source has a validator ERROR (it validates again, so an edit
+   after `stage` is caught), or when the dry run shows anything but `Update` of that one scriptid.
+   `stage` refuses a draft with a validator ERROR, and refuses when the template changed in
+   NetSuite since the base was read: re-read it, merge, and try again (`--force` only if the user
+   says to overwrite). Neither can see a WARN-level fault that fails the render, which is why the
+   save waits for a successful draft render.
    Import and deploy can each take a minute or more; give the Bash calls a long timeout. After a matching `cmp`, copy the draft over the base
    (`cp "$SP/pdf-draft-<id>.xml" "$SP/pdf-base-<id>.xml"`; the draft is now the base), render once
    in saved mode as the confirmation preview, then report the backup path and the record link
@@ -262,7 +280,8 @@ Restore = save the backup's contents through step 6:
    id, scriptid or name) and asks to change, redo or rebuild it, the result goes back onto **that
    template** (same scriptid), even when rewritten from scratch: forms and scripts reference it.
    Create a new template only when the user asks for one, or when the source is a standard
-   template (a custom copy, step 8).
+   template (a custom copy, step 8). "Copy X and change it" is one create: apply the changes to
+   the copy's draft, preview it, and `create` it with them (step 8); step 6 is for later edits.
 8. **Create.** Start from `references/starter-transaction.xml` (invoice-style layout: logo and
    company header, page x of y footer, Letter, an item table with a `<thead>` of `@label`s,
    totals) or `references/starter-statement.xml` (the same frame over `statement.lines` with the
@@ -295,9 +314,12 @@ Restore = save the backup's contents through step 6:
 
 ## Gotchas
 
-- **`position:absolute` needs a `position:relative` ancestor.** Without one the render fails with
-  the opaque `UNEXPECTED_ERROR`. For a fixed spot on the page, use a background macro
+- **`position:absolute` can't sit directly inside `<body>`**: there the render fails with the
+  opaque `UNEXPECTED_ERROR`. Inside a table cell or a block it renders, placed against its parent.
+  `position:fixed` always fails. For a fixed spot on the page, use a background macro
   (`references/bfo.md`).
+- **Table elements nest strictly**: `<tr>` directly inside `<table>`, `<thead>`, `<tbody>` or
+  `<tfoot>`, cells directly inside `<tr>`. A stray one fails the render with `UNEXPECTED_ERROR`.
 - **Text directly inside a `<div>` is not drawn.** Wrap it in `<p>`, `<span>` or a table cell.
 - `subsidiary` comes from the RESTlet adding the transaction's subsidiary; whether NetSuite's own
   print fills it the same way is untested. If a printed PDF shows a blank where the preview didn't,
@@ -305,8 +327,9 @@ Restore = save the backup's contents through step 6:
 - Images need absolute, publicly reachable URLs with `&` written `&amp;`; File Cabinet images that
   aren't "available without login" go through `<@filecabinet nstype="image" src="…"/>`.
   The merged XML embeds such images as data URIs, so it can be much larger than the source.
-- `UNEXPECTED_ERROR` with no detail: run `pdf-validate.sh` on the draft. If it's clean, bisect the
-  draft (comment out halves with `<#-- -->`) and re-render.
+- `UNEXPECTED_ERROR` with no detail: run `pdf-validate.sh` on the draft; it catches the causes
+  listed under "How NetSuite renders PDF templates". If it's clean, bisect the draft (comment out
+  halves with `<#-- -->`) and re-render.
 - Merged statement markup is `<pdfset>` with `<html>` children, not `<pdf>`; `bfo-to-html.sh`
   and `pdf-validate.sh --merged` both accept it.
 - **Draft statements** are rebuilt, not NetSuite's: AR lines in the customer's currency up to the

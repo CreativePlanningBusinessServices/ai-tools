@@ -1,10 +1,13 @@
 define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "../file-cabinet/index.js", "./statement-data.js"], function (require, exports, log, query, record, render, index_js_1, statement_data_js_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.formatStamp = exports.parseJsonObject = exports.parseTemplateRef = exports.renderTemplate = exports.backupTemplate = exports.describeTemplate = exports.FREEMARKER_HINT = exports.BACKUP_FOLDER = exports.ValidationError = void 0;
+    exports.formatStamp = exports.parseJsonObject = exports.parseTemplateRef = exports.renderTemplate = exports.backupTemplate = exports.describeTemplate = exports.PRINT_CHECKS_REFUSAL = exports.FREEMARKER_HINT = exports.BACKUP_FOLDER = exports.ValidationError = void 0;
     Object.defineProperty(exports, "ValidationError", { enumerable: true, get: function () { return index_js_1.ValidationError; } });
     exports.BACKUP_FOLDER = '/SuiteScripts/CreativePlanning/pdf-template-backups';
-    exports.FREEMARKER_HINT = 'NetSuite hit a FreeMarker or layout error but gives no detail — run pdf-validate.sh on the draft. Common causes: an unclosed <#if>/<#list>, an unknown ?built-in, a ${…} left open, position:absolute on an element with no position:relative ancestor.';
+    exports.FREEMARKER_HINT = 'NetSuite hit a FreeMarker or layout error but gives no detail — run pdf-validate.sh on the draft. Common causes: an unclosed <#if>/<#list>, an unknown ?built-in, a ${…} left open, a <tr> or <td> outside its <table> or <tr>, position:absolute on a direct child of <body>, position:fixed.';
+    exports.PRINT_CHECKS_REFUSAL = 'this template loops over `records` (a Print Checks batch layout), which a one-record preview cannot fill, so NetSuite would fail the render; validating and saving it still work — print a check batch in NetSuite to see it';
+    // The Print Checks batch hands the template a `records` sequence; a single-record render never sets it.
+    const PRINT_CHECKS_LOOP = /<#list\s+records\s/;
     const BACKUP_KEYS = ['id', 'scriptid'];
     const TRANSACTION_RENDER_KEYS = ['templateId', 'scriptId', 'source', 'record', 'printType'];
     const STATEMENT_RENDER_KEYS = ['printType', 'entityId', 'formId', 'statementDate', 'startDate', 'openTransactionsOnly'];
@@ -102,6 +105,8 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "../fi
             renderer.setTemplateById({ id: templateRef.id });
         else
             renderer.setTemplateByScriptId({ scriptId: templateRef.scriptid });
+        if (PRINT_CHECKS_LOOP.test(renderer.templateContent))
+            throw new index_js_1.ValidationError(exports.PRINT_CHECKS_REFUSAL);
         const transaction = record.load({ type: target.type, id: target.id });
         renderer.addRecord({ templateName: 'record', record: transaction });
         addSubsidiaryRoot(renderer, transaction);

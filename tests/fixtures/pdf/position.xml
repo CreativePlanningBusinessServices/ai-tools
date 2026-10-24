@@ -7,5 +7,6 @@
 <div style="position: absolute; top: 0pt;"><p>Stamp</p></div>
 <div style="position: relative;"><div style="position:absolute; top: 10pt;"><p>Inside</p></div></div>
 <p style="position:relative">Fine</p>
+<table><tr><td><p style="position: absolute; top: 2pt;">Nested without a relative parent</p></td></tr></table>
 </body>
 </pdf>

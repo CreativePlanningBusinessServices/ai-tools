@@ -5,6 +5,10 @@ function open_tag_col(text, name,   col, offset) {
   return col ? col : 1
 }
 function emit(rule, at_line, at_col, message) { gsub(/\t/, " ", message); print "ERROR\t" (at_line < 1 ? 1 : at_line) "\t" at_col "\t" rule "\t" message }
+# libxml2 cascades after a structural error, so only the first is reported; say so, or a fix looks like the last one.
+function emit_structural(rule, at_line, at_col, message) {
+  emit(rule, at_line, at_col, message "; this is the first XML structure error, so fix it and run the validator again to see any others")
+}
 FNR == NR { source[FNR] = $0; next }
 match($0, /xmllint\.xml:[0-9]+: [a-z ]*error : /) {
   header = substr($0, RSTART, RLENGTH); message = substr($0, RSTART + RLENGTH)
@@ -22,12 +26,12 @@ match($0, /xmllint\.xml:[0-9]+: [a-z ]*error : /) {
   if (match(message, /^Opening and ending tag mismatch: [^ ]+ line [0-9]+ and [^ ]+/)) {
     split(message, words, " "); open_name = words[6]; open_line = words[8] - prologLines
     hint = open_name ~ /^(br|img|hr|link|meta|pbr|pagenumber|totalpages)$/ ? "; empty elements must be self-closed, e.g. <" open_name " />" : ""
-    emit("xml.mismatch", open_line, open_tag_col(source[open_line], open_name), "<" open_name "> opened here is closed by </" words[10] "> on line " error_line hint)
+    emit_structural("xml.mismatch", open_line, open_tag_col(source[open_line], open_name), "<" open_name "> opened here is closed by </" words[10] "> on line " error_line hint)
   } else if (match(message, /^Premature end of data in tag [^ ]+ line [0-9]+/)) {
     split(message, words, " "); open_line = words[9] - prologLines
-    emit("xml.unclosed", open_line, open_tag_col(source[open_line], words[7]), "<" words[7] "> is never closed")
+    emit_structural("xml.unclosed", open_line, open_tag_col(source[open_line], words[7]), "<" words[7] "> is never closed")
   } else {
     if (match(message, / line [0-9]+/)) message = substr(message, 1, RSTART + 5) (substr(message, RSTART + 6, RLENGTH - 6) - prologLines) substr(message, RSTART + RLENGTH)
-    emit("xml.syntax", error_line, col, message)
+    emit_structural("xml.syntax", error_line, col, message)
   }
 }

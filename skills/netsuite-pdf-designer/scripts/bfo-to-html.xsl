@@ -27,6 +27,8 @@
           .bfo-barcode { display: inline-block; border: 1px solid #555; padding: 4px 8px; font: 11px monospace; }
           .bfo-size-note { background: #fff7e6; border: 1px solid #e6c576; padding: 4px 8px; font: 12px sans-serif; margin-bottom: 8px; }
           [data-bfo]:hover { outline: 1px dotted #165D7D; }
+          /* BFO left-aligns a th without align; :where() keeps this below any template rule */
+          :where(.bfo-sheet th:not([align])) { text-align: left; }
         </style>
         <xsl:for-each select="/pdf/head/style | /html/head/style | /pdfset/*/head/style">
           <style><xsl:value-of select="."/></style>
