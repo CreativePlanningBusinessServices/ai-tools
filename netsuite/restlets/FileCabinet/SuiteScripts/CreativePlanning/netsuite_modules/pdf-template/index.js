@@ -22,7 +22,7 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
     const PICKING_TICKET_KEYS = ['printType', 'templateId', 'scriptId', 'source', 'record', 'native', 'formId', 'shipgroup', 'location'];
     const PACKING_SLIP_KEYS = ['printType', 'templateId', 'scriptId', 'source', 'record', 'native', 'formId'];
     const NATIVE_ONLY_KEYS = ['formId', 'shipgroup', 'location'];
-    exports.RETURN_FORM_NOTE = "returnForm isn't supplied by the preview, so the return-form section stays hidden";
+    exports.RETURN_FORM_NOTE = 'returnForm isn\'t supplied by the preview, so the return-form section stays hidden';
     exports.SEARCH_DEFAULT_LIMIT = 50;
     exports.SEARCH_MAX_LIMIT = 1000;
     // ============ Describe ============
@@ -290,13 +290,14 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
         rejectNativeOnlyKeys(request);
         const template = parseTemplateChoice(request);
         const target = requirePackingSlipRecord(request.record);
+        const salesOrderId = target.type === 'salesorder' ? target.id : requireFulfillmentSalesOrder(target.id);
         const { renderer, isDraft } = prepareRenderer(template);
         const { adaptations } = adaptRendererTitle(renderer, 'Packing Slip');
         const notes = renderer.templateContent.includes('returnForm') ? [exports.RETURN_FORM_NOTE] : [];
         const shipped = record.load({ type: target.type, id: target.id });
         const salesOrder = target.type === 'salesorder'
             ? shipped
-            : record.load({ type: record.Type.SALES_ORDER, id: requireCreatedFrom(target.id, shipped.getValue({ fieldId: 'createdfrom' })) });
+            : record.load({ type: record.Type.SALES_ORDER, id: salesOrderId });
         renderer.addRecord({ templateName: 'record', record: shipped });
         renderer.addRecord({ templateName: 'salesorder', record: salesOrder });
         addSubsidiaryRoot(renderer, salesOrder);
@@ -309,20 +310,35 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
         rejectTemplateWithNative(body);
         const request = asObject(body, PACKING_SLIP_KEYS);
         const target = requirePackingSlipRecord(request.record);
-        const salesOrderId = target.type === 'salesorder' ? target.id : requireCreatedFrom(target.id, readFulfillmentSource(target.id));
+        const withForm = request.formId === undefined ? {} : { formId: requireId(request.formId) };
+        const salesOrderId = target.type === 'salesorder' ? target.id : requireFulfillmentSalesOrder(target.id);
         const pdfFile = render.packingSlip({
             entityId: salesOrderId,
             ...(target.type === 'itemfulfillment' && { fulfillmentId: target.id }),
             printMode: render.PrintMode.PDF,
-            ...(request.formId !== undefined && { formId: requireId(request.formId) }),
+            ...withForm,
         });
         return { mode: 'native', printType: 'PACKINGSLIP', record: target, pdf: pdfFile.getContents(), pdfBytes: pdfFile.size, xml: null };
     };
-    const readFulfillmentSource = (fulfillmentId) => {
+    // transaction.createdfrom isn't a SuiteQL column (SB2, 2026-10-24); the main line carries it.
+    const requireFulfillmentSalesOrder = (fulfillmentId) => {
         const rows = query
-            .runSuiteQL({ query: /* sql */ `SELECT createdfrom FROM transaction WHERE id = ?`, params: [fulfillmentId] })
+            .runSuiteQL({
+            query: /* sql */ `
+        SELECT mainLine.createdfrom, source.type AS sourcetype
+        FROM transaction fulfillment
+        JOIN transactionline mainLine ON mainLine.transaction = fulfillment.id AND mainLine.mainline = 'T'
+        LEFT JOIN transaction source ON source.id = mainLine.createdfrom
+        WHERE fulfillment.id = ? AND fulfillment.type = 'ItemShip'`,
+            params: [fulfillmentId],
+        })
             .asMappedResults();
-        return rows.length > 0 ? rows[0].createdfrom : null;
+        if (rows.length === 0)
+            throw new index_js_1.ValidationError(`record ${fulfillmentId} is not an item fulfillment`);
+        const { createdfrom, sourcetype } = rows[0];
+        if (createdfrom === null || sourcetype !== 'SalesOrd')
+            throw new index_js_1.ValidationError(`item fulfillment ${fulfillmentId} was not created from a sales order`);
+        return Number(createdfrom);
     };
     // ============ Render helpers ============
     const prepareRenderer = (template) => {
@@ -433,13 +449,6 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
             throw new index_js_1.ValidationError('a packing slip prints an item fulfillment (or, approximately, a sales order); record.type must be itemfulfillment or salesorder');
         }
         return target;
-    };
-    const requireCreatedFrom = (fulfillmentId, createdFrom) => {
-        const salesOrderId = Number(createdFrom);
-        if (createdFrom === null || createdFrom === undefined || createdFrom === '' || !Number.isInteger(salesOrderId) || salesOrderId <= 0) {
-            throw new index_js_1.ValidationError(`item fulfillment ${fulfillmentId} has no created-from sales order`);
-        }
-        return salesOrderId;
     };
     // ============ Request parsing helpers ============
     const parseTemplateRef = (params) => {
