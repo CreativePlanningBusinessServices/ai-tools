@@ -10,7 +10,7 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
     const PRINT_CHECKS_LOOP = /<#list\s+records\s/;
     exports.NATIVE_REFUSAL = 'native must be true or left out';
     exports.NATIVE_TEMPLATE_REFUSAL = 'native renders what the form prints, so it takes no templateId, scriptId or source';
-    exports.RAW_REFUSAL = 'xml must be BFO markup: an <?xml …?> declaration and a <pdf> or <pdfset> root';
+    exports.RAW_REFUSAL = 'xml must be BFO markup: an <?xml …?> declaration and a <pdf>, <pdfset> or <html> root';
     exports.RAW_FREEMARKER_REFUSAL = 'raw XML has no FreeMarker; use source';
     const BACKUP_KEYS = ['id', 'scriptid'];
     const TRANSACTION_RENDER_KEYS = ['templateId', 'scriptId', 'source', 'record', 'printType'];
@@ -154,13 +154,16 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
     // xmlToPdf turns plain text into a PDF instead of failing, so the input is checked here.
     const renderRaw = (body) => {
         const request = asObject(body, RAW_KEYS);
-        const markup = typeof request.xml === 'string' ? request.xml.trimStart() : '';
-        if (!markup.startsWith('<?xml') || !/<(pdf|pdfset)[\s>]/.test(markup))
+        const input = typeof request.xml === 'string' ? request.xml.trimStart() : '';
+        if (!input.startsWith('<?xml') || !/<(pdf|pdfset|html)[\s>]/.test(input))
             throw new index_js_1.ValidationError(exports.RAW_REFUSAL);
-        if (/<#|\$\{/.test(markup))
+        if (/<#|\$\{/.test(input))
             throw new index_js_1.ValidationError(exports.RAW_FREEMARKER_REFUSAL);
+        // NetSuite's HTML-mode merged markup names each document <html>; xmlToPdf accepts only <pdf> (SB2 QA 2026-10-24).
+        const markup = input.replace(/<(\/?)html(?=[\s>])/g, '<$1pdf');
         const pdfFile = render.xmlToPdf({ xmlString: markup });
-        return { mode: 'raw', printType: 'RAW', record: null, pdf: pdfFile.getContents(), pdfBytes: pdfFile.size, xml: markup };
+        const result = { mode: 'raw', printType: 'RAW', record: null, pdf: pdfFile.getContents(), pdfBytes: pdfFile.size, xml: markup };
+        return withExtras(result, { adaptations: markup === input ? [] : ['root: html → pdf'] });
     };
     const renderStatement = (body) => {
         const request = asObject(body, STATEMENT_RENDER_KEYS);
