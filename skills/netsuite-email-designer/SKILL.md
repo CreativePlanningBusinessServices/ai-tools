@@ -297,7 +297,7 @@ The email designer previews the body; the PDF an email carries belongs to the
    |---|---|---|---|
    | 6 "ACS \| Payment Link Transaction Email Template-new" | `email-invoice-ue`, `overdue_email_autom`, `send_out_old_invoices_ah`: invoices without the managed flag | `transactionId` + `recipient: {type: "customer", id: <its customer>}` | `{"printType": "TRANSACTION", "native": true, "record": {"type": "invoice", "id": <the sample invoice>}, "formId": 159}` |
    | 112 "Managed Account Transaction Email Template" | `email-invoice-ue`: invoices with `custbody_email_managed_account_team = 'T'` (pick the sample from those) | same | same (form 159) |
-   | the statement deployment's `custscript_es_statement_email_template` (production on 2026-10-25: 317 "CPES Outstanding Statements") | `statement_emails` (`customdeploy_statement_emails`, `customdeploy_statement_emails_ah`) | `recipient: {type: "contact", id: <an AP contact of the customer>}` only | `{"printType": "STATEMENT", "entityId": <that customer>, "formId": <custscript_es_statement_form>, "openTransactionsOnly": true}` |
+   | the statement deployment's `custscript_es_statement_email_template` (production on 2026-10-25: 317 "CPES Outstanding Statements") | `statement_emails` (`customdeploy_statement_emails`, `customdeploy_statement_emails_ah`) | `recipient: {type: "contact", id: <a contact of the customer with an email>}` only | `{"printType": "STATEMENT", "entityId": <that customer>, "formId": <custscript_es_statement_form>, "openTransactionsOnly": true}` |
 
    `overdue_email_autom` sends template 108 to managed accounts, and no template 108 exists in
    production or SB2 (2026-10-25): say so if the user asks about overdue emails for managed
@@ -324,7 +324,7 @@ The email designer previews the body; the PDF an email carries belongs to the
 4. **Hand off.** Load `netsuite-pdf-designer` and give it that request, complete, for the same
    sample record. It skips its own steps 1 and 2 (there is no template to resolve, and the sample
    is already chosen) and writes the PDF next to the email preview, as
-   `$SP/pdf-attachment-<record id>.pdf`. Both renders are read-only (email saved mode; PDF native
+   `$SP/pdf-attachment-<record or customer id>.pdf` (the email designer's `$SP`). Both renders are read-only (email saved mode; PDF native
    or saved statement), so they're safe in production.
 5. **Show both.** Send the email preview (with its banner, step 3) and the PDF in one SendUserFile
    call (render display), as the turn's last action. The caption names the template, the account,
