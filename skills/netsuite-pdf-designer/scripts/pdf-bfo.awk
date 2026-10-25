@@ -117,7 +117,9 @@ function process_tag(   name, name_length, junk_at, self_closing, depth, status,
   self_closing = (tagText ~ /\/[ \t\r\n]*>$/); depth = stackSize
   if (depth == 0 && !rootName) {
     rootName = name
-    if (name != "pdf" && name != "pdfset") report("ERROR", 1, "envelope.root", "root element is <" name ">; it must be <pdf> or <pdfset>")
+    # NetSuite's HTML-mode merged markup (native transaction renders) names the document <html>.
+    if (name == "html" && mergedInput == 1) start_document(name)
+    else if (name != "pdf" && name != "pdfset") report("ERROR", 1, "envelope.root", "root element is <" name ">; it must be <pdf> or <pdfset>")
     else if (name == "pdf") start_document(name)
   } else if (rootName == "pdfset" && depth == 1) {
     if (name == "pdf" || name == "html") start_document(name)

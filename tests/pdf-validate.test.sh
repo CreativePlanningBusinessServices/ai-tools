@@ -142,6 +142,11 @@ assert_not_contains "$output" "freemarker." "--merged skips the freemarker rules
 run_validator --merged "$fixtures/merged-pdfset.xml"
 assert_eq "$status" 0 "--merged accepts <pdfset> holding <html> documents"
 assert_not_contains "$output" "envelope." "a <pdfset> of <html> documents passes the envelope"
+run_validator --merged "$fixtures/merged-html-root.xml"
+assert_eq "$status" 0 "--merged accepts a top-level <html> root (native transaction markup)"
+assert_not_contains "$output" "envelope." "an <html>-rooted merged document passes the envelope"
+run_validator "$fixtures/merged-html-root.xml"
+assert_line '^ERROR 2:1 envelope\.root ' "a template source with an <html> root is still an envelope error"
 
 run_validator "$fixtures/branch-alternative-rows.xml"
 assert_eq "$status" 0 "a <tr> opened differently in <#if>/<#else> exits 0"
