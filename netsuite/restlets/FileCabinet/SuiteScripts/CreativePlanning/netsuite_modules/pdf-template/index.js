@@ -1,18 +1,28 @@
 define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/search", "../file-cabinet/index.js", "./statement-data.js"], function (require, exports, log, query, record, render, search, index_js_1, statement_data_js_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.formatStamp = exports.parseJsonObject = exports.parseTemplateRef = exports.renderTemplate = exports.backupTemplate = exports.describeTemplate = exports.SEARCH_MAX_LIMIT = exports.SEARCH_DEFAULT_LIMIT = exports.PRINT_CHECKS_REFUSAL = exports.FREEMARKER_HINT = exports.BACKUP_FOLDER = exports.ValidationError = void 0;
+    exports.formatStamp = exports.parseJsonObject = exports.parseTemplateRef = exports.adaptTitle = exports.renderTemplate = exports.backupTemplate = exports.describeTemplate = exports.SEARCH_MAX_LIMIT = exports.SEARCH_DEFAULT_LIMIT = exports.RETURN_FORM_NOTE = exports.RAW_FREEMARKER_REFUSAL = exports.RAW_REFUSAL = exports.NATIVE_TEMPLATE_REFUSAL = exports.NATIVE_REFUSAL = exports.PRINT_CHECKS_REFUSAL = exports.FREEMARKER_HINT = exports.BACKUP_FOLDER = exports.ValidationError = void 0;
     Object.defineProperty(exports, "ValidationError", { enumerable: true, get: function () { return index_js_1.ValidationError; } });
     exports.BACKUP_FOLDER = '/SuiteScripts/CreativePlanning/pdf-template-backups';
     exports.FREEMARKER_HINT = 'NetSuite hit a FreeMarker or layout error but gives no detail — run pdf-validate.sh on the draft. Common causes: an unclosed <#if>/<#list>, an unknown ?built-in, a ${…} left open, a <tr> or <td> outside its <table> or <tr>, position:absolute on a direct child of <body>, position:fixed.';
     exports.PRINT_CHECKS_REFUSAL = 'this template loops over `records` (a Print Checks batch layout), which a one-record preview cannot fill, so NetSuite would fail the render; validating and saving it still work — print a check batch in NetSuite to see it';
     // The Print Checks batch hands the template a `records` sequence; a single-record render never sets it.
     const PRINT_CHECKS_LOOP = /<#list\s+records\s/;
+    exports.NATIVE_REFUSAL = 'native must be true or left out';
+    exports.NATIVE_TEMPLATE_REFUSAL = 'native renders what the form prints, so it takes no templateId, scriptId or source';
+    exports.RAW_REFUSAL = 'xml must be BFO markup: an <?xml …?> declaration and a <pdf> or <pdfset> root';
+    exports.RAW_FREEMARKER_REFUSAL = 'raw XML has no FreeMarker; use source';
     const BACKUP_KEYS = ['id', 'scriptid'];
     const TRANSACTION_RENDER_KEYS = ['templateId', 'scriptId', 'source', 'record', 'printType'];
     const STATEMENT_RENDER_KEYS = ['printType', 'entityId', 'formId', 'statementDate', 'startDate', 'openTransactionsOnly'];
     const DRAFT_STATEMENT_RENDER_KEYS = ['printType', 'source', 'entityId', 'statementDate', 'startDate', 'openTransactionsOnly'];
     const SEARCH_RENDER_KEYS = ['printType', 'templateId', 'scriptId', 'source', 'searchId', 'limit', 'resultsAlias'];
+    const NATIVE_TRANSACTION_KEYS = ['printType', 'native', 'record', 'formId'];
+    const RAW_KEYS = ['xml'];
+    const PICKING_TICKET_KEYS = ['printType', 'templateId', 'scriptId', 'source', 'record', 'native', 'formId', 'shipgroup', 'location'];
+    const PACKING_SLIP_KEYS = ['printType', 'templateId', 'scriptId', 'source', 'record', 'native', 'formId'];
+    const NATIVE_ONLY_KEYS = ['formId', 'shipgroup', 'location'];
+    exports.RETURN_FORM_NOTE = "returnForm isn't supplied by the preview, so the return-form section stays hidden";
     exports.SEARCH_DEFAULT_LIMIT = 50;
     exports.SEARCH_MAX_LIMIT = 1000;
     // ============ Describe ============
@@ -74,14 +84,21 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
     // ============ Render ============
     const renderTemplate = (body) => {
         const request = (0, exports.parseJsonObject)(body);
+        if ('xml' in request)
+            return translateRenderErrors(() => renderRaw(request));
         const printType = request.printType ?? 'TRANSACTION';
-        if (printType === 'TRANSACTION')
-            return translateRenderErrors(() => renderTransaction(request));
+        if (printType === 'TRANSACTION') {
+            return translateRenderErrors(() => ('native' in request ? renderNativeTransaction(request) : renderTransaction(request)));
+        }
         if (printType === 'STATEMENT')
             return translateRenderErrors(() => ('source' in request ? renderDraftStatement(request) : renderStatement(request)));
         if (printType === 'SEARCH')
             return translateRenderErrors(() => renderSearch(request));
-        throw new index_js_1.ValidationError(`${String(printType)} has no preview yet — supported: TRANSACTION, STATEMENT, SEARCH`);
+        if (printType === 'PICKINGTICKET')
+            return translateRenderErrors(() => renderPickingTicket(request));
+        if (printType === 'PACKINGSLIP')
+            return translateRenderErrors(() => renderPackingSlip(request));
+        throw new index_js_1.ValidationError(`${String(printType)} has no preview yet — supported: TRANSACTION, STATEMENT, SEARCH, PICKINGTICKET, PACKINGSLIP`);
     };
     exports.renderTemplate = renderTemplate;
     const translateRenderErrors = (operation) => {
@@ -98,17 +115,9 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
     };
     const renderTransaction = (body) => {
         const request = asObject(body, TRANSACTION_RENDER_KEYS);
-        const isDraft = 'source' in request;
-        const source = isDraft ? requireSource(request.source) : '';
-        const templateRef = isDraft ? null : parseSavedTemplateRef(request);
+        const template = parseTemplateChoice(request);
         const target = requireRecordRef(request.record);
-        const renderer = render.create();
-        if (templateRef === null)
-            renderer.templateContent = source;
-        else if ('id' in templateRef)
-            renderer.setTemplateById({ id: templateRef.id });
-        else
-            renderer.setTemplateByScriptId({ scriptId: templateRef.scriptid });
+        const { renderer, isDraft } = prepareRenderer(template);
         if (PRINT_CHECKS_LOOP.test(renderer.templateContent))
             throw new index_js_1.ValidationError(exports.PRINT_CHECKS_REFUSAL);
         const transaction = record.load({ type: target.type, id: target.id });
@@ -123,6 +132,35 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
             pdfBytes: pdfFile.size,
             xml: renderer.renderAsString(),
         };
+    };
+    // What NetSuite itself prints or attaches through the record's form (or formId); HTML mode returns the merged markup.
+    const renderNativeTransaction = (body) => {
+        requireNative(body.native);
+        rejectTemplateWithNative(body);
+        const request = asObject(body, NATIVE_TRANSACTION_KEYS);
+        const target = requireRecordRef(request.record);
+        const withForm = request.formId === undefined ? {} : { formId: requireId(request.formId) };
+        const pdfFile = render.transaction({ entityId: target.id, printMode: render.PrintMode.PDF, ...withForm });
+        const htmlFile = render.transaction({ entityId: target.id, printMode: render.PrintMode.HTML, ...withForm });
+        return {
+            mode: 'native',
+            printType: 'TRANSACTION',
+            record: { ...target, ...withForm },
+            pdf: pdfFile.getContents(),
+            pdfBytes: pdfFile.size,
+            xml: htmlFile.getContents(),
+        };
+    };
+    // xmlToPdf turns plain text into a PDF instead of failing, so the input is checked here.
+    const renderRaw = (body) => {
+        const request = asObject(body, RAW_KEYS);
+        const markup = typeof request.xml === 'string' ? request.xml.trimStart() : '';
+        if (!markup.startsWith('<?xml') || !/<(pdf|pdfset)[\s>]/.test(markup))
+            throw new index_js_1.ValidationError(exports.RAW_REFUSAL);
+        if (/<#|\$\{/.test(markup))
+            throw new index_js_1.ValidationError(exports.RAW_FREEMARKER_REFUSAL);
+        const pdfFile = render.xmlToPdf({ xmlString: markup });
+        return { mode: 'raw', printType: 'RAW', record: null, pdf: pdfFile.getContents(), pdfBytes: pdfFile.size, xml: markup };
     };
     const renderStatement = (body) => {
         const request = asObject(body, STATEMENT_RENDER_KEYS);
@@ -188,9 +226,7 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
     // addSearchResults takes search.Result objects, so this one path uses N/search rather than SuiteQL.
     const renderSearch = (body) => {
         const request = asObject(body, SEARCH_RENDER_KEYS);
-        const isDraft = 'source' in request;
-        const source = isDraft ? requireSource(request.source) : '';
-        const templateRef = isDraft ? null : parseSavedTemplateRef(request);
+        const template = parseTemplateChoice(request);
         const searchId = requireSearchId(request.searchId);
         const limit = requireLimit(request.limit);
         const resultsAlias = requireResultsAlias(request.resultsAlias);
@@ -199,13 +235,7 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
         const fetched = savedSearch.run().getRange({ start: 0, end: Math.min(limit + 1, exports.SEARCH_MAX_LIMIT) });
         const truncated = fetched.length > limit || (limit === exports.SEARCH_MAX_LIMIT && fetched.length === exports.SEARCH_MAX_LIMIT);
         const rows = fetched.slice(0, limit);
-        const renderer = render.create();
-        if (templateRef === null)
-            renderer.templateContent = source;
-        else if ('id' in templateRef)
-            renderer.setTemplateById({ id: templateRef.id });
-        else
-            renderer.setTemplateByScriptId({ scriptId: templateRef.scriptid });
+        const { renderer, isDraft } = prepareRenderer(template);
         renderer.addSearchResults({ templateName: resultsAlias, searchResult: rows });
         const pdfFile = renderer.renderAsPdf();
         return {
@@ -217,6 +247,117 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
             xml: renderer.renderAsString(),
         };
     };
+    const renderPickingTicket = (body) => {
+        if ('native' in body)
+            return renderNativePickingTicket(body);
+        const request = asObject(body, PICKING_TICKET_KEYS);
+        rejectNativeOnlyKeys(request);
+        const template = parseTemplateChoice(request);
+        const target = requireRecordRef(request.record);
+        if (target.type !== 'salesorder')
+            throw new index_js_1.ValidationError('a picking ticket prints a sales order; record.type must be salesorder');
+        const { renderer, isDraft } = prepareRenderer(template);
+        const { adaptations } = adaptRendererTitle(renderer, 'Picking Ticket');
+        const salesOrder = record.load({ type: target.type, id: target.id });
+        renderer.addRecord({ templateName: 'record', record: salesOrder });
+        addSubsidiaryRoot(renderer, salesOrder);
+        return withExtras(renderToResult(renderer, isDraft, 'PICKINGTICKET', target), { adaptations });
+    };
+    const renderNativePickingTicket = (body) => {
+        requireNative(body.native);
+        rejectTemplateWithNative(body);
+        const request = asObject(body, PICKING_TICKET_KEYS);
+        const target = requireRecordRef(request.record);
+        if (target.type !== 'salesorder')
+            throw new index_js_1.ValidationError('a picking ticket prints a sales order; record.type must be salesorder');
+        const options = {
+            entityId: target.id,
+            printMode: render.PrintMode.PDF,
+            ...(request.formId !== undefined && { formId: requireId(request.formId) }),
+            ...(request.shipgroup !== undefined && { shipgroup: requireId(request.shipgroup) }),
+            ...(request.location !== undefined && { location: requireId(request.location) }),
+        };
+        const pdfFile = render.pickingTicket(options);
+        return { mode: 'native', printType: 'PICKINGTICKET', record: target, pdf: pdfFile.getContents(), pdfBytes: pdfFile.size, xml: null };
+    };
+    const renderPackingSlip = (body) => {
+        if ('native' in body)
+            return renderNativePackingSlip(body);
+        const request = asObject(body, PACKING_SLIP_KEYS);
+        rejectNativeOnlyKeys(request);
+        const template = parseTemplateChoice(request);
+        const target = requirePackingSlipRecord(request.record);
+        const { renderer, isDraft } = prepareRenderer(template);
+        const { adaptations } = adaptRendererTitle(renderer, 'Packing Slip');
+        const notes = renderer.templateContent.includes('returnForm') ? [exports.RETURN_FORM_NOTE] : [];
+        const shipped = record.load({ type: target.type, id: target.id });
+        const salesOrder = target.type === 'salesorder'
+            ? shipped
+            : record.load({ type: record.Type.SALES_ORDER, id: requireCreatedFrom(target.id, shipped.getValue({ fieldId: 'createdfrom' })) });
+        renderer.addRecord({ templateName: 'record', record: shipped });
+        renderer.addRecord({ templateName: 'salesorder', record: salesOrder });
+        addSubsidiaryRoot(renderer, salesOrder);
+        const result = renderToResult(renderer, isDraft, 'PACKINGSLIP', target);
+        // Without a fulfillment the sales order stands in for it, so ship date, method and phone come from the order.
+        return withExtras(target.type === 'salesorder' ? { ...result, approximate: true } : result, { adaptations, notes });
+    };
+    const renderNativePackingSlip = (body) => {
+        requireNative(body.native);
+        rejectTemplateWithNative(body);
+        const request = asObject(body, PACKING_SLIP_KEYS);
+        const target = requirePackingSlipRecord(request.record);
+        const salesOrderId = target.type === 'salesorder' ? target.id : requireCreatedFrom(target.id, readFulfillmentSource(target.id));
+        const pdfFile = render.packingSlip({
+            entityId: salesOrderId,
+            ...(target.type === 'itemfulfillment' && { fulfillmentId: target.id }),
+            printMode: render.PrintMode.PDF,
+            ...(request.formId !== undefined && { formId: requireId(request.formId) }),
+        });
+        return { mode: 'native', printType: 'PACKINGSLIP', record: target, pdf: pdfFile.getContents(), pdfBytes: pdfFile.size, xml: null };
+    };
+    const readFulfillmentSource = (fulfillmentId) => {
+        const rows = query
+            .runSuiteQL({ query: /* sql */ `SELECT createdfrom FROM transaction WHERE id = ?`, params: [fulfillmentId] })
+            .asMappedResults();
+        return rows.length > 0 ? rows[0].createdfrom : null;
+    };
+    // ============ Render helpers ============
+    const prepareRenderer = (template) => {
+        const renderer = render.create();
+        if ('source' in template) {
+            renderer.templateContent = template.source;
+            return { renderer, isDraft: true };
+        }
+        if ('id' in template.ref)
+            renderer.setTemplateById({ id: template.ref.id });
+        else
+            renderer.setTemplateByScriptId({ scriptId: template.ref.scriptid });
+        return { renderer, isDraft: false };
+    };
+    // A saved template is adapted on the renderer's copy of its source; the template itself is never written.
+    const adaptRendererTitle = (renderer, title) => {
+        const adapted = (0, exports.adaptTitle)(renderer.templateContent, title);
+        if (adapted.adaptations.length > 0)
+            renderer.templateContent = adapted.source;
+        return { adaptations: adapted.adaptations };
+    };
+    // record@title would print the loaded record's type ("Sales Order"); NetSuite's own print shows the print type's title.
+    const adaptTitle = (source, title) => {
+        const adapted = source.replace(/\$\{\s*record@title\s*\}/g, title);
+        return adapted === source ? { source, adaptations: [] } : { source: adapted, adaptations: [`title: ${title}`] };
+    };
+    exports.adaptTitle = adaptTitle;
+    const renderToResult = (renderer, isDraft, printType, target) => {
+        const pdfFile = renderer.renderAsPdf();
+        return {
+            mode: isDraft ? 'draft' : 'saved', printType, record: target, pdf: pdfFile.getContents(), pdfBytes: pdfFile.size, xml: renderer.renderAsString(),
+        };
+    };
+    const withExtras = (result, extras) => ({
+        ...result,
+        ...(extras.adaptations && extras.adaptations.length > 0 && { adaptations: extras.adaptations }),
+        ...(extras.notes && extras.notes.length > 0 && { notes: extras.notes }),
+    });
     // Accounts without subsidiaries (non-OneWorld) leave the field empty, so the root is skipped.
     const addSubsidiaryRoot = (renderer, owner) => {
         const subsidiaryId = owner.getValue({ fieldId: 'subsidiary' });
@@ -267,6 +408,35 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
         if (typeof value === 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(value))
             return value;
         throw new index_js_1.ValidationError(`resultsAlias must be a FreeMarker name like results, got ${JSON.stringify(value)}`);
+    };
+    // Only JSON true: a "true" string or a false would otherwise switch modes silently.
+    const requireNative = (value) => {
+        if (value !== true)
+            throw new index_js_1.ValidationError(exports.NATIVE_REFUSAL);
+        return value;
+    };
+    const rejectTemplateWithNative = (request) => {
+        if (['templateId', 'scriptId', 'source'].some((key) => key in request))
+            throw new index_js_1.ValidationError(exports.NATIVE_TEMPLATE_REFUSAL);
+    };
+    const rejectNativeOnlyKeys = (request) => {
+        if (NATIVE_ONLY_KEYS.some((key) => key in request))
+            throw new index_js_1.ValidationError('formId, shipgroup and location are only for native: true');
+    };
+    const parseTemplateChoice = (request) => ('source' in request ? { source: requireSource(request.source) } : { ref: parseSavedTemplateRef(request) });
+    const requirePackingSlipRecord = (value) => {
+        const target = requireRecordRef(value);
+        if (target.type !== 'itemfulfillment' && target.type !== 'salesorder') {
+            throw new index_js_1.ValidationError('a packing slip prints an item fulfillment (or, approximately, a sales order); record.type must be itemfulfillment or salesorder');
+        }
+        return target;
+    };
+    const requireCreatedFrom = (fulfillmentId, createdFrom) => {
+        const salesOrderId = Number(createdFrom);
+        if (createdFrom === null || createdFrom === undefined || createdFrom === '' || !Number.isInteger(salesOrderId) || salesOrderId <= 0) {
+            throw new index_js_1.ValidationError(`item fulfillment ${fulfillmentId} has no created-from sales order`);
+        }
+        return salesOrderId;
     };
     // ============ Request parsing helpers ============
     const parseTemplateRef = (params) => {
