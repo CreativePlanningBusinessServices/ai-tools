@@ -150,8 +150,11 @@ rl --method POST --data @"$SP/raw.json"   # raw BFO XML, no data: {"xml": "<?xml
   source and lists that in `adaptations` (the saved template is never changed).
 - **Raw XML** (`{"xml": "<?xml…"}`, nothing else): renders BFO markup as is, with no record and no
   FreeMarker, through `render.xmlToPdf`; `mode` and `printType` are `raw` / `RAW`, `record` is
-  `null`. The input must be an `<?xml …?>` document with a `<pdf>` or `<pdfset>` root and no
-  `<#`/`${` (use `source` for a template).
+  `null`. The input must be an `<?xml …?>` document with a `<pdf>`, `<pdfset>` or `<html>` root
+  and no `<#`/`${` (use `source` for a template). Merged markup from a native transaction render
+  or a saved statement names its documents `<html>`, which `xmlToPdf` refuses, so the RESTlet
+  renames them to `<pdf>` and lists `root: html → pdf` in `adaptations`; `pdf-validate.sh --merged`
+  accepts either form.
 - Other print types answer `<printType> has no preview yet — supported: TRANSACTION, STATEMENT, SEARCH, PICKINGTICKET, PACKINGSLIP`.
 - **Statement**: `entityId` (customer) is required; `statementDate` (default today), `startDate`
   (default none: the whole history) and `openTransactionsOnly` (boolean, default false) are
