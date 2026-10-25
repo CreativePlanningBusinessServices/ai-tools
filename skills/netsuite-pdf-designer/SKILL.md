@@ -255,8 +255,10 @@ Restore = step 6 with the backup's contents as the draft:
    For a picking ticket, a sales order waiting to be fulfilled:
    `SELECT txn.id, txn.tranid, txn.trandate FROM transaction txn WHERE txn.type = 'SalesOrd' AND txn.status IN ('B', 'D', 'E') ORDER BY txn.id DESC FETCH FIRST 5 ROWS ONLY`.
    For a packing slip, a recent fulfillment and its sales order:
-   `SELECT txn.id, txn.tranid, txn.trandate, txn.createdfrom, BUILTIN.DF(txn.createdfrom) AS salesorder FROM transaction txn WHERE txn.type = 'ItemShip' ORDER BY txn.id DESC FETCH FIRST 5 ROWS ONLY`.
-   If the account has no fulfillments, use a sales order and say the preview is approximate.
+   `SELECT txn.id, txn.tranid, txn.trandate, mainLine.createdfrom, BUILTIN.DF(mainLine.createdfrom) AS salesorder FROM transaction txn JOIN transactionline mainLine ON mainLine.transaction = txn.id AND mainLine.mainline = 'T' WHERE txn.type = 'ItemShip' ORDER BY txn.id DESC FETCH FIRST 5 ROWS ONLY`
+   (`createdfrom` lives on the main line; `transaction.createdfrom` is not a SuiteQL column).
+   Only a fulfillment created from a sales order can be previewed. If the account has none, use
+   a sales order and say the preview is approximate.
 3. **Check what can be previewed.** Transactions and custom records: saved and draft. Saved
    searches: saved and draft, against the search's first rows (exact). Picking tickets and packing
    slips: saved and draft (a packing slip from a sales order alone is approximate), plus native.
@@ -293,8 +295,9 @@ Restore = step 6 with the backup's contents as the draft:
    Send it with SendUserFile (render display) as the **last** action of the turn, after the
    explanatory text, so the card sits at the bottom of the chat. The caption names the template,
    the account, the sample record and the mode: `saved`, `draft`, step 3's approximate statement
-   label, `native (what the form prints)`, `draft (approximate: sales order stands in for the
-   fulfillment)` or `raw (BFO markup, no data)`. Report any `notes` and `adaptations` in one line
+   label, `native (what the form prints)`, `saved (approximate: sales order stands in for the
+   fulfillment)` / `draft (approximate: …)` for any packing slip rendered from a sales order (the
+   response says `approximate: true`), or `raw (BFO markup, no data)`. Report any `notes` and `adaptations` in one line
    each. A result with `xml: null` (native picking tickets and packing slips) has no merged markup,
    so skip `pdf-validate.sh --merged` for it.
    When one turn produces several previews, send them all in that one call and name each in the
