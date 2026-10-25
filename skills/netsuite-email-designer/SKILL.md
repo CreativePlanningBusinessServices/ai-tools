@@ -1,6 +1,6 @@
 ---
 name: netsuite-email-designer
-description: Use when a task needs to view, preview, edit, redesign, or create a NetSuite email template — a template URL (emailtemplate.nl?id=…), id or name, "what does this email look like", "change the wording of the invoice email", "build a new email for X", "will this email work in Outlook?" — in any account where Creative Planning's cp_email_template_rl RESTlet is installed. Covers the RESTlet's JSON contract (called via netsuite-cli restlet call), how NetSuite renders FreeMarker templates, previewing in the Code tab against a real record, building new templates as hand-written email HTML, and an email-client compatibility check against caniemail data (bash + jq, no Python or Node).
+description: Use when a task needs to view, preview, edit, redesign, or create a NetSuite email template — a template URL (emailtemplate.nl?id=…), id or name, "what does this email look like", "show the invoice email with its PDF", "change the wording of the invoice email", "build a new email for X", "will this email work in Outlook?" — in any account where Creative Planning's cp_email_template_rl RESTlet is installed. When the email goes out with a PDF attached, also previews that PDF by handing it to netsuite-pdf-designer. Covers the RESTlet's JSON contract (called via netsuite-cli restlet call), how NetSuite renders FreeMarker templates, previewing in the Code tab against a real record, building new templates as hand-written email HTML, and an email-client compatibility check against caniemail data (bash + jq, no Python or Node).
 ---
 
 # Email templates via the cp_email_template_rl RESTlet
@@ -194,7 +194,8 @@ overrides) and deletes it if the record save fails. Returns the GET shape.
    Write tool, the file pane (`show_pane`), and a preview server all fail to, so don't try them.
    Where SendUserFile is unavailable, give the path. Previews hold
    real customer data: they live only in the scratchpad and are never committed, attached, or
-   published.
+   published. If the email goes out with a PDF attached, preview that too: see "Emails that
+   attach a PDF".
 4. **Edit loop.** Keep the working copy at `$SP/email-draft-<templateId>.html`. After each edit:
    ```bash
    jq -n --rawfile body "$SP/email-draft-123.html" '{templateId: 123, body: $body, transactionId: 456}' > "$SP/draft.json"
@@ -271,6 +272,52 @@ overrides) and deletes it if the record save fails. Returns the GET shape.
    `[Example Invoice Email (sb1)](https://1234567-sb1.app.netsuite.com/app/crm/common/merge/emailtemplate.nl?id=123)`.
    A refused or failed `PUT` gets no link; report the error instead.
 
+## Emails that attach a PDF
+
+The email designer previews the body; the PDF an email carries belongs to the
+`netsuite-pdf-designer` skill. Hand it over so the user sees both.
+
+1. **When.** A script that sends this template renders a PDF next to `render.mergeEmail`
+   (`render.transaction` or `render.statement`), or the user says the email carries the record's
+   PDF.
+2. **Check the PDF RESTlet** in the same account:
+   ```bash
+   netsuite-cli suiteql --account <alias> "SELECT scriptid FROM script WHERE scriptid = 'customscript_cp_pdf_template_rl'"
+   ```
+   No rows: send the email preview alone and say the PDF can't be previewed in that account
+   because `cp_pdf_template_rl` isn't installed. Offer the install (the PDF designer's "Installing
+   the RESTlet": the same package, all five CP RESTlets) and install only after a yes for that
+   account.
+3. **Find the sender's render.** In CP's own account (6967599) and its sandboxes:
+
+   | Email template | Sent by | PDF designer request |
+   |---|---|---|
+   | 6 (invoice); 112 (managed accounts, on invoice save); 108 (managed accounts, overdue) | `email-invoice-ue`, `overdue_email_autom`, `send_out_old_invoices_ah` | `{"printType": "TRANSACTION", "native": true, "record": {"type": "invoice", "id": <the sample invoice>}, "formId": 159}` |
+   | the statement deployment's `custscript_es_statement_email_template` | `statement_emails` (`customdeploy_statement_emails`, `customdeploy_statement_emails_ah`) | `{"printType": "STATEMENT", "entityId": <the recipient's customer>, "formId": <custscript_es_statement_form>, "openTransactionsOnly": true}` |
+
+   Every invoice template attaches form 159, the managed-account ones included. The statement
+   form and template are deployment parameters that neither SuiteQL nor REST can read. Ask the
+   user for the form's internal id, or read it on the deployment's page:
+   ```bash
+   netsuite-cli suiteql --account <alias> "SELECT primarykey FROM scriptdeployment WHERE scriptid = 'customdeploy_statement_emails'"
+   # https://$NS_HOST.app.netsuite.com/app/common/scripting/scriptdeployment.nl?id=<primarykey>
+   ```
+   Without the form id there is no statement attachment preview: never guess one.
+
+   In any other account, or for an email no listed script sends (a workflow, the record's own
+   Email button): a native render with no `formId`. Say the record's own form decided the PDF, and
+   ask whether something else sends the email.
+4. **Hand off.** Load `netsuite-pdf-designer` and give it that request for the same sample record
+   (for a statement, the customer the sample recipient belongs to). Both renders are read-only
+   (email saved mode, PDF native or saved statement), so they're safe in production.
+5. **Show both.** Send the email preview (with its banner, step 3) and the PDF in one SendUserFile
+   call (render display), as the turn's last action. The caption names the template, the account,
+   the sample record and `attachment: what form <id> prints` (or `the record's own form`).
+6. **Edits.** Body and subject changes stay here. A change to the PDF goes to the template the
+   form prints with, through the PDF designer's own workflow. The user names that template, or the
+   form's printing settings do (`https://$NS_HOST.app.netsuite.com/app/common/custom/custform.nl?id=<formId>`
+   in the UI).
+
 ## Gotchas
 
 - `${recipient.…}` / `${sender.…}` in a draft or a new template must be written null-safe,
@@ -319,4 +366,6 @@ and verify the result. No `INSTALL.md` there: ask the user where their `ai-tools
 Source: the private `sdf-creative-planning` repo, `src/RESTlet/cp_email_template_rl.ts` and
 `src/netsuite_modules/email-template/index.ts`, with tests under `__tests__/email_template/`.
 Shipped here via `netsuite/restlets/sync.sh`. Spec:
-`docs/superpowers/specs/2026-10-05-netsuite-email-designer-design.html` in that repo.
+`docs/superpowers/specs/2026-10-05-netsuite-email-designer-design.html` in that repo. The PDF
+attachment hand-off is specified in §5 of
+`docs/superpowers/specs/2026-10-24-netsuite-pdf-designer-print-types-design.html` in that repo.
