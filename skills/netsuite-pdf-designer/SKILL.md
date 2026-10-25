@@ -259,8 +259,9 @@ Restore = step 6 with the backup's contents as the draft:
    (`createdfrom` lives on the main line; `transaction.createdfrom` is not a SuiteQL column).
    Only a fulfillment created from a sales order can be previewed. If the account has none, use
    a sales order and say the preview is approximate.
-3. **Check what can be previewed.** Called from the email designer for an attachment: run the native render
-   with the form you were given, with the sender's options, and hand back the PDF.
+3. **Check what can be previewed.** Called from the email designer for an attachment: run the request
+   you were given as is (a native render with the sender's form, or a saved statement with its
+   form and `openTransactionsOnly`), skip steps 1 and 2, and hand back the PDF.
    Transactions and custom records: saved and draft. Saved
    searches: saved and draft, against the search's first rows (exact). Picking tickets and packing
    slips: saved and draft (a packing slip from a sales order alone is approximate), plus native.

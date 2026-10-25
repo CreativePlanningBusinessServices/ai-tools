@@ -279,7 +279,8 @@ The email designer previews the body; the PDF an email carries belongs to the
 
 1. **When.** A script that sends this template renders a PDF next to `render.mergeEmail`
    (`render.transaction` or `render.statement`), or the user says the email carries the record's
-   PDF.
+   PDF. In CP's own account, the table in step 3 lists those templates: check it while resolving
+   the template, before picking a sample.
 2. **Check the PDF RESTlet** in the same account:
    ```bash
    netsuite-cli suiteql --account <alias> "SELECT scriptid FROM script WHERE scriptid = 'customscript_cp_pdf_template_rl'"
@@ -288,28 +289,43 @@ The email designer previews the body; the PDF an email carries belongs to the
    because `cp_pdf_template_rl` isn't installed. Offer the install (the PDF designer's "Installing
    the RESTlet": the same package, all five CP RESTlets) and install only after a yes for that
    account.
-3. **Find the sender's render.** In CP's own account (6967599) and its sandboxes:
+3. **Find the sender's render.** In CP's own account (6967599) and its sandboxes. The email
+   preview passes the same refs the sender's `mergeEmail` does, and the PDF request is the
+   sender's attachment call:
 
-   | Email template | Sent by | PDF designer request |
-   |---|---|---|
-   | 6 (invoice); 112 (managed accounts, on invoice save); 108 (managed accounts, overdue) | `email-invoice-ue`, `overdue_email_autom`, `send_out_old_invoices_ah` | `{"printType": "TRANSACTION", "native": true, "record": {"type": "invoice", "id": <the sample invoice>}, "formId": 159}` |
-   | the statement deployment's `custscript_es_statement_email_template` | `statement_emails` (`customdeploy_statement_emails`, `customdeploy_statement_emails_ah`) | `{"printType": "STATEMENT", "entityId": <the recipient's customer>, "formId": <custscript_es_statement_form>, "openTransactionsOnly": true}` |
+   | Email template | Sent by, and for which invoices | Email preview refs | PDF designer request |
+   |---|---|---|---|
+   | 6 "ACS \| Payment Link Transaction Email Template-new" | `email-invoice-ue`, `overdue_email_autom`, `send_out_old_invoices_ah`: invoices without the managed flag | `transactionId` + `recipient: {type: "customer", id: <its customer>}` | `{"printType": "TRANSACTION", "native": true, "record": {"type": "invoice", "id": <the sample invoice>}, "formId": 159}` |
+   | 112 "Managed Account Transaction Email Template" | `email-invoice-ue`: invoices with `custbody_email_managed_account_team = 'T'` (pick the sample from those) | same | same (form 159) |
+   | the statement deployment's `custscript_es_statement_email_template` (production on 2026-10-25: 317 "CPES Outstanding Statements") | `statement_emails` (`customdeploy_statement_emails`, `customdeploy_statement_emails_ah`) | `recipient: {type: "contact", id: <an AP contact of the customer>}` only | `{"printType": "STATEMENT", "entityId": <that customer>, "formId": <custscript_es_statement_form>, "openTransactionsOnly": true}` |
 
-   Every invoice template attaches form 159, the managed-account ones included. The statement
-   form and template are deployment parameters that neither SuiteQL nor REST can read. Ask the
-   user for the form's internal id, or read it on the deployment's page:
+   `overdue_email_autom` sends template 108 to managed accounts, and no template 108 exists in
+   production or SB2 (2026-10-25): say so if the user asks about overdue emails for managed
+   accounts. For a statement sample, list customers with open invoices and a contact who has an
+   email (contacts link to customers through `companycontactrelationship`, not `contact.company`):
+   ```bash
+   netsuite-cli suiteql --account <alias> "SELECT DISTINCT txn.entity AS customer, relationship.contact FROM transaction txn JOIN companycontactrelationship relationship ON relationship.company = txn.entity JOIN contact ON contact.id = relationship.contact WHERE txn.type = 'CustInvc' AND txn.status = 'A' AND contact.email IS NOT NULL ORDER BY txn.entity DESC FETCH FIRST 5 ROWS ONLY"
+   ```
+
+   The statement form and template are deployment parameters that neither SuiteQL nor REST can
+   read, and they can change. Confirm them with the user, or read them on the deployment's page:
    ```bash
    netsuite-cli suiteql --account <alias> "SELECT primarykey FROM scriptdeployment WHERE scriptid = 'customdeploy_statement_emails'"
-   # https://$NS_HOST.app.netsuite.com/app/common/scripting/scriptdeployment.nl?id=<primarykey>
+   # https://$NS_HOST.app.netsuite.com/app/common/scripting/scriptrecord.nl?id=<primarykey>
    ```
-   Without the form id there is no statement attachment preview: never guess one.
+   The page's Parameters tab shows the form and template by **name** only. The template's id
+   comes from SuiteQL by that name (`SELECT id FROM emailtemplate WHERE name = '<name>'`). The
+   form's internal id is the parameter field's value in the page's edit mode (`&e=T`); leave
+   without saving. Without the form id there is no statement attachment preview: never guess one.
 
    In any other account, or for an email no listed script sends (a workflow, the record's own
    Email button): a native render with no `formId`. Say the record's own form decided the PDF, and
    ask whether something else sends the email.
-4. **Hand off.** Load `netsuite-pdf-designer` and give it that request for the same sample record
-   (for a statement, the customer the sample recipient belongs to). Both renders are read-only
-   (email saved mode, PDF native or saved statement), so they're safe in production.
+4. **Hand off.** Load `netsuite-pdf-designer` and give it that request, complete, for the same
+   sample record. It skips its own steps 1 and 2 (there is no template to resolve, and the sample
+   is already chosen) and writes the PDF next to the email preview, as
+   `$SP/pdf-attachment-<record id>.pdf`. Both renders are read-only (email saved mode; PDF native
+   or saved statement), so they're safe in production.
 5. **Show both.** Send the email preview (with its banner, step 3) and the PDF in one SendUserFile
    call (render display), as the turn's last action. The caption names the template, the account,
    the sample record and `attachment: what form <id> prints` (or `the record's own form`).
