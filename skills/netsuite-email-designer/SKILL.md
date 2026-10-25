@@ -295,32 +295,38 @@ The email designer previews the body; the PDF an email carries belongs to the
 
    | Email template | Sent by, and for which invoices | Email preview refs | PDF designer request |
    |---|---|---|---|
-   | 6 "ACS \| Payment Link Transaction Email Template-new" | `email-invoice-ue`, `overdue_email_autom`, `send_out_old_invoices_ah`: invoices without the managed flag | `transactionId` + `recipient: {type: "customer", id: <its customer>}` | `{"printType": "TRANSACTION", "native": true, "record": {"type": "invoice", "id": <the sample invoice>}, "formId": 159}` |
+   | 6 "ACS \| Payment Link Transaction Email Template-new" | `email-invoice-ue` and `overdue_email_autom`: invoices without the managed flag; `send_out_old_invoices_ah`: every invoice it sends, managed ones included | `transactionId` + `recipient: {type: "customer", id: <its customer>}` | `{"printType": "TRANSACTION", "native": true, "record": {"type": "invoice", "id": <the sample invoice>}, "formId": 159}` |
    | 112 "Managed Account Transaction Email Template" | `email-invoice-ue`: invoices with `custbody_email_managed_account_team = 'T'` (pick the sample from those) | same | same (form 159) |
    | the statement deployment's `custscript_es_statement_email_template` (production on 2026-10-25: 317 "CPES Outstanding Statements") | `statement_emails` (`customdeploy_statement_emails`, `customdeploy_statement_emails_ah`) | `recipient: {type: "contact", id: <a contact of the customer with an email>}` only | `{"printType": "STATEMENT", "entityId": <that customer>, "formId": <custscript_es_statement_form>, "openTransactionsOnly": true}` |
 
    `overdue_email_autom` sends template 108 to managed accounts, and no template 108 exists in
    production or SB2 (2026-10-25): say so if the user asks about overdue emails for managed
-   accounts. For a statement sample, list customers with open invoices and a contact who has an
-   email (contacts link to customers through `companycontactrelationship`, not `contact.company`):
+   accounts. For a statement sample, list the customers `statement_emails` actually mails: open
+   invoices with an ERP-department (212) line, and a contact with an email, joined through
+   `companycontactrelationship` as the sender does (it prefers contacts with the AP role, 1):
    ```bash
-   netsuite-cli suiteql --account <alias> "SELECT DISTINCT txn.entity AS customer, relationship.contact FROM transaction txn JOIN companycontactrelationship relationship ON relationship.company = txn.entity JOIN contact ON contact.id = relationship.contact WHERE txn.type = 'CustInvc' AND txn.status = 'A' AND contact.email IS NOT NULL ORDER BY txn.entity DESC FETCH FIRST 5 ROWS ONLY"
+   netsuite-cli suiteql --account <alias> "SELECT DISTINCT txn.entity AS customer, relationship.contact, relationship.role FROM transaction txn JOIN transactionline line ON line.transaction = txn.id AND line.department = 212 JOIN companycontactrelationship relationship ON relationship.company = txn.entity JOIN contact ON contact.id = relationship.contact WHERE txn.type = 'CustInvc' AND txn.status = 'A' AND contact.email IS NOT NULL ORDER BY txn.entity DESC FETCH FIRST 5 ROWS ONLY"
    ```
 
    The statement form and template are deployment parameters that neither SuiteQL nor REST can
-   read, and they can change. Confirm them with the user, or read them on the deployment's page:
+   read, they can change, and each of the two deployments has its own. Ask the user for the form's
+   internal id, and give them the deployment's page so they can read it (ask which deployment
+   they mean when it isn't clear; the scheduled one is `customdeploy_statement_emails`):
    ```bash
-   netsuite-cli suiteql --account <alias> "SELECT primarykey FROM scriptdeployment WHERE scriptid = 'customdeploy_statement_emails'"
+   netsuite-cli suiteql --account <alias> "SELECT scriptid, primarykey FROM scriptdeployment WHERE scriptid IN ('customdeploy_statement_emails', 'customdeploy_statement_emails_ah')"
    # https://$NS_HOST.app.netsuite.com/app/common/scripting/scriptrecord.nl?id=<primarykey>
    ```
-   The page's Parameters tab shows the form and template by **name** only. The template's id
-   comes from SuiteQL by that name (`SELECT id FROM emailtemplate WHERE name = '<name>'`). The
-   form's internal id is the parameter field's value in the page's edit mode (`&e=T`); leave
-   without saving. Without the form id there is no statement attachment preview: never guess one.
+   The page's Parameters tab shows the form and template by **name** only; the form's internal id
+   is the parameter field's value in the page's edit mode, so tell the user to leave that page
+   without saving. Don't open the deployment in edit mode yourself (no hand edits to script or
+   deployment records, above). The template's id comes from SuiteQL by its name
+   (`SELECT id FROM emailtemplate WHERE name = '<name>'`). Without the form id there is no
+   statement attachment preview: never guess one.
 
    In any other account, or for an email no listed script sends (a workflow, the record's own
    Email button): a native render with no `formId`. Say the record's own form decided the PDF, and
-   ask whether something else sends the email.
+   ask whether something else sends the email. A statement has no such fallback: ask for the
+   statement form id, and never present a draft (approximate) statement as the attachment.
 4. **Hand off.** Load `netsuite-pdf-designer` and give it that request, complete, for the same
    sample record. It skips its own steps 1 and 2 (there is no template to resolve, and the sample
    is already chosen) and writes the PDF next to the email preview, as
