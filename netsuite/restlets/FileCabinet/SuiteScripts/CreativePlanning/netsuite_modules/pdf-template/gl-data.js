@@ -69,10 +69,12 @@ define(["require", "exports", "N/query", "../file-cabinet/index.js", "./freemark
         const formatted = source.replace(/\$\{\s*(line\.debitfxamount|line\.creditfxamount|line_debitamount|line_creditamount)\s*\}/g, (match, amount) => `<#if ${amount} != 0>\${nsformat_currency(${amount}, ${LINE_AMOUNT_CURRENCIES[amount]})}</#if>`);
         return { source: formatted, changed: formatted !== source };
     };
-    // Base and transaction currency are the same here: SB2 has no foreign-currency transactions to build the other from.
+    // Base and transaction currency are the same here, so a foreign-currency transaction shows its base amounts and base
+    // currency in both column groups (SB2 has no foreign-currency transaction to build the other from).
     const loadGlImpactData = (transactionId) => {
         const header = loadHeader(transactionId);
-        const currency = header.currencyiso ?? '';
+        const currency = header.currencyname ?? '';
+        const currencyIso = header.currencyiso ?? '';
         return {
             record: {
                 trandate: header.trandate,
@@ -84,8 +86,8 @@ define(["require", "exports", "N/query", "../file-cabinet/index.js", "./freemark
                 exchangerate: header.exchangerate ?? '',
                 currency,
                 basecurrency: currency,
-                transaction_currency_iso: currency,
-                base_currency_iso: currency,
+                transaction_currency_iso: currencyIso,
+                base_currency_iso: currencyIso,
                 line: loadLines(transactionId).map((line) => toTemplateLine(line, currency)),
             },
             label: exports.GL_IMPACT_LABELS,
@@ -99,8 +101,9 @@ define(["require", "exports", "N/query", "../file-cabinet/index.js", "./freemark
         txn.tranid,
         (SELECT MAX(mainLine.subsidiary) FROM transactionline mainLine WHERE mainLine.transaction = txn.id AND mainLine.mainline = 'T') AS subsidiary,
         TO_CHAR(txn.exchangerate, 'FM999990.00') AS exchangerate,
-        BUILTIN.DF(txn.currency) AS currencyiso
+        BUILTIN.DF(txn.currency) AS currencyname, currency.symbol AS currencyiso
       FROM transaction txn
+      LEFT JOIN currency ON currency.id = txn.currency
       WHERE txn.id = ?`,
             params: [transactionId],
         }).asMappedResults();

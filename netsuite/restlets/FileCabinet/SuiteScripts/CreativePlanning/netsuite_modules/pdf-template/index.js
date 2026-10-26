@@ -162,7 +162,6 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
             xml: htmlFile.getContents(),
         };
     };
-    // xmlToPdf turns plain text into a PDF instead of failing, so the input is checked here.
     // render.glImpact draws only NetSuite's own data, so a draft gets the GL data rebuilt and injected: always approximate.
     const renderGlImpact = (body) => {
         const request = asObject(body, GL_IMPACT_RENDER_KEYS);
@@ -191,6 +190,7 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
             notes: [exports.GL_IMPACT_NOTE],
         };
     };
+    // xmlToPdf turns plain text into a PDF instead of failing, so the input is checked here.
     const renderRaw = (body) => {
         const request = asObject(body, RAW_KEYS);
         const input = typeof request.xml === 'string' ? request.xml.trimStart() : '';

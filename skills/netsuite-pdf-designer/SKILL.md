@@ -197,8 +197,10 @@ rl --method POST --data @"$SP/raw.json"   # raw BFO XML, no data: {"xml": "<?xml
   ("GL Impact", "Posting Period", …). `${record.X@label}` and `line.X@label` become fixed captions
   ("Date", "Document Number", "Account", "Memo", "Exchange Rate"), and the four line-amount
   interpolations print through `nsformat_currency`, blank when 0, as NetSuite's do. Both are listed in
-  `adaptations`. Always `"approximate": true`: secondary accounting books aren't shown, and
-  foreign-currency transactions are untested. Compared with NetSuite's own print in SB2
+  `adaptations`. Always `"approximate": true`: secondary accounting books aren't shown; a
+  foreign-currency transaction shows its base amounts and base currency in both column groups; the
+  exchange rate is rounded to two decimals; any other `X@label` prints as the field name X; and
+  `noLinesMessage` ("No GL impact lines") is a guess. Compared with NetSuite's own print in SB2
   (2026-10-26), an invoice and a journal match on header, captions, accounts, memos, subsidiaries,
   amounts and totals.
 - Other print types answer `<printType> has no preview yet — supported: TRANSACTION, STATEMENT, SEARCH, PICKINGTICKET, PACKINGSLIP, SHIPPINGLABEL, MAILINGLABEL, ITEMLABEL, GLIMPACT`.
