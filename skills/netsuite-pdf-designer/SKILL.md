@@ -168,7 +168,7 @@ rl --method POST --data @"$SP/raw.json"   # raw BFO XML, no data: {"xml": "<?xml
 
     | Type | Fields (default) |
     |---|---|
-    | `SHIPPINGLABEL` | `refNumber` (whole number, 0 hides the ref line), `shipAddress` (text) |
+    | `SHIPPINGLABEL` | `refNumber` (whole number, 0 hides the ref line; rows built from `transactionIds` always use 0), `shipAddress` (text) |
     | `MAILINGLABEL` | `address` (text) |
     | `ITEMLABEL` | `id`, `price`, `serialnumber` (text), `upc` (true/false), `skuUpcBarcode` (text, defaults to `id`) |
 
@@ -313,10 +313,14 @@ Restore = step 6 with the backup's contents as the draft:
    through it is the reference to compare against. For a saved search, the body is
    `{printType: "SEARCH", templateId: 453, searchId: "customsearch_…"}` (or `source` for a draft).
    Mention `truncated: true` when the search had more rows than the preview shows. Labels: saved
-   and draft, always **approximate**. Their rows are rebuilt with SuiteQL, and four things are
-   **guesses until compared with a label printed from the NetSuite UI**: the captions, the ref
-   number (the transaction number's digits), the price format, and the base-currency price at the
-   base price level. Say so when you show one. Other print types (price list, GL impact, bill of
+   and draft, always **approximate**. Their rows are rebuilt with SuiteQL. Compared with NetSuite's
+   own Print Shipping Labels output in SB2 (2026-10-26): the `Ship To` caption and the ship
+   address match, and NetSuite printed no ref line for invoices or cash sales, so rows built from
+   ids use `refNumber` 0 (what feeds it is unknown; pass `labels` to show the line). That print
+   used NetSuite's basic label layout, so it checks the data, not the template's rendering. Still
+   **guesses**: the `Ref #` caption, and for item labels the price format and the base-currency
+   price at the base price level (no item or mailing label print was compared). Say so when you
+   show one. Other print types (price list, GL impact, bill of
    materials): no preview in this version; read, validate and save still work. **Check templates that loop over `records`** (the
    Print Checks batch list) can't be previewed either: before rendering, run
    `grep -Eq '<#list[[:space:]]+records[[:space:]]' "$SP/pdf-base-<id>.xml"` and, on a match, say

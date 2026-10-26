@@ -70,17 +70,18 @@ define(["require", "exports", "N/query", "../file-cabinet/index.js"], function (
         MAILINGLABEL: 'customer, vendor or contact',
         ITEMLABEL: 'item',
     };
-    // The ref line shows the transaction number's digits ("SO06" → 6); a guess until compared with a UI print.
+    // NetSuite's own print showed no ref line for invoices, cash sales or orders, even with a numeric PO # (SB2,
+    // 2026-10-26), and what feeds refNumber is unknown, so loaded rows leave it at 0; synthetic labels can set it.
     const loadShippingLabels = (ids, placeholders) => {
         const rows = query.runSuiteQL({
             query: /* sql */ `
-      SELECT txn.id, NVL(TO_NUMBER(REGEXP_REPLACE(txn.tranid, '[^0-9]', '')), 0) AS refnumber, address.addrtext AS shipaddress
+      SELECT txn.id, address.addrtext AS shipaddress
       FROM transaction txn
       LEFT JOIN transactionshippingaddress address ON address.nkey = txn.shippingaddress
       WHERE txn.id IN (${placeholders})`,
             params: ids,
         }).asMappedResults();
-        return new Map(rows.map((row) => [Number(row.id), { refNumber: Number(row.refnumber), shipAddress: row.shipaddress ?? '' }]));
+        return new Map(rows.map((row) => [Number(row.id), { refNumber: 0, shipAddress: row.shipaddress ?? '' }]));
     };
     // The generic entity table fails this join (SB2, 2026-10-26), so each addressable entity type is queried in turn.
     const loadMailingLabels = (ids, placeholders) => {
