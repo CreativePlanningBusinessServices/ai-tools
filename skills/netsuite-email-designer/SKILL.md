@@ -329,12 +329,19 @@ The email designer previews the body; the PDF an email carries belongs to the
    statement form id, and never present a draft (approximate) statement as the attachment.
 4. **Hand off.** Load `netsuite-pdf-designer` and give it that request, complete, for the same
    sample record. It skips its own steps 1 and 2 (there is no template to resolve, and the sample
-   is already chosen) and writes the PDF next to the email preview, as
-   `$SP/pdf-attachment-<record or customer id>.pdf` (the email designer's `$SP`). Both renders are read-only (email saved mode; PDF native
-   or saved statement), so they're safe in production.
+   is already chosen). Keep this skill's `rl` and `$SP`: don't define the PDF designer's helper or
+   work folder in the same shell, and call the PDF RESTlet by its full ids instead:
+   ```bash
+   netsuite-cli restlet call --account <alias> --script customscript_cp_pdf_template_rl --deploy customdeploy_cp_pdf_template_rl --method POST --data @"$SP/attachment-request.json" > "$SP/attachment-out.json"
+   jq -j .pdf "$SP/attachment-out.json" | base64 -D > "$SP/pdf-attachment-<record or customer id>.pdf"
+   ```
+   Both renders are read-only (email saved mode; PDF native or saved statement), so they're safe
+   in production.
 5. **Show both.** Send the email preview (with its banner, step 3) and the PDF in one SendUserFile
-   call (render display), as the turn's last action. The caption names the template, the account,
-   the sample record and `attachment: what form <id> prints` (or `the record's own form`).
+   call (render display), as the turn's last action; the PDF designer's own send and file names
+   don't apply here. The caption names the template, the account, the sample record and
+   `attachment: what form <id> prints` (or `the record's own form`). If the PDF render returns an
+   `{error}`, still send the email preview, alone, and report the error in one line.
 6. **Edits.** Body and subject changes stay here. A change to the PDF goes to the template the
    form prints with, through the PDF designer's own workflow. The user names that template, or the
    form's printing settings do (`https://$NS_HOST.app.netsuite.com/app/common/custom/custform.nl?id=<formId>`
