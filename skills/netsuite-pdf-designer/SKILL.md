@@ -108,6 +108,7 @@ rl --method POST --data '{"printType": "STATEMENT", "entityId": 789, "formId": 2
 rl --method POST --data @"$SP/draft.json"   # draft statement: {"printType": "STATEMENT", "source": "<?xml…", "entityId": 789}
 rl --method POST --data '{"printType": "SEARCH", "templateId": 453, "searchId": "customsearch_cp_balances", "limit": 50}'   # saved search
 rl --method POST --data '{"printType": "TRANSACTION", "native": true, "record": {"type": "invoice", "id": 456}, "formId": 159}'   # what the form prints
+rl --method POST --data '{"printType": "GLIMPACT", "native": true, "record": {"type": "invoice", "id": 456}}'                    # GL impact (native only)
 rl --method POST --data '{"printType": "PICKINGTICKET", "templateId": 8, "record": {"type": "salesorder", "id": 789}}'           # picking ticket
 rl --method POST --data '{"printType": "PACKINGSLIP", "templateId": 41, "record": {"type": "itemfulfillment", "id": 987}}'      # packing slip
 rl --method POST --data '{"printType": "ITEMLABEL", "templateId": 26, "itemIds": [101, 102], "startLabel": 1}'                 # item labels
@@ -138,6 +139,10 @@ rl --method POST --data @"$SP/raw.json"   # raw BFO XML, no data: {"xml": "<?xml
     as the Email button's "attach PDF" does). Returns the PDF and the merged `xml`.
   - Picking tickets (`formId`, `shipgroup`, `location` optional) and packing slips (`formId`
     optional): PDF only, `xml` is `null`.
+  - GL impact (`GLIMPACT`): `record` only (no `formId`). Returns the PDF and the merged `xml`, and
+    `notes` says NetSuite prints the account's GL impact template, so it can't choose the template
+    being edited. Saved and draft GL impact renders are refused for now (`GLIMPACT has a native
+    preview only for now`). A transaction with no GL impact gets NetSuite's own error.
   - A form that isn't set to an advanced template prints NetSuite's basic layout, so a native
     render shows what the form prints, not necessarily the template being edited.
 - **Picking ticket** (`PICKINGTICKET`): `record` is the sales order (`salesorder` only). Saved and
@@ -182,7 +187,7 @@ rl --method POST --data @"$SP/raw.json"   # raw BFO XML, no data: {"xml": "<?xml
   `{"labelCount": 2, "startLabel": 1}`. A source that never reads `records`, or has no `<body>`,
   is refused. A numeric 12- or 13-digit item code draws as a Code 128 barcode in the preview (NetSuite
   draws UPC-A or EAN-13), and `notes` says so.
-- Other print types answer `<printType> has no preview yet — supported: TRANSACTION, STATEMENT, SEARCH, PICKINGTICKET, PACKINGSLIP, SHIPPINGLABEL, MAILINGLABEL, ITEMLABEL`.
+- Other print types answer `<printType> has no preview yet — supported: TRANSACTION, STATEMENT, SEARCH, PICKINGTICKET, PACKINGSLIP, SHIPPINGLABEL, MAILINGLABEL, ITEMLABEL, GLIMPACT (native)`.
 - **Statement**: `entityId` (customer) is required; `statementDate` (default today), `startDate`
   (default none: the whole history) and `openTransactionsOnly` (boolean, default false) are
   optional, dates in the user's NetSuite format (`MM/DD/YYYY` in CP's accounts). Saved and draft
@@ -199,7 +204,7 @@ rl --method POST --data @"$SP/raw.json"   # raw BFO XML, no data: {"xml": "<?xml
 
 ```json
 { "mode": "saved" | "draft" | "native" | "raw",
-  "printType": "TRANSACTION" | "STATEMENT" | "SEARCH" | "PICKINGTICKET" | "PACKINGSLIP" | "SHIPPINGLABEL" | "MAILINGLABEL" | "ITEMLABEL" | "RAW",
+  "printType": "TRANSACTION" | "STATEMENT" | "SEARCH" | "PICKINGTICKET" | "PACKINGSLIP" | "SHIPPINGLABEL" | "MAILINGLABEL" | "ITEMLABEL" | "GLIMPACT" | "RAW",
   "record": { "type": "invoice", "id": 456, "formId": 159 } | { "entityId": 789, "formId": 210 } | { "entityId": 789 }
           | { "searchId": "customsearch_…", "searchType": "customer", "resultCount": 50, "truncated": false }
           | { "labelCount": 2, "startLabel": 1 } | null,
@@ -263,7 +268,8 @@ Restore = step 6 with the backup's contents as the draft:
    for how its custom-record templates are stored. Before creating one, GET a template the account
    already uses for that record (or ask how it's printed today, usually by a script), and take its
    print type. `TRANSACTION` (custom records included), `STATEMENT`, `SEARCH`, `PICKINGTICKET`,
-   `PACKINGSLIP` and the three label types can be previewed in this version (step 3).
+   `PACKINGSLIP` and the three label types can be previewed in this version (step 3); `GLIMPACT`
+   natively only, which shows NetSuite's GL impact print rather than a draft of the template.
 2. **Pick a sample record** of the template's `tranType`. If the user named one, use it. Otherwise
    list five recent candidates that have lines and ask the user to choose:
    ```bash
@@ -294,6 +300,10 @@ Restore = step 6 with the backup's contents as the draft:
    - shipping: `SELECT txn.id, txn.tranid, txn.type FROM transaction txn JOIN transactionshippingaddress address ON address.nkey = txn.shippingaddress WHERE address.addrtext IS NOT NULL AND txn.type IN ('SalesOrd', 'ItemShip') ORDER BY txn.id DESC FETCH FIRST 5 ROWS ONLY`.
 
    When the user only wants to see the layout, use synthetic `labels` instead and say so.
+   For a GL impact, a recent transaction that posts to the GL:
+   `SELECT DISTINCT txn.id, txn.tranid, txn.type FROM transaction txn JOIN transactionaccountingline accountingLine ON accountingLine.transaction = txn.id WHERE txn.posting = 'T' ORDER BY txn.id DESC FETCH FIRST 5 ROWS ONLY`
+   (`transactionaccountingline` also has non-posting transactions such as opportunities, hence the
+   `posting` filter).
 3. **Check what can be previewed.** Called from the email designer for an attachment: run the request
    you were given as is (a native render with the sender's form, or a saved statement with its
    form and `openTransactionsOnly`), skip steps 1 and 2, and hand back the PDF. The email
@@ -323,8 +333,10 @@ Restore = step 6 with the backup's contents as the draft:
    used NetSuite's basic label layout, so it checks the data, not the template's rendering. Still
    **guesses**: the `Ref #` caption, and for item labels the price format and the base-currency
    price at the base price level (no item or mailing label print was compared). Say so when you
-   show one. Other print types (price list, GL impact, bill of
-   materials): no preview in this version; read, validate and save still work. **Check templates that loop over `records`** (the
+   show one. GL impact: native only (`{printType: "GLIMPACT", native: true, record}`), captioned
+   `native (NetSuite's GL impact print)`; it doesn't render the template being edited. Other print
+   types (price list, bill of materials): no preview in this version; read, validate and save
+   still work. **Check templates that loop over `records`** (the
    Print Checks batch list) can't be previewed either: before rendering a `TRANSACTION` template,
    run `grep -Eq '<#list[[:space:]]+records[[:space:]]' "$SP/pdf-base-<id>.xml"` and, on a match,
    say so instead of calling the RESTlet (which refuses them too, naming Print Checks). Validate and
