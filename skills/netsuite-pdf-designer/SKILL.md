@@ -259,7 +259,12 @@ Restore = step 6 with the backup's contents as the draft:
    (`createdfrom` lives on the main line; `transaction.createdfrom` is not a SuiteQL column).
    Only a fulfillment created from a sales order can be previewed. If the account has none, use
    a sales order and say the preview is approximate.
-3. **Check what can be previewed.** Transactions and custom records: saved and draft. Saved
+3. **Check what can be previewed.** Called from the email designer for an attachment: run the request
+   you were given as is (a native render with the sender's form, or a saved statement with its
+   form and `openTransactionsOnly`), skip steps 1 and 2, and hand back the PDF. The email
+   designer's "Emails that attach a PDF" owns the rest: its `rl` and work folder, the file name,
+   the one combined send, and an `{error}` (the email preview still goes out).
+   Transactions and custom records: saved and draft. Saved
    searches: saved and draft, against the search's first rows (exact). Picking tickets and packing
    slips: saved and draft (a packing slip from a sales order alone is approximate), plus native.
    **Native** (`native: true`) answers "what will NetSuite actually print or attach": run it when
