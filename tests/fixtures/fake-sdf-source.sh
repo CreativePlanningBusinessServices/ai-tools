@@ -30,6 +30,8 @@ echo 'define(["require", "exports", "N/log", "../netsuite_modules/pdf-template/i
 echo 'define(["require", "exports", "N/render", "../file-cabinet/index.js", "./statement-data.js", "./label-data.js"], function () {});' > "$out/netsuite_modules/pdf-template/index.js"
 echo 'define(["require", "exports", "N/format", "N/query", "../file-cabinet/index.js"], function () {});' > "$out/netsuite_modules/pdf-template/statement-data.js"
 echo 'define(["require", "exports", "N/query", "../file-cabinet/index.js"], function () {});' > "$out/netsuite_modules/pdf-template/label-data.js"
+echo 'define(["require", "exports", "../file-cabinet/index.js"], function () {});' > "$out/netsuite_modules/pdf-template/freemarker-literal.js"
+echo 'define(["require", "exports", "N/query", "../file-cabinet/index.js"], function () {});' > "$out/netsuite_modules/pdf-template/gl-data.js"
 EOF
   printf 'FileCabinet/\nnode_modules/\n' > "$dir/.gitignore"
   fake_commit "$dir" base
