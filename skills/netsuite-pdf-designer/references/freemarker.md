@@ -53,7 +53,7 @@ there. `pdf-validate.sh --printtype` warns about that (`netsuite.roots`).
 | `SEARCH` | `results`, one row per search result | saved and draft [probe-print-types] |
 | `PICKINGTICKET` | `record` (the sales order) | saved, draft and native; `${record@title}` previews as "Picking Ticket" [probe-print-types] |
 | `PACKINGSLIP` | `record` (the item fulfillment), `salesorder`, `returnForm` | saved, draft and native; `${record@title}` previews as "Packing Slip"; `returnForm` is filled by NetSuite's own print only, so its section never shows in a preview [probe-print-types] |
-| `SHIPPINGLABEL`, `MAILINGLABEL`, `ITEMLABEL` | `records[…]` (one entry per label) and `startlabel` | not yet |
+| `SHIPPINGLABEL`, `MAILINGLABEL`, `ITEMLABEL` | `records[…]` (one entry per label) and `startlabel` | saved and draft, approximate: the RESTlet injects the rows as FreeMarker literals, because custom data sources turn numbers into strings and break the label grid arithmetic |
 | `GLIMPACT` | `record.line` (accounting lines), `label` (captions) | not yet |
 | Print Checks (`TRANSACTION`, Check) | `<#list records as check>` | never (a batch, not one record) |
 

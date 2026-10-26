@@ -8,7 +8,7 @@ pkg="$tmp/pkg"
 js_root="$pkg/FileCabinet/SuiteScripts/CreativePlanning"
 for file in RESTlet/cp_saved_search_rl.js RESTlet/cp_file_cabinet_rl.js RESTlet/cp_mr_driver_rl.js RESTlet/cp_email_template_rl.js RESTlet/cp_pdf_template_rl.js \
             netsuite_modules/saved-search-serializer/index.js netsuite_modules/file-cabinet/index.js \
-            netsuite_modules/email-template/index.js netsuite_modules/pdf-template/index.js netsuite_modules/pdf-template/statement-data.js netsuite_modules/extra/index.js; do
+            netsuite_modules/email-template/index.js netsuite_modules/pdf-template/index.js netsuite_modules/pdf-template/statement-data.js netsuite_modules/pdf-template/label-data.js netsuite_modules/extra/index.js; do
   mkdir -p "$js_root/$(dirname "$file")"
   printf 'define([], function () {});\n// %s\n' "$file" > "$js_root/$file"
 done

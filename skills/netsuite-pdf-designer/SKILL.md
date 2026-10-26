@@ -110,6 +110,8 @@ rl --method POST --data '{"printType": "SEARCH", "templateId": 453, "searchId": 
 rl --method POST --data '{"printType": "TRANSACTION", "native": true, "record": {"type": "invoice", "id": 456}, "formId": 159}'   # what the form prints
 rl --method POST --data '{"printType": "PICKINGTICKET", "templateId": 8, "record": {"type": "salesorder", "id": 789}}'           # picking ticket
 rl --method POST --data '{"printType": "PACKINGSLIP", "templateId": 41, "record": {"type": "itemfulfillment", "id": 987}}'      # packing slip
+rl --method POST --data '{"printType": "ITEMLABEL", "templateId": 26, "itemIds": [101, 102], "startLabel": 1}'                 # item labels
+rl --method POST --data @"$SP/labels.json"   # synthetic labels: {"printType": "SHIPPINGLABEL", "source": "<?xml…", "labels": [{"refNumber": 12345, "shipAddress": "1 Test Street"}]}
 rl --method POST --data @"$SP/raw.json"   # raw BFO XML, no data: {"xml": "<?xml…"}
 ```
 
@@ -155,7 +157,29 @@ rl --method POST --data @"$SP/raw.json"   # raw BFO XML, no data: {"xml": "<?xml
   or a saved statement names its documents `<html>`, which `xmlToPdf` refuses, so the RESTlet
   renames them to `<pdf>` and lists `root: html → pdf` in `adaptations`; `pdf-validate.sh --merged`
   accepts either form.
-- Other print types answer `<printType> has no preview yet — supported: TRANSACTION, STATEMENT, SEARCH, PICKINGTICKET, PACKINGSLIP`.
+- **Labels** (`SHIPPINGLABEL`, `MAILINGLABEL`, `ITEMLABEL`): NetSuite has no label render function,
+  so the RESTlet builds the label rows and injects them into its copy of the source, right after
+  `<body …>`, as `<#assign records = [ … ]><#assign startlabel = N>`. Every label preview is
+  `"approximate": true`. Pass exactly one data input, at most 100 entries:
+  - record ids: `transactionIds` (shipping), `entityIds` (mailing: customers, vendors or contacts)
+    or `itemIds` (item), read with SuiteQL. Labels keep the order of the ids, and every id that
+    doesn't resolve is named in the error;
+  - or `labels`, rows you write yourself (no customer data), checked against the type's fields:
+
+    | Type | Fields (default) |
+    |---|---|
+    | `SHIPPINGLABEL` | `refNumber` (whole number, 0 hides the ref line), `shipAddress` (text) |
+    | `MAILINGLABEL` | `address` (text) |
+    | `ITEMLABEL` | `id`, `price`, `serialnumber` (text), `upc` (true/false), `skuUpcBarcode` (text, defaults to `id`) |
+
+  `startLabel` (whole number, default 1) leaves the first slots blank. Text is XML-escaped and its
+  line breaks become `<br />`, so data never runs as markup or FreeMarker. `${label.X@label}`
+  captions become fixed English text (`Ref #`, `Ship To`, `Address`, `Price`, `UPC`, `Item`; any
+  other X prints as X) and are listed in `adaptations`. `record` in the response is
+  `{"labelCount": 2, "startLabel": 1}`. A source that never reads `records`, or has no `<body>`,
+  is refused. A numeric 12- or 13-digit item code draws as a Code 128 barcode in the preview (NetSuite
+  draws UPC-A or EAN-13), and `notes` says so.
+- Other print types answer `<printType> has no preview yet — supported: TRANSACTION, STATEMENT, SEARCH, PICKINGTICKET, PACKINGSLIP, SHIPPINGLABEL, MAILINGLABEL, ITEMLABEL`.
 - **Statement**: `entityId` (customer) is required; `statementDate` (default today), `startDate`
   (default none: the whole history) and `openTransactionsOnly` (boolean, default false) are
   optional, dates in the user's NetSuite format (`MM/DD/YYYY` in CP's accounts). Saved and draft
@@ -172,11 +196,12 @@ rl --method POST --data @"$SP/raw.json"   # raw BFO XML, no data: {"xml": "<?xml
 
 ```json
 { "mode": "saved" | "draft" | "native" | "raw",
-  "printType": "TRANSACTION" | "STATEMENT" | "SEARCH" | "PICKINGTICKET" | "PACKINGSLIP" | "RAW",
+  "printType": "TRANSACTION" | "STATEMENT" | "SEARCH" | "PICKINGTICKET" | "PACKINGSLIP" | "SHIPPINGLABEL" | "MAILINGLABEL" | "ITEMLABEL" | "RAW",
   "record": { "type": "invoice", "id": 456, "formId": 159 } | { "entityId": 789, "formId": 210 } | { "entityId": 789 }
-          | { "searchId": "customsearch_…", "searchType": "customer", "resultCount": 50, "truncated": false } | null,
+          | { "searchId": "customsearch_…", "searchType": "customer", "resultCount": 50, "truncated": false }
+          | { "labelCount": 2, "startLabel": 1 } | null,
   "pdf": "<base64>", "pdfBytes": 41318, "xml": "<merged BFO markup>" | null,
-  "approximate": true,                     // draft statements; a packing slip from a sales order
+  "approximate": true,                     // draft statements; a packing slip from a sales order; labels
   "notes": ["returnForm isn't supplied…"], // when something the template reads isn't previewed
   "adaptations": ["title: Packing Slip"] } // what the RESTlet changed on its copy of the source
 ```
@@ -234,8 +259,8 @@ Restore = step 6 with the backup's contents as the draft:
    takes that template's type. The custom-record row is unconfirmed: no account has been checked
    for how its custom-record templates are stored. Before creating one, GET a template the account
    already uses for that record (or ask how it's printed today, usually by a script), and take its
-   print type. `TRANSACTION` (custom records included), `STATEMENT`, `SEARCH`, `PICKINGTICKET`
-   and `PACKINGSLIP` can be previewed in this version (step 3).
+   print type. `TRANSACTION` (custom records included), `STATEMENT`, `SEARCH`, `PICKINGTICKET`,
+   `PACKINGSLIP` and the three label types can be previewed in this version (step 3).
 2. **Pick a sample record** of the template's `tranType`. If the user named one, use it. Otherwise
    list five recent candidates that have lines and ask the user to choose:
    ```bash
@@ -259,6 +284,13 @@ Restore = step 6 with the backup's contents as the draft:
    (`createdfrom` lives on the main line; `transaction.createdfrom` is not a SuiteQL column).
    Only a fulfillment created from a sales order can be previewed. If the account has none, use
    a sales order and say the preview is approximate.
+   For labels, real records (ask which ones, or list candidates):
+   - item: `SELECT item.id, item.itemid, item.upccode FROM item WHERE item.isinactive = 'F' AND item.upccode IS NOT NULL FETCH FIRST 5 ROWS ONLY`
+     (no rows: drop the `upccode` condition);
+   - mailing: `SELECT customer.id, customer.entityid FROM customer JOIN entityaddress address ON address.nkey = customer.defaultbillingaddress WHERE address.addrtext IS NOT NULL ORDER BY customer.id DESC FETCH FIRST 5 ROWS ONLY`;
+   - shipping: `SELECT txn.id, txn.tranid, txn.type FROM transaction txn JOIN transactionshippingaddress address ON address.nkey = txn.shippingaddress WHERE address.addrtext IS NOT NULL AND txn.type IN ('SalesOrd', 'ItemShip') ORDER BY txn.id DESC FETCH FIRST 5 ROWS ONLY`.
+
+   When the user only wants to see the layout, use synthetic `labels` instead and say so.
 3. **Check what can be previewed.** Called from the email designer for an attachment: run the request
    you were given as is (a native render with the sender's form, or a saved statement with its
    form and `openTransactionsOnly`), skip steps 1 and 2, and hand back the PDF. The email
@@ -280,9 +312,12 @@ Restore = step 6 with the backup's contents as the draft:
    in its caption, and tell the user the numbers are rebuilt. When a form for the template exists, a saved render
    through it is the reference to compare against. For a saved search, the body is
    `{printType: "SEARCH", templateId: 453, searchId: "customsearch_…"}` (or `source` for a draft).
-   Mention `truncated: true` when the search had more rows than the preview shows. Other print types
-   (labels, price list, GL impact, bill of materials): no preview in this version; read, validate
-   and save still work. **Check templates that loop over `records`** (the
+   Mention `truncated: true` when the search had more rows than the preview shows. Labels: saved
+   and draft, always **approximate**. Their rows are rebuilt with SuiteQL, and four things are
+   **guesses until compared with a label printed from the NetSuite UI**: the captions, the ref
+   number (the transaction number's digits), the price format, and the base-currency price at the
+   base price level. Say so when you show one. Other print types (price list, GL impact, bill of
+   materials): no preview in this version; read, validate and save still work. **Check templates that loop over `records`** (the
    Print Checks batch list) can't be previewed either: before rendering, run
    `grep -Eq '<#list[[:space:]]+records[[:space:]]' "$SP/pdf-base-<id>.xml"` and, on a match, say
    so instead of calling the RESTlet (which refuses them too, naming Print Checks). Validate and
@@ -302,7 +337,9 @@ Restore = step 6 with the backup's contents as the draft:
    the account, the sample record and the mode: `saved`, `draft`, step 3's approximate statement
    label, `native (what the form prints)`, `saved (approximate: sales order stands in for the
    fulfillment)` / `draft (approximate: …)` for any packing slip rendered from a sales order (the
-   response says `approximate: true`), or `raw (BFO markup, no data)`. Report any `notes` and `adaptations` in one line
+   response says `approximate: true`), `saved (approximate: label rows rebuilt with SuiteQL)` /
+   `draft (approximate: …)` for labels (add `synthetic labels` when you passed `labels`), or
+   `raw (BFO markup, no data)`. Report any `notes` and `adaptations` in one line
    each. A result with `xml: null` (native picking tickets and packing slips) has no merged markup,
    so skip `pdf-validate.sh --merged` for it.
    When one turn produces several previews, send them all in that one call and name each in the

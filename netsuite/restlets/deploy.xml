@@ -10,6 +10,7 @@
         <path>~/FileCabinet/SuiteScripts/CreativePlanning/RESTlet/cp_pdf_template_rl.js</path>
         <path>~/FileCabinet/SuiteScripts/CreativePlanning/netsuite_modules/pdf-template/index.js</path>
         <path>~/FileCabinet/SuiteScripts/CreativePlanning/netsuite_modules/pdf-template/statement-data.js</path>
+        <path>~/FileCabinet/SuiteScripts/CreativePlanning/netsuite_modules/pdf-template/label-data.js</path>
     </files>
     <objects>
         <path>~/Objects/Scripts/RESTlet/customscript_cp_saved_search_rl.xml</path>

@@ -20,7 +20,7 @@ mkdir -p "$tmp/pkg"
 assert_eq "$(run_sync main "$tmp/pkg")" 0 "good ref exits 0"
 for file in RESTlet/cp_saved_search_rl.js RESTlet/cp_file_cabinet_rl.js RESTlet/cp_mr_driver_rl.js RESTlet/cp_email_template_rl.js RESTlet/cp_pdf_template_rl.js \
             netsuite_modules/saved-search-serializer/index.js netsuite_modules/file-cabinet/index.js \
-            netsuite_modules/email-template/index.js netsuite_modules/pdf-template/index.js netsuite_modules/pdf-template/statement-data.js; do
+            netsuite_modules/email-template/index.js netsuite_modules/pdf-template/index.js netsuite_modules/pdf-template/statement-data.js netsuite_modules/pdf-template/label-data.js; do
   if [ -f "$tmp/pkg/$js_root/$file" ]; then pass "copied $file"; else fail "copied $file"; fi
 done
 for name in saved_search file_cabinet mr_driver email_template pdf_template; do
