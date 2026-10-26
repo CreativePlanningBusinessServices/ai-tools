@@ -172,8 +172,11 @@ rl --method POST --data @"$SP/raw.json"   # raw BFO XML, no data: {"xml": "<?xml
     | `MAILINGLABEL` | `address` (text) |
     | `ITEMLABEL` | `id`, `price`, `serialnumber` (text), `upc` (true/false), `skuUpcBarcode` (text, defaults to `id`) |
 
-  `startLabel` (whole number, default 1) leaves the first slots blank. Text is XML-escaped and its
-  line breaks become `<br />`, so data never runs as markup or FreeMarker. `${label.X@label}`
+  `startLabel` (whole number, default 1) leaves the first slots blank. Data never runs as
+  FreeMarker or markup: text is XML-escaped, unless the template's `<#ftl>` header auto-escapes
+  (the standard item label does: `output_format="XML" auto_esc=true`), in which case NetSuite
+  escapes it. Line breaks become `<br />` in `shipAddress` and `address` (spaces in auto-escaping
+  templates) and spaces in every other field, which may sit in an attribute. `${label.X@label}`
   captions become fixed English text (`Ref #`, `Ship To`, `Address`, `Price`, `UPC`, `Item`; any
   other X prints as X) and are listed in `adaptations`. `record` in the response is
   `{"labelCount": 2, "startLabel": 1}`. A source that never reads `records`, or has no `<body>`,
@@ -322,10 +325,11 @@ Restore = step 6 with the backup's contents as the draft:
    price at the base price level (no item or mailing label print was compared). Say so when you
    show one. Other print types (price list, GL impact, bill of
    materials): no preview in this version; read, validate and save still work. **Check templates that loop over `records`** (the
-   Print Checks batch list) can't be previewed either: before rendering, run
-   `grep -Eq '<#list[[:space:]]+records[[:space:]]' "$SP/pdf-base-<id>.xml"` and, on a match, say
-   so instead of calling the RESTlet (which refuses them too, naming Print Checks). Validate and
-   save still work for them.
+   Print Checks batch list) can't be previewed either: before rendering a `TRANSACTION` template,
+   run `grep -Eq '<#list[[:space:]]+records[[:space:]]' "$SP/pdf-base-<id>.xml"` and, on a match,
+   say so instead of calling the RESTlet (which refuses them too, naming Print Checks). Validate and
+   save still work for them. Label templates also read `records`, even with `<#list records`, and
+   are previewed normally: never run this check on them.
 4. **Preview.** `POST` (saved mode first), then write the PDF, keeping the merged markup for the
    validator:
    ```bash

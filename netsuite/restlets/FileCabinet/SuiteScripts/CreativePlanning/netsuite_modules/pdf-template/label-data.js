@@ -40,7 +40,8 @@ define(["require", "exports", "N/query", "../file-cabinet/index.js"], function (
         const bodyTag = /<body\b[^>]*>/i.exec(source);
         if (bodyTag === null)
             throw new index_js_1.ValidationError(exports.LABEL_BODY_REFUSAL);
-        const assigns = `<#assign records = [${rows.map(toFreemarkerHash).join(', ')}]><#assign startlabel = ${startLabel}>`;
+        const autoEscapes = templateAutoEscapes(source);
+        const assigns = `<#assign records = [${rows.map((row) => toFreemarkerHash(row, autoEscapes)).join(', ')}]><#assign startlabel = ${startLabel}>`;
         const insertAt = bodyTag.index + bodyTag[0].length;
         const injected = source.slice(0, insertAt) + assigns + source.slice(insertAt);
         const captioned = replaceCaptions(injected);
@@ -70,7 +71,7 @@ define(["require", "exports", "N/query", "../file-cabinet/index.js"], function (
         MAILINGLABEL: 'customer, vendor or contact',
         ITEMLABEL: 'item',
     };
-    // NetSuite's own print showed no ref line for invoices, cash sales or orders, even with a numeric PO # (SB2,
+    // NetSuite's own print showed no ref line for invoices or cash sales, even with a numeric PO # (SB2,
     // 2026-10-26), and what feeds refNumber is unknown, so loaded rows leave it at 0; synthetic labels can set it.
     const loadShippingLabels = (ids, placeholders) => {
         const rows = query.runSuiteQL({
@@ -110,7 +111,7 @@ define(["require", "exports", "N/query", "../file-cabinet/index.js"], function (
         TO_CHAR(pricing.unitprice, 'FM999,999,990.00') AS price
       FROM item
       LEFT JOIN pricing ON pricing.item = item.id AND pricing.pricelevel = 1 AND pricing.quantity = 1
-        AND pricing.currency = (SELECT id FROM currency WHERE isbasecurrency = 'T')
+        AND pricing.currency = (SELECT MIN(id) FROM currency WHERE isbasecurrency = 'T')
       WHERE item.id IN (${placeholders})`,
             params: ids,
         }).asMappedResults();
@@ -121,16 +122,29 @@ define(["require", "exports", "N/query", "../file-cabinet/index.js"], function (
     // \{ keeps a value like "${x}" from interpolating; FreeMarker prints it as "${x}".
     const toFreemarkerString = (text) => `"${text.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\{/g, '\\{')}"`;
     exports.toFreemarkerString = toFreemarkerString;
-    const toFreemarkerHash = (row) => `{${Object.entries(row).map(([field, value]) => `${(0, exports.toFreemarkerString)(field)}: ${toFreemarkerValue(value)}`).join(', ')}}`;
-    const toFreemarkerValue = (value) => (typeof value === 'string' ? (0, exports.toFreemarkerString)(toLabelMarkup(value)) : String(value));
-    // Record addresses render with <br /> between lines, and data is never markup.
-    const toLabelMarkup = (text) => text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;')
-        .replace(/\r\n|\n|\r/g, '<br />');
+    const ADDRESS_FIELDS = ['shipAddress', 'address'];
+    const toFreemarkerHash = (row, autoEscapes) => `{${Object.entries(row).map(([field, value]) => `${(0, exports.toFreemarkerString)(field)}: ${toFreemarkerValue(field, value, autoEscapes)}`).join(', ')}}`;
+    const toFreemarkerValue = (field, value, autoEscapes) => (typeof value === 'string' ? (0, exports.toFreemarkerString)(toLabelText(field, value, autoEscapes)) : String(value));
+    // Data is never markup. An auto-escaping template escapes it on output, so escaping here would show "&amp;".
+    // Addresses break lines as record addresses do; other fields can sit in attributes (template 26's barcodes).
+    const toLabelText = (field, text, autoEscapes) => {
+        const escaped = autoEscapes ? text : text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+        const lineBreak = ADDRESS_FIELDS.includes(field) && !autoEscapes ? '<br />' : ' ';
+        return escaped.replace(/\r\n|\n|\r/g, lineBreak);
+    };
+    // An <#ftl output_format=…> header auto-escapes unless it says auto_esc=false: NetSuite's item label (26) does,
+    // its shipping and mailing labels (23, 25) don't.
+    const templateAutoEscapes = (source) => {
+        const header = /^\s*<#ftl\b([^>]*)>/.exec(source);
+        if (header === null)
+            return false;
+        return /\boutput_format\s*=\s*"(XML|HTML|XHTML)"/i.test(header[1]) && !/\bauto_esc\s*=\s*false\b/.test(header[1]);
+    };
     const readsRecords = (source) => (source.match(/\$\{[^}]*\}|<#[^>]*>/g) ?? []).some((code) => /\brecords\b/.test(code));
     const replaceCaptions = (source) => {
         const fields = [];
