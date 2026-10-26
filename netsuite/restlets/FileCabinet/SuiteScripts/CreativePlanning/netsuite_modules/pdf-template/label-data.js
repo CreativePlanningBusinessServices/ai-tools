@@ -1,7 +1,8 @@
-define(["require", "exports", "N/query", "../file-cabinet/index.js"], function (require, exports, query, index_js_1) {
+define(["require", "exports", "N/query", "../file-cabinet/index.js", "./freemarker-literal.js", "./freemarker-literal.js"], function (require, exports, query, index_js_1, freemarker_literal_js_1, freemarker_literal_js_2) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.toFreemarkerString = exports.loadLabelRows = exports.injectLabels = exports.parseLabelInput = exports.LABEL_BARCODE_NOTE = exports.LABEL_BODY_REFUSAL = exports.LABEL_RECORDS_REFUSAL = exports.LABEL_CAPTIONS = exports.LABEL_ID_KEYS = exports.LABEL_MAX_ROWS = exports.LABEL_PRINT_TYPES = void 0;
+    exports.loadLabelRows = exports.injectLabels = exports.parseLabelInput = exports.LABEL_BARCODE_NOTE = exports.LABEL_BODY_REFUSAL = exports.LABEL_RECORDS_REFUSAL = exports.LABEL_CAPTIONS = exports.LABEL_ID_KEYS = exports.LABEL_MAX_ROWS = exports.LABEL_PRINT_TYPES = exports.toFreemarkerString = void 0;
+    Object.defineProperty(exports, "toFreemarkerString", { enumerable: true, get: function () { return freemarker_literal_js_2.toFreemarkerString; } });
     exports.LABEL_PRINT_TYPES = ['SHIPPINGLABEL', 'MAILINGLABEL', 'ITEMLABEL'];
     exports.LABEL_MAX_ROWS = 100;
     exports.LABEL_ID_KEYS = {
@@ -37,13 +38,9 @@ define(["require", "exports", "N/query", "../file-cabinet/index.js"], function (
     const injectLabels = (source, rows, startLabel) => {
         if (!readsRecords(source))
             throw new index_js_1.ValidationError(exports.LABEL_RECORDS_REFUSAL);
-        const bodyTag = /<body\b[^>]*>/i.exec(source);
-        if (bodyTag === null)
-            throw new index_js_1.ValidationError(exports.LABEL_BODY_REFUSAL);
-        const autoEscapes = templateAutoEscapes(source);
-        const assigns = `<#assign records = [${rows.map((row) => toFreemarkerHash(row, autoEscapes)).join(', ')}]><#assign startlabel = ${startLabel}>`;
-        const insertAt = bodyTag.index + bodyTag[0].length;
-        const injected = source.slice(0, insertAt) + assigns + source.slice(insertAt);
+        const options = { autoEscapes: (0, freemarker_literal_js_1.templateAutoEscapes)(source), breakLines: (field) => ADDRESS_FIELDS.includes(field) };
+        const assigns = `<#assign records = ${(0, freemarker_literal_js_1.toFreemarkerLiteral)(rows, options)}><#assign startlabel = ${startLabel}>`;
+        const injected = (0, freemarker_literal_js_1.injectAfterBody)(source, assigns, exports.LABEL_BODY_REFUSAL);
         const captioned = replaceCaptions(injected);
         return {
             source: captioned.source,
@@ -119,32 +116,8 @@ define(["require", "exports", "N/query", "../file-cabinet/index.js"], function (
                 id: row.itemid, price: row.price ?? '', upc: row.isupca === 'T', serialnumber: '', skuUpcBarcode: row.skuupcbarcode,
             }]));
     };
-    // \{ keeps a value like "${x}" from interpolating; FreeMarker prints it as "${x}".
-    const toFreemarkerString = (text) => `"${text.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\{/g, '\\{')}"`;
-    exports.toFreemarkerString = toFreemarkerString;
+    // Record addresses break lines with <br /> when they render.
     const ADDRESS_FIELDS = ['shipAddress', 'address'];
-    const toFreemarkerHash = (row, autoEscapes) => `{${Object.entries(row).map(([field, value]) => `${(0, exports.toFreemarkerString)(field)}: ${toFreemarkerValue(field, value, autoEscapes)}`).join(', ')}}`;
-    const toFreemarkerValue = (field, value, autoEscapes) => (typeof value === 'string' ? (0, exports.toFreemarkerString)(toLabelText(field, value, autoEscapes)) : String(value));
-    // Data is never markup. An auto-escaping template escapes it on output, so escaping here would show "&amp;".
-    // Addresses break lines as record addresses do; other fields can sit in attributes (template 26's barcodes).
-    const toLabelText = (field, text, autoEscapes) => {
-        const escaped = autoEscapes ? text : text
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
-        const lineBreak = ADDRESS_FIELDS.includes(field) && !autoEscapes ? '<br />' : ' ';
-        return escaped.replace(/\r\n|\n|\r/g, lineBreak);
-    };
-    // An <#ftl output_format=…> header auto-escapes unless it says auto_esc=false: NetSuite's item label (26) does,
-    // its shipping and mailing labels (23, 25) don't.
-    const templateAutoEscapes = (source) => {
-        const header = /^\s*<#ftl\b([^>]*)>/.exec(source);
-        if (header === null)
-            return false;
-        return /\boutput_format\s*=\s*"(XML|HTML|XHTML)"/i.test(header[1]) && !/\bauto_esc\s*=\s*false\b/.test(header[1]);
-    };
     const readsRecords = (source) => (source.match(/\$\{[^}]*\}|<#[^>]*>/g) ?? []).some((code) => /\brecords\b/.test(code));
     const replaceCaptions = (source) => {
         const fields = [];

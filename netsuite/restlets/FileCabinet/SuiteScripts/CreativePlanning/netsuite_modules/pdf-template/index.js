@@ -1,7 +1,7 @@
-define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/search", "../file-cabinet/index.js", "./statement-data.js", "./label-data.js", "./label-data.js"], function (require, exports, log, query, record, render, search, index_js_1, statement_data_js_1, label_data_js_1, label_data_js_2) {
+define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/search", "../file-cabinet/index.js", "./statement-data.js", "./label-data.js", "./gl-data.js", "./label-data.js"], function (require, exports, log, query, record, render, search, index_js_1, statement_data_js_1, label_data_js_1, gl_data_js_1, label_data_js_2) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.formatStamp = exports.parseJsonObject = exports.parseTemplateRef = exports.adaptTitle = exports.renderTemplate = exports.backupTemplate = exports.describeTemplate = exports.SEARCH_MAX_LIMIT = exports.SEARCH_DEFAULT_LIMIT = exports.RETURN_FORM_NOTE = exports.GL_IMPACT_NOTE = exports.GL_IMPACT_NATIVE_ONLY_REFUSAL = exports.RAW_FREEMARKER_REFUSAL = exports.RAW_REFUSAL = exports.NATIVE_TEMPLATE_REFUSAL = exports.NATIVE_REFUSAL = exports.PRINT_CHECKS_REFUSAL = exports.FREEMARKER_HINT = exports.BACKUP_FOLDER = exports.LABEL_RECORDS_REFUSAL = exports.LABEL_BARCODE_NOTE = exports.ValidationError = void 0;
+    exports.formatStamp = exports.parseJsonObject = exports.parseTemplateRef = exports.adaptTitle = exports.renderTemplate = exports.backupTemplate = exports.describeTemplate = exports.SEARCH_MAX_LIMIT = exports.SEARCH_DEFAULT_LIMIT = exports.RETURN_FORM_NOTE = exports.GL_IMPACT_NOTE = exports.RAW_FREEMARKER_REFUSAL = exports.RAW_REFUSAL = exports.NATIVE_TEMPLATE_REFUSAL = exports.NATIVE_REFUSAL = exports.PRINT_CHECKS_REFUSAL = exports.FREEMARKER_HINT = exports.BACKUP_FOLDER = exports.LABEL_RECORDS_REFUSAL = exports.LABEL_BARCODE_NOTE = exports.ValidationError = void 0;
     Object.defineProperty(exports, "ValidationError", { enumerable: true, get: function () { return index_js_1.ValidationError; } });
     Object.defineProperty(exports, "LABEL_BARCODE_NOTE", { enumerable: true, get: function () { return label_data_js_2.LABEL_BARCODE_NOTE; } });
     Object.defineProperty(exports, "LABEL_RECORDS_REFUSAL", { enumerable: true, get: function () { return label_data_js_2.LABEL_RECORDS_REFUSAL; } });
@@ -14,7 +14,6 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
     exports.NATIVE_TEMPLATE_REFUSAL = 'native renders what the form prints, so it takes no templateId, scriptId or source';
     exports.RAW_REFUSAL = 'xml must be BFO markup: an <?xml …?> declaration and a <pdf>, <pdfset> or <html> root';
     exports.RAW_FREEMARKER_REFUSAL = 'raw XML has no FreeMarker; use source';
-    exports.GL_IMPACT_NATIVE_ONLY_REFUSAL = 'GLIMPACT has a native preview only for now — pass native: true with record {type, id}';
     exports.GL_IMPACT_NOTE = 'NetSuite prints the account\'s GL impact template; a native preview can\'t choose another';
     const BACKUP_KEYS = ['id', 'scriptid'];
     const TRANSACTION_RENDER_KEYS = ['templateId', 'scriptId', 'source', 'record', 'printType'];
@@ -23,6 +22,7 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
     const SEARCH_RENDER_KEYS = ['printType', 'templateId', 'scriptId', 'source', 'searchId', 'limit', 'resultsAlias'];
     const NATIVE_TRANSACTION_KEYS = ['printType', 'native', 'record', 'formId'];
     const GL_IMPACT_KEYS = ['printType', 'native', 'record'];
+    const GL_IMPACT_RENDER_KEYS = ['printType', 'templateId', 'scriptId', 'source', 'record'];
     const RAW_KEYS = ['xml'];
     const PICKING_TICKET_KEYS = ['printType', 'templateId', 'scriptId', 'source', 'record', 'native', 'formId', 'shipgroup', 'location'];
     const PACKING_SLIP_KEYS = ['printType', 'templateId', 'scriptId', 'source', 'record', 'native', 'formId'];
@@ -108,8 +108,8 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
             return translateRenderErrors(() => renderLabels(printType, request));
         // No FreeMarker runs in NetSuite's own GL impact print, so its errors pass through untranslated.
         if (printType === 'GLIMPACT')
-            return renderNativeGlImpact(request);
-        throw new index_js_1.ValidationError(`${String(printType)} has no preview yet — supported: TRANSACTION, STATEMENT, SEARCH, PICKINGTICKET, PACKINGSLIP, SHIPPINGLABEL, MAILINGLABEL, ITEMLABEL, GLIMPACT (native)`);
+            return 'native' in request ? renderNativeGlImpact(request) : translateRenderErrors(() => renderGlImpact(request));
+        throw new index_js_1.ValidationError(`${String(printType)} has no preview yet — supported: TRANSACTION, STATEMENT, SEARCH, PICKINGTICKET, PACKINGSLIP, SHIPPINGLABEL, MAILINGLABEL, ITEMLABEL, GLIMPACT`);
     };
     exports.renderTemplate = renderTemplate;
     const translateRenderErrors = (operation) => {
@@ -163,9 +163,18 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
         };
     };
     // xmlToPdf turns plain text into a PDF instead of failing, so the input is checked here.
+    // render.glImpact draws only NetSuite's own data, so a draft gets the GL data rebuilt and injected: always approximate.
+    const renderGlImpact = (body) => {
+        const request = asObject(body, GL_IMPACT_RENDER_KEYS);
+        const template = parseTemplateChoice(request);
+        const target = requireRecordRef(request.record);
+        const data = (0, gl_data_js_1.loadGlImpactData)(target.id);
+        const { renderer, isDraft } = prepareRenderer(template);
+        const injected = (0, gl_data_js_1.injectGlImpact)(renderer.templateContent, data);
+        renderer.templateContent = injected.source;
+        return withExtras({ ...renderToResult(renderer, isDraft, 'GLIMPACT', target), approximate: true }, { adaptations: injected.adaptations });
+    };
     const renderNativeGlImpact = (body) => {
-        if (!('native' in body))
-            throw new index_js_1.ValidationError(exports.GL_IMPACT_NATIVE_ONLY_REFUSAL);
         requireNative(body.native);
         rejectTemplateWithNative(body);
         const request = asObject(body, GL_IMPACT_KEYS);

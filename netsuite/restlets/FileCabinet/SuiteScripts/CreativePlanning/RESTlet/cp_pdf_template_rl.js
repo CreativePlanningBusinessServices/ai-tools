@@ -9,7 +9,7 @@
  *   ?scriptid= returns the template metadata plus its raw source; PUT backs the template's current
  *   source up to the File Cabinet; POST renders a saved or draft template to PDF plus merged XML/HTML against a
  *   transaction or any record type record.load accepts (custom records included), a statement, a saved search's
- *   results, a picking ticket, a packing slip or shipping, mailing and item labels (rows injected as literals); renders natively (a GL impact natively only) through a form (native: true); or renders raw
+ *   results, a picking ticket, a packing slip or shipping, mailing and item labels (rows injected as literals); renders a GL impact (saved and draft on GL data rebuilt with SuiteQL); renders natively through a form (native: true); or renders raw
  *   BFO XML. Called by netsuite-cli
  *   via `restlet call`; contract in the netsuite-pdf-designer skill. See
  *   docs/superpowers/specs/2026-10-16-netsuite-pdf-designer-design.html.
