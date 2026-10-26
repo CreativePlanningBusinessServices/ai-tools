@@ -82,7 +82,7 @@ define(["require", "exports", "N/query", "../file-cabinet/index.js", "./freemark
                 type: header.typename ?? '',
                 typeid: header.type,
                 tranid: header.tranid ?? '',
-                subsidiary: header.subsidiary === null ? '' : String(header.subsidiary),
+                subsidiary: header.subsidiary ?? '',
                 exchangerate: header.exchangerate ?? '',
                 currency,
                 basecurrency: currency,
@@ -99,7 +99,7 @@ define(["require", "exports", "N/query", "../file-cabinet/index.js", "./freemark
             query: /* sql */ `
       SELECT txn.trandate, BUILTIN.DF(txn.postingperiod) AS postingperiod, BUILTIN.DF(txn.type) AS typename, txn.type,
         txn.tranid,
-        (SELECT MAX(mainLine.subsidiary) FROM transactionline mainLine WHERE mainLine.transaction = txn.id AND mainLine.mainline = 'T') AS subsidiary,
+        (SELECT MAX(BUILTIN.DF(mainLine.subsidiary)) FROM transactionline mainLine WHERE mainLine.transaction = txn.id AND mainLine.mainline = 'T') AS subsidiary,
         TO_CHAR(txn.exchangerate, 'FM999990.00') AS exchangerate,
         BUILTIN.DF(txn.currency) AS currencyname, currency.symbol AS currencyiso
       FROM transaction txn
