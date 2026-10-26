@@ -96,7 +96,9 @@ define(["require", "exports", "N/query", "../file-cabinet/index.js", "./freemark
         const rows = query.runSuiteQL({
             query: /* sql */ `
       SELECT txn.trandate, BUILTIN.DF(txn.postingperiod) AS postingperiod, BUILTIN.DF(txn.type) AS typename, txn.type,
-        txn.tranid, txn.subsidiary, TO_CHAR(txn.exchangerate, 'FM999990.00') AS exchangerate,
+        txn.tranid,
+        (SELECT MAX(mainLine.subsidiary) FROM transactionline mainLine WHERE mainLine.transaction = txn.id AND mainLine.mainline = 'T') AS subsidiary,
+        TO_CHAR(txn.exchangerate, 'FM999990.00') AS exchangerate,
         BUILTIN.DF(txn.currency) AS currencyiso
       FROM transaction txn
       WHERE txn.id = ?`,
