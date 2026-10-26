@@ -1,8 +1,10 @@
-define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/search", "../file-cabinet/index.js", "./statement-data.js"], function (require, exports, log, query, record, render, search, index_js_1, statement_data_js_1) {
+define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/search", "../file-cabinet/index.js", "./statement-data.js", "./label-data.js", "./label-data.js"], function (require, exports, log, query, record, render, search, index_js_1, statement_data_js_1, label_data_js_1, label_data_js_2) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.formatStamp = exports.parseJsonObject = exports.parseTemplateRef = exports.adaptTitle = exports.renderTemplate = exports.backupTemplate = exports.describeTemplate = exports.SEARCH_MAX_LIMIT = exports.SEARCH_DEFAULT_LIMIT = exports.RETURN_FORM_NOTE = exports.RAW_FREEMARKER_REFUSAL = exports.RAW_REFUSAL = exports.NATIVE_TEMPLATE_REFUSAL = exports.NATIVE_REFUSAL = exports.PRINT_CHECKS_REFUSAL = exports.FREEMARKER_HINT = exports.BACKUP_FOLDER = exports.ValidationError = void 0;
+    exports.formatStamp = exports.parseJsonObject = exports.parseTemplateRef = exports.adaptTitle = exports.renderTemplate = exports.backupTemplate = exports.describeTemplate = exports.SEARCH_MAX_LIMIT = exports.SEARCH_DEFAULT_LIMIT = exports.RETURN_FORM_NOTE = exports.RAW_FREEMARKER_REFUSAL = exports.RAW_REFUSAL = exports.NATIVE_TEMPLATE_REFUSAL = exports.NATIVE_REFUSAL = exports.PRINT_CHECKS_REFUSAL = exports.FREEMARKER_HINT = exports.BACKUP_FOLDER = exports.LABEL_RECORDS_REFUSAL = exports.LABEL_BARCODE_NOTE = exports.ValidationError = void 0;
     Object.defineProperty(exports, "ValidationError", { enumerable: true, get: function () { return index_js_1.ValidationError; } });
+    Object.defineProperty(exports, "LABEL_BARCODE_NOTE", { enumerable: true, get: function () { return label_data_js_2.LABEL_BARCODE_NOTE; } });
+    Object.defineProperty(exports, "LABEL_RECORDS_REFUSAL", { enumerable: true, get: function () { return label_data_js_2.LABEL_RECORDS_REFUSAL; } });
     exports.BACKUP_FOLDER = '/SuiteScripts/CreativePlanning/pdf-template-backups';
     exports.FREEMARKER_HINT = 'NetSuite hit a FreeMarker or layout error but gives no detail — run pdf-validate.sh on the draft. Common causes: an unclosed <#if>/<#list>, an unknown ?built-in, a ${…} left open, a <tr> or <td> outside its <table> or <tr>, position:absolute on a direct child of <body>, position:fixed.';
     exports.PRINT_CHECKS_REFUSAL = 'this template loops over `records` (a Print Checks batch layout), which a one-record preview cannot fill, so NetSuite would fail the render; validating and saving it still work — print a check batch in NetSuite to see it';
@@ -22,6 +24,7 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
     const PICKING_TICKET_KEYS = ['printType', 'templateId', 'scriptId', 'source', 'record', 'native', 'formId', 'shipgroup', 'location'];
     const PACKING_SLIP_KEYS = ['printType', 'templateId', 'scriptId', 'source', 'record', 'native', 'formId'];
     const NATIVE_ONLY_KEYS = ['formId', 'shipgroup', 'location'];
+    const LABEL_KEYS = ['printType', 'templateId', 'scriptId', 'source', 'labels', 'startLabel'];
     exports.RETURN_FORM_NOTE = 'returnForm isn\'t supplied by the preview, so the return-form section stays hidden';
     exports.SEARCH_DEFAULT_LIMIT = 50;
     exports.SEARCH_MAX_LIMIT = 1000;
@@ -98,7 +101,9 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
             return translateRenderErrors(() => renderPickingTicket(request));
         if (printType === 'PACKINGSLIP')
             return translateRenderErrors(() => renderPackingSlip(request));
-        throw new index_js_1.ValidationError(`${String(printType)} has no preview yet — supported: TRANSACTION, STATEMENT, SEARCH, PICKINGTICKET, PACKINGSLIP`);
+        if (isLabelPrintType(printType))
+            return translateRenderErrors(() => renderLabels(printType, request));
+        throw new index_js_1.ValidationError(`${String(printType)} has no preview yet — supported: TRANSACTION, STATEMENT, SEARCH, PICKINGTICKET, PACKINGSLIP, SHIPPINGLABEL, MAILINGLABEL, ITEMLABEL`);
     };
     exports.renderTemplate = renderTemplate;
     const translateRenderErrors = (operation) => {
@@ -320,6 +325,30 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
         });
         return { mode: 'native', printType: 'PACKINGSLIP', record: target, pdf: pdfFile.getContents(), pdfBytes: pdfFile.size, xml: null };
     };
+    // NetSuite has no label render function: the rows are injected into the source as FreeMarker literals, so every label is approximate.
+    const renderLabels = (printType, body) => {
+        const request = asObject(body, [...LABEL_KEYS, label_data_js_1.LABEL_ID_KEYS[printType]]);
+        const template = parseTemplateChoice(request);
+        const input = (0, label_data_js_1.parseLabelInput)(printType, request);
+        const rows = input.rows ?? (0, label_data_js_1.loadLabelRows)(printType, input.ids ?? []);
+        const { renderer, isDraft } = prepareRenderer(template);
+        const injected = (0, label_data_js_1.injectLabels)(renderer.templateContent, rows, input.startLabel);
+        renderer.templateContent = injected.source;
+        const pdfFile = renderer.renderAsPdf();
+        const result = {
+            mode: isDraft ? 'draft' : 'saved',
+            printType,
+            record: { labelCount: rows.length, startLabel: input.startLabel },
+            pdf: pdfFile.getContents(),
+            pdfBytes: pdfFile.size,
+            xml: renderer.renderAsString(),
+            approximate: true,
+        };
+        return withExtras(result, { adaptations: injected.adaptations, notes: hasNumericBarcode(printType, rows) ? [label_data_js_1.LABEL_BARCODE_NOTE] : [] });
+    };
+    const isLabelPrintType = (printType) => label_data_js_1.LABEL_PRINT_TYPES.some((labelType) => labelType === printType);
+    // Injected text never answers ?is_number, so template 26 draws these as Code 128 rather than UPC-A or EAN-13.
+    const hasNumericBarcode = (printType, rows) => printType === 'ITEMLABEL' && rows.some((row) => /^\d{12,13}$/.test(String(row.skuUpcBarcode)));
     // transaction.createdfrom isn't a SuiteQL column (SB2, 2026-10-24); the main line carries it.
     const requireFulfillmentSalesOrder = (fulfillmentId) => {
         const rows = query

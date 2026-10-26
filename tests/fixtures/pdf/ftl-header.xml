@@ -1,0 +1,81 @@
+<#ftl output_format="XML" auto_esc=true>
+<?xml version="1.0"?><!DOCTYPE pdf PUBLIC "-//big.faceless.org//report" "report-1.1.dtd">
+<pdf>
+<head>
+	<link name="NotoSans" type="font" subtype="truetype" src="${nsfont.NotoSans_Regular}" src-bold="${nsfont.NotoSans_Bold}" src-italic="${nsfont.NotoSans_Italic}" src-bolditalic="${nsfont.NotoSans_BoldItalic}" bytes="2" />
+	<#if .locale == "ja_JP">
+		<link name="NotoSansCJKjp" type="font" subtype="opentype" src="${nsfont.NotoSansCJKjp_Regular}" src-bold="${nsfont.NotoSansCJKjp_Bold}" bytes="2" />
+	</#if>
+    <macrolist>
+        <macro id="nlheader">
+            <table class="header" style="width: 100%;"><tr>
+	<td style="padding-top:10px;" width="50%"><strong>Example Company</strong><br />100 Main St. - Anytown, KS 00000<br />
+	Phone: 555-0100&nbsp; &nbsp;Fax: 555-0101</td>
+	<td align="right" width="50%">
+	<#if subsidiary.logo?length != 0>
+	<img src="${subsidiary.logo@url}" style="float: right; width: 150px; height: 40px;" />
+	</#if>
+	</td>
+	</tr></table>
+        </macro>
+        <macro id="nlfooter">
+            <table class="footer" style="width: 100%;"><tr>
+	<td align="right"><pagenumber/> of <totalpages/></td>
+	</tr></table>
+        </macro>
+    </macrolist>
+    <style type="text/css">* {
+		font-family: NotoSans, sans-serif;
+		}
+		table {
+			font-size: 9pt;
+			table-layout: fixed;
+		}
+        th {
+            font-weight: bold;
+            vertical-align: middle;
+            padding: 5px 6px 3px;
+            background-color: #e3e3e3;
+        }
+        td p { align: left }
+        table.total {
+            page-break-inside: avoid;
+        }
+</style>
+</head>
+<body header="nlheader" header-height="12%" footer="nlfooter" footer-height="20pt" padding="0.5in 0.5in 0.5in 0.5in" size="Letter">
+<#-- <table> markup inside a FreeMarker comment is not XML -->
+<table style="width: 100%; margin-top: 10px;"><tr>
+	<td><b>INVOICE #</b> ${record.tranid}</td>
+	<td><b>DATE</b> ${record.trandate?string("MM/dd/yyyy")}</td>
+	</tr></table>
+<#if record.item?has_content>
+<table class="itemtable" style="width: 100%; margin-top: 10px;"><!-- start items --><#list record.item as item><#if item_index==0>
+<thead>
+	<tr>
+	<th colspan="3">${item.description@label}</th>
+	<th align="right">${item.amount@label}</th>
+	</tr>
+</thead>
+</#if>
+<!-- items -->
+	<tr>
+	<td colspan="3">${item.description}<#if item.quantity < 1> (credit)</#if></td>
+	<td align="right">${item.amount}</td>
+	</tr>
+<!-- /items -->
+	</#list><!-- end items --></table>
+</#if>
+<#assign paidAmount = (record.amountpaid?has_content)?then(record.amountpaid?replace("[$,]", "", "r")?trim, "0")?number>
+<table class="total" style="width: 100%; margin-top: 20px; border-top: 0.8px dashed #004254;"><tr>
+	<td align="right">
+	<#if paidAmount gt 0>
+	<strong>TOTAL Remaining&nbsp;</strong> ${record.amountremaining}
+	<#else>
+	<strong>TOTAL&nbsp;</strong> ${record.total}
+	</#if>
+	</td>
+	</tr></table>
+<p style="font-size: 8pt;">Questions? Email the billing team &amp; include ${record.tranid}.</p>
+</body>
+</pdf>

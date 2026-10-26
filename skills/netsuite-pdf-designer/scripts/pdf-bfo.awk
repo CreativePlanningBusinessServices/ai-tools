@@ -94,7 +94,7 @@ function check_stylesheet(text,   comment, start, match_at, ch, prelude, at_rule
 }
 function process_tag(   name, name_length, junk_at, self_closing, depth, status, check_attributes, scan, scan_base, attribute_start, attribute_length, attribute, equals, attribute_name, quote_at, attribute_value, value_offset, attribute_status) {
   chunkText = tagText; chunkLine = tagLine; chunkCol = tagCol
-  if (tagText ~ /^<\?xml[ \t\r\n]/) { if (tagLine == 1 && (tagCol == 1 || declarationAfterFreemarker)) sawDeclaration = 1; return }
+  if (tagText ~ /^<\?xml[ \t\r\n]/) { if ((tagLine == 1 && tagCol == 1) || tagLine == declarationAfterFreemarker) sawDeclaration = 1; return }
   if (tagText ~ /^<!DOCTYPE/) {
     sawDoctype = 1
     if (index(tagText, "-//big.faceless.org//report") == 0 || index(tagText, "report-1.1.dtd") == 0)

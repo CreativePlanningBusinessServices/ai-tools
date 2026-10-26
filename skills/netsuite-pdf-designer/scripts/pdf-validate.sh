@@ -71,7 +71,7 @@ else
     [ -z "$print_type" ] || awk -v printType="$print_type" -f "$script_dir/pdf-roots.awk" "$input_file" >> "$findings"
   fi
   cat "$work/data.tsv" "$macros" > "$work/bfo-data.tsv"
-  awk -v mergedInput="$merged" -v declarationAfterFreemarker="$([ -f "$work/declaration-after-freemarker" ] && echo 1)" -f "$script_dir/pdf-bfo.awk" "$work/bfo-data.tsv" "$stripped" >> "$findings"
+  awk -v mergedInput="$merged" -v declarationAfterFreemarker="$(cat "$work/declaration-after-freemarker" 2>/dev/null)" -f "$script_dir/pdf-bfo.awk" "$work/bfo-data.tsv" "$stripped" >> "$findings"
   # <head>/<body> and table nesting are checked on the copy xmllint reads (one branch); after a FreeMarker syntax error
   # that copy can't be trusted.
   structure_copy="$xml_copy"; [ -f "$work/corrupt" ] && structure_copy="$stripped"
