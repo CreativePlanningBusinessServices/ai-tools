@@ -1,5 +1,5 @@
 # pdf-freemarker.awk — FreeMarker pass of pdf-validate.sh. Input: data.tsv (B/D rows), then the template.
-# Prints findings as TSV, touches declarationFile when only FreeMarker precedes <?xml on line 1, and writes two copies with the template's lines and columns: strippedFile (FreeMarker spans
+# Prints findings as TSV, writes the <?xml line number to declarationFile when only FreeMarker precedes it, and writes two copies with the template's lines and columns: strippedFile (FreeMarker spans
 # blanked, ${…} as x's, every branch kept, for the BFO pass) and xmlCopyFile (also blanks the bodies of non-first
 # branches — <#else>, <#elseif>, later <#case>/<#default>/<#on>, <#recover> — so alternative markup parses in xmllint).
 # Macro and function bodies go to macroFile as "M<TAB>startLine<TAB>startCol<TAB>endLine<TAB>endCol" rows.
@@ -77,7 +77,7 @@ function pop_level() {
   if (alternate[depth]) hiddenLevels--; depth--
 }
 BEGIN {
-  FS = "\t"; SPACES = sprintf("%512s", ""); EXES = SPACES; gsub(/ /, "x", EXES)
+  FS = "\t"; SPACES = sprintf("%512s", ""); EXES = SPACES; gsub(/ /, "x", EXES); seekingDeclaration = 1
   split("if list items macro function attempt switch compress escape noescape autoesc noautoesc outputformat noparse assign global local", names, " ")
   for (i in names) blockDirective[names[i]] = 1
   allowedParents["else"] = "if list"; allowedParents["elseif"] = "if"; allowedParents["recover"] = "attempt"
@@ -85,7 +85,7 @@ BEGIN {
 }
 FNR == NR { if ($1 == "B") builtin[$2] = 1; else if ($1 == "D") directive[$2] = 1; next }
 {
-  line = $0; len = length(line); out = ""; xmlOut = ""; pos = 1
+  line = $0; len = length(line); out = ""; xmlOut = ""; pos = 1; lineText = ""
   while (pos <= len) {
     if (mode == "comment") {
       found = index(substr(line, pos), "-->")
@@ -99,8 +99,8 @@ FNR == NR { if ($1 == "B") builtin[$2] = 1; else if ($1 == "D") directive[$2] = 
     }
     if (mode == "directive" || mode == "interpolation") { scan_expression(); continue }
     rest = substr(line, pos)
-    if (!match(rest, /<\/?[#@][a-zA-Z_-]|\$\{/)) { put(rest); if (FNR == 1) firstLineText = firstLineText rest; break }
-    put(substr(rest, 1, RSTART - 1)); if (FNR == 1) firstLineText = firstLineText substr(rest, 1, RSTART - 1)
+    if (!match(rest, /<\/?[#@][a-zA-Z_-]|\$\{/)) { put(rest); lineText = lineText rest; break }
+    put(substr(rest, 1, RSTART - 1)); lineText = lineText substr(rest, 1, RSTART - 1)
     pos += RSTART - 1; startLine = FNR; startCol = pos; quote = ""
     if (substr(line, pos, 4) == "<#--") { mode = "comment"; put("    "); pos += 4 }
     else if (substr(line, pos, 2) == "${") { mode = "interpolation"; braces = 1; put("xx"); pos += 2 }
@@ -110,8 +110,12 @@ FNR == NR { if ($1 == "B") builtin[$2] = 1; else if ($1 == "D") directive[$2] = 
     }
   }
   if (mode == "directive") body = body "\n"
-  # FreeMarker output drops these spans, so <#assign …><?xml …?> still puts the declaration first
-  if (FNR == 1 && line !~ /^<\?xml/ && firstLineText ~ /^<\?xml[ \t]/) print "1" > declarationFile
+  # FreeMarker output drops its own spans and any line holding only FTL tags, so <#ftl …> on a line of
+  # its own (NetSuite's standard label templates) or <#assign …><?xml …?> still puts the declaration first.
+  if (seekingDeclaration && !(lineText ~ /^[ \t\r]*$/ && lineText != line)) {
+    if (lineText ~ /^<\?xml[ \t]/ && (FNR > 1 || line !~ /^<\?xml/)) print FNR > declarationFile
+    seekingDeclaration = 0
+  }
   print out > strippedFile; print xmlOut > xmlCopyFile
 }
 END {

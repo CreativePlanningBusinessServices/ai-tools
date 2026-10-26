@@ -173,6 +173,13 @@ assert_not_contains "$output" "copy" "&copy; is not flagged"
 run_validator "$fixtures/assign-before-declaration.xml"
 assert_not_contains "$output" "envelope.xml-declaration" "a FreeMarker directive before <?xml on line 1 is accepted"
 
+run_validator "$fixtures/ftl-header.xml"
+assert_not_contains "$output" "envelope.xml-declaration" "an <#ftl> header line before <?xml (NetSuite's standard label templates) is accepted"
+assert_contains "$output" "0 errors" "an <#ftl> header line leaves a good template clean"
+
+run_validator "$fixtures/blank-before-declaration.xml"
+assert_line '^ERROR 1:1 envelope\.xml-declaration ' "a blank line before <?xml is still an envelope error"
+
 run_validator "$fixtures/div-text.xml"
 assert_line '^WARN 7:32 netsuite\.div-text ' "bare text inside <div> is a warning"
 
