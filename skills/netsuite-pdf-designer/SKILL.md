@@ -110,7 +110,8 @@ rl --method POST --data '{"printType": "SEARCH", "templateId": 453, "searchId": 
 rl --method POST --data '{"printType": "TRANSACTION", "native": true, "record": {"type": "invoice", "id": 456}, "formId": 159}'   # what the form prints
 rl --method POST --data '{"printType": "GLIMPACT", "templateId": 45, "record": {"type": "invoice", "id": 456}}'                  # GL impact (saved; or source)
 rl --method POST --data '{"printType": "GLIMPACT", "native": true, "record": {"type": "invoice", "id": 456}}'                    # GL impact as NetSuite prints it
-rl --method POST --data '{"printType": "BOM", "native": true, "record": {"type": "workorder", "id": 3824098}}'                   # bill of materials (native only)
+rl --method POST --data '{"printType": "BOM", "templateId": 22, "record": {"type": "workorder", "id": 3824098}}'               # bill of materials (saved; or source)
+rl --method POST --data '{"printType": "BOM", "native": true, "record": {"type": "workorder", "id": 3824098}}'                   # bill of materials as NetSuite prints it
 rl --method POST --data '{"printType": "PICKINGTICKET", "templateId": 8, "record": {"type": "salesorder", "id": 789}}'           # picking ticket
 rl --method POST --data '{"printType": "PACKINGSLIP", "templateId": 41, "record": {"type": "itemfulfillment", "id": 987}}'      # packing slip
 rl --method POST --data '{"printType": "ITEMLABEL", "templateId": 26, "itemIds": [101, 102], "startLabel": 1}'                 # item labels
@@ -148,8 +149,7 @@ rl --method POST --data @"$SP/raw.json"   # raw BFO XML, no data: {"xml": "<?xml
     materials (customer, assembly, quantity, then each component's quantity, item, options and
     inventory detail). A BOM, BOM revision or assembly id is refused (`a bill of materials prints a
     work order — record N is not a work order`). Returns the PDF and the merged `xml`, with a note
-    that NetSuite prints the account's BOM template. Saved and draft BOM renders are refused for now
-    (`BOM has a native preview only for now`). Sample: `SELECT id, tranid FROM transaction WHERE type = 'WorkOrd' ORDER BY id DESC FETCH FIRST 5 ROWS ONLY`.
+    that NetSuite prints the account's BOM template. Sample: `SELECT id, tranid FROM transaction WHERE type = 'WorkOrd' ORDER BY id DESC FETCH FIRST 5 ROWS ONLY`.
   - A form that isn't set to an advanced template prints NetSuite's basic layout, so a native
     render shows what the form prints, not necessarily the template being edited.
 - **Picking ticket** (`PICKINGTICKET`): `record` is the sales order (`salesorder` only). Saved and
@@ -210,7 +210,15 @@ rl --method POST --data @"$SP/raw.json"   # raw BFO XML, no data: {"xml": "<?xml
   `noLinesMessage` ("No GL impact lines") is a guess. Compared with NetSuite's own print in SB2
   (2026-10-26), an invoice and a journal match on header, captions, accounts, memos, subsidiaries,
   amounts and totals.
-- Other print types answer `<printType> has no preview yet — supported: TRANSACTION, STATEMENT, SEARCH, PICKINGTICKET, PACKINGSLIP, SHIPPINGLABEL, MAILINGLABEL, ITEMLABEL, GLIMPACT, BOM (native)`.
+- **Bill of materials** (`BOM`), saved (`templateId` / `scriptId`) and draft (`source`), with `record`
+  {type, id} of a **work order** (no `formId`; any other id is refused as for native): the work order
+  is loaded as `record`, so the template reads its header, assembly, quantity and `record.item`
+  components itself. `${record.quantity@label}` and `${item.quantity@label}` become "Qty. Required",
+  NetSuite's caption (the loaded work order's own is "Quantity"), listed in `adaptations` as
+  `captions: quantity`. Always `"approximate": true`, and `notes` says what's missing: the components'
+  inventory-detail lots and the assembly-detail table (`record.assemblydetail`) are filled only by
+  NetSuite's own print, so they print empty. Compare with the native render of the same work order.
+- Other print types answer `<printType> has no preview yet — supported: TRANSACTION, STATEMENT, SEARCH, PICKINGTICKET, PACKINGSLIP, SHIPPINGLABEL, MAILINGLABEL, ITEMLABEL, GLIMPACT, BOM`.
 - **Statement**: `entityId` (customer) is required; `statementDate` (default today), `startDate`
   (default none: the whole history) and `openTransactionsOnly` (boolean, default false) are
   optional, dates in the user's NetSuite format (`MM/DD/YYYY` in CP's accounts). Saved and draft
@@ -291,8 +299,8 @@ Restore = step 6 with the backup's contents as the draft:
    for how its custom-record templates are stored. Before creating one, GET a template the account
    already uses for that record (or ask how it's printed today, usually by a script), and take its
    print type. `TRANSACTION` (custom records included), `STATEMENT`, `SEARCH`, `PICKINGTICKET`,
-   `PACKINGSLIP`, the three label types and `GLIMPACT` can be previewed in this version (step 3);
-   `BOM` natively only.
+   `PACKINGSLIP`, the three label types, `GLIMPACT` and `BOM` can be previewed in this version (step 3);
+   `PRICELIST` can't.
 2. **Pick a sample record** of the template's `tranType`. If the user named one, use it. Otherwise
    list five recent candidates that have lines and ask the user to choose:
    ```bash
@@ -359,9 +367,11 @@ Restore = step 6 with the backup's contents as the draft:
    show one. GL impact: saved and draft on rebuilt GL data, captioned `saved (approximate: GL data
    rebuilt with SuiteQL)` / `draft (approximate: …)`; compare with the native render of the same
    transaction (`native: true`, captioned `native (NetSuite's GL impact print)`), which prints
-   NetSuite's own data through the account's GL impact template, not the one being edited. Other print
-   types: a bill of materials natively only (`{printType: "BOM", native: true, record}`, captioned
-   `native (NetSuite's BOM print)`); a price list has no preview in this version. Read, validate and save
+   NetSuite's own data through the account's GL impact template, not the one being edited. Bill of
+   materials: `record` is a work order; saved and draft are captioned `saved (approximate: no lots or
+   assembly-detail table)` / `draft (approximate: …)`; compare with the native render (`native: true`,
+   captioned `native (NetSuite's BOM print)`), which prints through the account's BOM template, not the
+   one being edited. A price list has no preview in this version. Read, validate and save
    still work. **Check templates that loop over `records`** (the
    Print Checks batch list) can't be previewed either: before rendering a `TRANSACTION` template,
    run `grep -Eq '<#list[[:space:]]+records[[:space:]]' "$SP/pdf-base-<id>.xml"` and, on a match,
