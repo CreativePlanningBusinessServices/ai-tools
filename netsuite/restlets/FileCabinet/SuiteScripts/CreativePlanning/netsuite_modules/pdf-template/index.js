@@ -26,8 +26,9 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
     const GL_IMPACT_KEYS = ['printType', 'native', 'record'];
     const BOM_KEYS = ['printType', 'native', 'record'];
     const BOM_RENDER_KEYS = ['printType', 'templateId', 'scriptId', 'source', 'record'];
-    // render.bom fills @label from the work order's form; a loaded work order's own caption for quantity is "Quantity".
-    const BOM_CAPTIONS = { quantity: 'Qty. Required' };
+    // NetSuite's BOM print captions the work order's and its components' quantity "Qty. Required"; a loaded work order's own
+    // caption is "Quantity", which the assembly-detail table keeps in NetSuite's print too.
+    const BOM_QUANTITY_CAPTION = 'Qty. Required';
     const GL_IMPACT_RENDER_KEYS = ['printType', 'templateId', 'scriptId', 'source', 'record'];
     const RAW_KEYS = ['xml'];
     const PICKING_TICKET_KEYS = ['printType', 'templateId', 'scriptId', 'source', 'record', 'native', 'formId', 'shipgroup', 'location'];
@@ -206,12 +207,12 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
         requireWorkOrder(target.id);
         const { renderer, isDraft } = prepareRenderer(template);
         const titled = (0, exports.adaptTitle)(renderer.templateContent, 'Bill of Materials');
-        const captioned = replaceBomCaptions(titled.source);
+        const captioned = replaceBomQuantityCaptions(titled.source);
         renderer.templateContent = captioned.source;
         const workOrder = record.load({ type: 'workorder', id: target.id });
         renderer.addRecord({ templateName: 'record', record: workOrder });
         addSubsidiaryRoot(renderer, workOrder);
-        const adaptations = [...titled.adaptations, ...(captioned.fields.length > 0 ? [`captions: ${captioned.fields.join(', ')}`] : [])];
+        const adaptations = [...titled.adaptations, ...(captioned.replaced ? ['captions: quantity'] : [])];
         return withExtras({ ...renderToResult(renderer, isDraft, 'BOM', target), approximate: true }, { adaptations, notes: [exports.BOM_DRAFT_NOTE] });
     };
     // Like GL impact, NetSuite's own print runs no FreeMarker of ours, so its errors pass through untranslated.
@@ -242,16 +243,15 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
             throw new index_js_1.ValidationError(`a bill of materials prints a work order — record ${id} is not a work order`);
         }
     };
-    const replaceBomCaptions = (source) => {
-        const fields = [];
-        const replaced = source.replace(/\$\{\s*(?:record|item)\.(\w+)@label\s*\}/g, (match, field) => {
-            if (!(field in BOM_CAPTIONS))
-                return match;
-            if (!fields.includes(field))
-                fields.push(field);
-            return BOM_CAPTIONS[field];
-        });
-        return { source: replaced, fields };
+    // Only `record` and the variables of `<#list record.item as …>` loops: a plain ${x.quantity@label} becomes the caption, any
+    // other use (a built-in, a directive) the caption as a string literal.
+    const replaceBomQuantityCaptions = (source) => {
+        const componentVariables = [...source.matchAll(/<#list\s+record\.item\s+as\s+(\w+)\s*>/g)].map((loop) => loop[1]);
+        const variables = ['record', ...componentVariables].join('|');
+        const captioned = source
+            .replace(new RegExp(`\\$\\{\\s*(?:${variables})\\.quantity@label\\s*\\}`, 'g'), BOM_QUANTITY_CAPTION)
+            .replace(new RegExp(`\\b(?:${variables})\\.quantity@label\\b`, 'g'), JSON.stringify(BOM_QUANTITY_CAPTION));
+        return { source: captioned, replaced: captioned !== source };
     };
     // xmlToPdf turns plain text into a PDF instead of failing, so the input is checked here.
     const renderRaw = (body) => {
