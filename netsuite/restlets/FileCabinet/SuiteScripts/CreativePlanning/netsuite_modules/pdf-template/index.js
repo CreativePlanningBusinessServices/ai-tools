@@ -1,7 +1,7 @@
 define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/search", "../file-cabinet/index.js", "./statement-data.js", "./label-data.js", "./gl-data.js", "./label-data.js"], function (require, exports, log, query, record, render, search, index_js_1, statement_data_js_1, label_data_js_1, gl_data_js_1, label_data_js_2) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.formatStamp = exports.parseJsonObject = exports.parseTemplateRef = exports.adaptTitle = exports.renderTemplate = exports.backupTemplate = exports.describeTemplate = exports.SEARCH_MAX_LIMIT = exports.SEARCH_DEFAULT_LIMIT = exports.RETURN_FORM_NOTE = exports.GL_IMPACT_NOTE = exports.BOM_NOTE = exports.BOM_NATIVE_ONLY_REFUSAL = exports.RAW_FREEMARKER_REFUSAL = exports.RAW_REFUSAL = exports.NATIVE_TEMPLATE_REFUSAL = exports.NATIVE_REFUSAL = exports.PRINT_CHECKS_REFUSAL = exports.FREEMARKER_HINT = exports.BACKUP_FOLDER = exports.LABEL_RECORDS_REFUSAL = exports.LABEL_BARCODE_NOTE = exports.ValidationError = void 0;
+    exports.formatStamp = exports.parseJsonObject = exports.parseTemplateRef = exports.adaptTitle = exports.renderTemplate = exports.backupTemplate = exports.describeTemplate = exports.SEARCH_MAX_LIMIT = exports.SEARCH_DEFAULT_LIMIT = exports.RETURN_FORM_NOTE = exports.GL_IMPACT_NOTE = exports.BOM_DRAFT_NOTE = exports.BOM_NOTE = exports.RAW_FREEMARKER_REFUSAL = exports.RAW_REFUSAL = exports.NATIVE_TEMPLATE_REFUSAL = exports.NATIVE_REFUSAL = exports.PRINT_CHECKS_REFUSAL = exports.FREEMARKER_HINT = exports.BACKUP_FOLDER = exports.LABEL_RECORDS_REFUSAL = exports.LABEL_BARCODE_NOTE = exports.ValidationError = void 0;
     Object.defineProperty(exports, "ValidationError", { enumerable: true, get: function () { return index_js_1.ValidationError; } });
     Object.defineProperty(exports, "LABEL_BARCODE_NOTE", { enumerable: true, get: function () { return label_data_js_2.LABEL_BARCODE_NOTE; } });
     Object.defineProperty(exports, "LABEL_RECORDS_REFUSAL", { enumerable: true, get: function () { return label_data_js_2.LABEL_RECORDS_REFUSAL; } });
@@ -14,8 +14,8 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
     exports.NATIVE_TEMPLATE_REFUSAL = 'native renders what the form prints, so it takes no templateId, scriptId or source';
     exports.RAW_REFUSAL = 'xml must be BFO markup: an <?xml …?> declaration and a <pdf>, <pdfset> or <html> root';
     exports.RAW_FREEMARKER_REFUSAL = 'raw XML has no FreeMarker; use source';
-    exports.BOM_NATIVE_ONLY_REFUSAL = 'BOM has a native preview only for now — pass native: true with record {type, id}';
     exports.BOM_NOTE = 'NetSuite prints the account\'s bill of materials template; a native preview can\'t choose another';
+    exports.BOM_DRAFT_NOTE = 'inventory detail lots and the assembly-detail table aren\'t shown in a template preview; compare with native: true';
     exports.GL_IMPACT_NOTE = 'NetSuite prints the account\'s GL impact template; a native preview can\'t choose another';
     const BACKUP_KEYS = ['id', 'scriptid'];
     const TRANSACTION_RENDER_KEYS = ['templateId', 'scriptId', 'source', 'record', 'printType'];
@@ -25,6 +25,9 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
     const NATIVE_TRANSACTION_KEYS = ['printType', 'native', 'record', 'formId'];
     const GL_IMPACT_KEYS = ['printType', 'native', 'record'];
     const BOM_KEYS = ['printType', 'native', 'record'];
+    const BOM_RENDER_KEYS = ['printType', 'templateId', 'scriptId', 'source', 'record'];
+    // render.bom fills @label from the work order's form; a loaded work order's own caption for quantity is "Quantity".
+    const BOM_CAPTIONS = { quantity: 'Qty. Required' };
     const GL_IMPACT_RENDER_KEYS = ['printType', 'templateId', 'scriptId', 'source', 'record'];
     const RAW_KEYS = ['xml'];
     const PICKING_TICKET_KEYS = ['printType', 'templateId', 'scriptId', 'source', 'record', 'native', 'formId', 'shipgroup', 'location'];
@@ -113,8 +116,8 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
         if (printType === 'GLIMPACT')
             return 'native' in request ? renderNativeGlImpact(request) : translateRenderErrors(() => renderGlImpact(request));
         if (printType === 'BOM')
-            return renderNativeBom(request);
-        throw new index_js_1.ValidationError(`${String(printType)} has no preview yet — supported: TRANSACTION, STATEMENT, SEARCH, PICKINGTICKET, PACKINGSLIP, SHIPPINGLABEL, MAILINGLABEL, ITEMLABEL, GLIMPACT, BOM (native)`);
+            return 'native' in request ? renderNativeBom(request) : translateRenderErrors(() => renderBom(request));
+        throw new index_js_1.ValidationError(`${String(printType)} has no preview yet — supported: TRANSACTION, STATEMENT, SEARCH, PICKINGTICKET, PACKINGSLIP, SHIPPINGLABEL, MAILINGLABEL, ITEMLABEL, GLIMPACT, BOM`);
     };
     exports.renderTemplate = renderTemplate;
     const translateRenderErrors = (operation) => {
@@ -195,10 +198,22 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
             notes: [exports.GL_IMPACT_NOTE],
         };
     };
+    // The template reads the work order itself, but lots and the assembly-detail table come only from NetSuite's own print.
+    const renderBom = (body) => {
+        const request = asObject(body, BOM_RENDER_KEYS);
+        const template = parseTemplateChoice(request);
+        const target = requireRecordRef(request.record);
+        requireWorkOrder(target.id);
+        const { renderer, isDraft } = prepareRenderer(template);
+        const captioned = replaceBomCaptions(renderer.templateContent);
+        renderer.templateContent = captioned.source;
+        const workOrder = record.load({ type: 'workorder', id: target.id });
+        renderer.addRecord({ templateName: 'record', record: workOrder });
+        addSubsidiaryRoot(renderer, workOrder);
+        return withExtras({ ...renderToResult(renderer, isDraft, 'BOM', target), approximate: true }, { adaptations: captioned.fields.length > 0 ? [`captions: ${captioned.fields.join(', ')}`] : [], notes: [exports.BOM_DRAFT_NOTE] });
+    };
     // Like GL impact, NetSuite's own print runs no FreeMarker of ours, so its errors pass through untranslated.
     const renderNativeBom = (body) => {
-        if (!('native' in body))
-            throw new index_js_1.ValidationError(exports.BOM_NATIVE_ONLY_REFUSAL);
         requireNative(body.native);
         rejectTemplateWithNative(body);
         const request = asObject(body, BOM_KEYS);
@@ -224,6 +239,17 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
         if (rows.length === 0 || rows[0].type !== 'WorkOrd') {
             throw new index_js_1.ValidationError(`a bill of materials prints a work order — record ${id} is not a work order`);
         }
+    };
+    const replaceBomCaptions = (source) => {
+        const fields = [];
+        const replaced = source.replace(/\$\{\s*(?:record|item)\.(\w+)@label\s*\}/g, (match, field) => {
+            if (!(field in BOM_CAPTIONS))
+                return match;
+            if (!fields.includes(field))
+                fields.push(field);
+            return BOM_CAPTIONS[field];
+        });
+        return { source: replaced, fields };
     };
     // xmlToPdf turns plain text into a PDF instead of failing, so the input is checked here.
     const renderRaw = (body) => {
