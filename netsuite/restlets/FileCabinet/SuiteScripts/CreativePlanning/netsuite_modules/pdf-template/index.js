@@ -246,7 +246,7 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
     // Only `record` and the variables of `<#list record.item as …>` loops: a plain ${x.quantity@label} becomes the caption, any
     // other use (a built-in, a directive) the caption as a string literal.
     const replaceBomQuantityCaptions = (source) => {
-        const componentVariables = [...source.matchAll(/<#list\s+record\.item\s+as\s+(\w+)\s*>/g)].map((loop) => loop[1]);
+        const componentVariables = [...source.matchAll(/<#list\s+record\.item(?:\?[^\s>]+)*\s+as\s+(\w+)\s*>/g)].map((loop) => loop[1]);
         const variables = ['record', ...componentVariables].join('|');
         const captioned = source
             .replace(new RegExp(`\\$\\{\\s*(?:${variables})\\.quantity@label\\s*\\}`, 'g'), BOM_QUANTITY_CAPTION)

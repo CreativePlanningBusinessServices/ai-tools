@@ -214,7 +214,7 @@ rl --method POST --data @"$SP/raw.json"   # raw BFO XML, no data: {"xml": "<?xml
   {type, id} of a **work order** (no `formId`; any other id is refused as for native): the work order
   is loaded as `record`, so the template reads its header, assembly, quantity and `record.item`
   components itself. `${record@title}` becomes "Bill of Materials" (the loaded record's own title is
-  "Work Order"), and the quantity caption of `record` and of each `<#list record.item as …>` variable
+  "Work Order"), and the quantity caption of `record` and of each `<#list record.item as …>` variable (sorted or filtered too)
   (`${item.quantity@label}`) becomes "Qty. Required", NetSuite's caption (a string literal where a built-in
   or directive uses it); `adaptations` lists both. The assembly-detail table's caption stays "Quantity",
   as NetSuite prints it. Always `"approximate": true`, and `notes` says what's missing: the components'
