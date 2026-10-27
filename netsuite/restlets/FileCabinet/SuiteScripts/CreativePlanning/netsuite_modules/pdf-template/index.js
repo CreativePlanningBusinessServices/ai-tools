@@ -205,12 +205,14 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
         const target = requireRecordRef(request.record);
         requireWorkOrder(target.id);
         const { renderer, isDraft } = prepareRenderer(template);
-        const captioned = replaceBomCaptions(renderer.templateContent);
+        const titled = (0, exports.adaptTitle)(renderer.templateContent, 'Bill of Materials');
+        const captioned = replaceBomCaptions(titled.source);
         renderer.templateContent = captioned.source;
         const workOrder = record.load({ type: 'workorder', id: target.id });
         renderer.addRecord({ templateName: 'record', record: workOrder });
         addSubsidiaryRoot(renderer, workOrder);
-        return withExtras({ ...renderToResult(renderer, isDraft, 'BOM', target), approximate: true }, { adaptations: captioned.fields.length > 0 ? [`captions: ${captioned.fields.join(', ')}`] : [], notes: [exports.BOM_DRAFT_NOTE] });
+        const adaptations = [...titled.adaptations, ...(captioned.fields.length > 0 ? [`captions: ${captioned.fields.join(', ')}`] : [])];
+        return withExtras({ ...renderToResult(renderer, isDraft, 'BOM', target), approximate: true }, { adaptations, notes: [exports.BOM_DRAFT_NOTE] });
     };
     // Like GL impact, NetSuite's own print runs no FreeMarker of ours, so its errors pass through untranslated.
     const renderNativeBom = (body) => {

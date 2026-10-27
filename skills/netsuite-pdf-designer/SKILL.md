@@ -213,9 +213,9 @@ rl --method POST --data @"$SP/raw.json"   # raw BFO XML, no data: {"xml": "<?xml
 - **Bill of materials** (`BOM`), saved (`templateId` / `scriptId`) and draft (`source`), with `record`
   {type, id} of a **work order** (no `formId`; any other id is refused as for native): the work order
   is loaded as `record`, so the template reads its header, assembly, quantity and `record.item`
-  components itself. `${record.quantity@label}` and `${item.quantity@label}` become "Qty. Required",
-  NetSuite's caption (the loaded work order's own is "Quantity"), listed in `adaptations` as
-  `captions: quantity`. Always `"approximate": true`, and `notes` says what's missing: the components'
+  components itself. `${record@title}` becomes "Bill of Materials" (the loaded record's own title is
+  "Work Order"), and `${record.quantity@label}` and `${item.quantity@label}` become "Qty. Required",
+  NetSuite's caption (the work order's own is "Quantity"); `adaptations` lists both. Always `"approximate": true`, and `notes` says what's missing: the components'
   inventory-detail lots and the assembly-detail table (`record.assemblydetail`) are filled only by
   NetSuite's own print, so they print empty. Compare with the native render of the same work order.
 - Other print types answer `<printType> has no preview yet — supported: TRANSACTION, STATEMENT, SEARCH, PICKINGTICKET, PACKINGSLIP, SHIPPINGLABEL, MAILINGLABEL, ITEMLABEL, GLIMPACT, BOM`.
