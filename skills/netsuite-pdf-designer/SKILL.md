@@ -110,7 +110,7 @@ rl --method POST --data '{"printType": "SEARCH", "templateId": 453, "searchId": 
 rl --method POST --data '{"printType": "TRANSACTION", "native": true, "record": {"type": "invoice", "id": 456}, "formId": 159}'   # what the form prints
 rl --method POST --data '{"printType": "GLIMPACT", "templateId": 45, "record": {"type": "invoice", "id": 456}}'                  # GL impact (saved; or source)
 rl --method POST --data '{"printType": "GLIMPACT", "native": true, "record": {"type": "invoice", "id": 456}}'                    # GL impact as NetSuite prints it
-rl --method POST --data '{"printType": "BOM", "native": true, "record": {"type": "bom", "id": 1089}}'                             # bill of materials (native only)
+rl --method POST --data '{"printType": "BOM", "native": true, "record": {"type": "workorder", "id": 3824098}}'                   # bill of materials (native only)
 rl --method POST --data '{"printType": "PICKINGTICKET", "templateId": 8, "record": {"type": "salesorder", "id": 789}}'           # picking ticket
 rl --method POST --data '{"printType": "PACKINGSLIP", "templateId": 41, "record": {"type": "itemfulfillment", "id": 987}}'      # packing slip
 rl --method POST --data '{"printType": "ITEMLABEL", "templateId": 26, "itemIds": [101, 102], "startLabel": 1}'                 # item labels
@@ -144,9 +144,12 @@ rl --method POST --data @"$SP/raw.json"   # raw BFO XML, no data: {"xml": "<?xml
   - GL impact (`GLIMPACT`): `record` only (no `formId`). Returns the PDF and the merged `xml`, and
     `notes` says NetSuite prints the account's GL impact template, so it can't choose the template
     being edited. A non-posting transaction (a sales order) prints its non-posting lines.
-  - Bill of materials (`BOM`): `record` only; `render.bom` takes the id as its `entityId`. Returns
-    the PDF and the merged `xml`, with a note that NetSuite prints the account's BOM template. Saved
-    and draft BOM renders are refused for now (`BOM has a native preview only for now`).
+  - Bill of materials (`BOM`): `record` is a **work order** — NetSuite prints a work order's bill of
+    materials (customer, assembly, quantity, then each component's quantity, item, options and
+    inventory detail). A BOM, BOM revision or assembly id is refused (`a bill of materials prints a
+    work order — record N is not a work order`). Returns the PDF and the merged `xml`, with a note
+    that NetSuite prints the account's BOM template. Saved and draft BOM renders are refused for now
+    (`BOM has a native preview only for now`). Sample: `SELECT id, tranid FROM transaction WHERE type = 'WorkOrd' ORDER BY id DESC FETCH FIRST 5 ROWS ONLY`.
   - A form that isn't set to an advanced template prints NetSuite's basic layout, so a native
     render shows what the form prints, not necessarily the template being edited.
 - **Picking ticket** (`PICKINGTICKET`): `record` is the sales order (`salesorder` only). Saved and

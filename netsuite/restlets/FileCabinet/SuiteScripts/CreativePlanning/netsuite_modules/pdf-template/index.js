@@ -203,6 +203,7 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
         rejectTemplateWithNative(body);
         const request = asObject(body, BOM_KEYS);
         const target = requireRecordRef(request.record);
+        requireWorkOrder(target.id);
         const pdfFile = render.bom({ entityId: target.id, printMode: render.PrintMode.PDF });
         const htmlFile = render.bom({ entityId: target.id, printMode: render.PrintMode.HTML });
         return {
@@ -214,6 +215,15 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
             xml: htmlFile.getContents(),
             notes: [exports.BOM_NOTE],
         };
+    };
+    // render.bom prints a work order's bill of materials; a BOM, revision or assembly id only gets an opaque
+    // "unexpected SuiteScript error" (manufacturing sandbox, 2026-10-26).
+    const requireWorkOrder = (id) => {
+        const rows = query.runSuiteQL({ query: /* sql */ `SELECT txn.type FROM transaction txn WHERE txn.id = ?`, params: [id] })
+            .asMappedResults();
+        if (rows.length === 0 || rows[0].type !== 'WorkOrd') {
+            throw new index_js_1.ValidationError(`a bill of materials prints a work order — record ${id} is not a work order`);
+        }
     };
     // xmlToPdf turns plain text into a PDF instead of failing, so the input is checked here.
     const renderRaw = (body) => {
