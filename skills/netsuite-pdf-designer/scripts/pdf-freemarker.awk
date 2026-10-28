@@ -65,7 +65,8 @@ function end_directive(   name, parents) {
   if (!(name in blockDirective) || body ~ /\/[ \t\r\n]*$/) return
   if (name ~ /^(assign|global|local)$/ && body ~ /=/) return
   depth++; stackName[depth] = name; stackLine[depth] = startLine; stackCol[depth] = startCol; alternate[depth] = 0; caseSeen[depth] = 0
-  loopVariables[depth] = name ~ /^(list|items)$/ ? bound_loop_variables(body) : name ~ /^(macro|function)$/ ? bound_parameters(body) : ""
+  loopVariables[depth] = name ~ /^(list|items)$/ ? bound_loop_variables(body) : ""
+  parameters[depth] = name ~ /^(macro|function)$/ ? bound_parameters(body) : ""
   if (name == "noparse") mode = "noparse"
 }
 function close_block(name,   level) {
@@ -82,7 +83,7 @@ function close_block(name,   level) {
 # nesting checks inside these ranges.
 function pop_level() {
   if (stackName[depth] ~ /^(macro|function)$/) print "M\t" stackLine[depth] "\t" stackCol[depth] "\t" startLine "\t" startCol > macroFile
-  loopVariables[depth] = ""
+  loopVariables[depth] = ""; parameters[depth] = ""
   if (alternate[depth]) hiddenLevels--; depth--
 }
 # "list seq as item" or "list map as key, value" or "items as item" -> "item" or "key value"
@@ -112,6 +113,11 @@ function loop_bound(variable,   level) {
   for (level = depth; level > 0; level--) if (index(" " loopVariables[level] " ", " " variable " ")) return 1
   return 0
 }
+# A loop variable or a macro/function parameter: either may itself be named row_index.
+function name_bound(name,   level) {
+  for (level = depth; level > 0; level--) if (index(" " loopVariables[level] " " parameters[level] " ", " " name " ")) return 1
+  return 0
+}
 # Renaming a loop (as item -> as component) and leaving item_index or item?counter behind renders without error in
 # NetSuite but silently drops what that expression guarded.
 function check_loop_references(text,   rest, reference, variable, before, after) {
@@ -123,7 +129,7 @@ function check_loop_references(text,   rest, reference, variable, before, after)
     reference = substr(rest, RSTART, RLENGTH)
     rest = substr(rest, RSTART + RLENGTH)
     if (before ~ /[a-zA-Z0-9_.]/ || after ~ /[a-zA-Z0-9_]/) continue
-    if (reference !~ /\?/ && (reference in assigned || loop_bound(reference))) continue
+    if (reference !~ /\?/ && (reference in assigned || name_bound(reference))) continue
     variable = reference; sub(/(_index|_has_next|\?[a-z_]+)$/, "", variable)
     if (!loop_bound(variable))
       finding("WARN", startLine, startCol, "freemarker.loop-variable", reference " needs a loop variable " variable ", but no enclosing <#list> or <#items> binds it (a renamed loop?); NetSuite renders without error and drops what it guards")

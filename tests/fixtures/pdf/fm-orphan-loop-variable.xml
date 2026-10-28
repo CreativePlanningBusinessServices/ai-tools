@@ -8,5 +8,6 @@
 <#if item_index==0><thead><tr><th>${component.quantity@label}</th></tr></thead></#if>
 <tr><td>${component.item}</td><td>${line?counter}</td></tr>
 </#list></table>
+<#macro row item><p>${item.name}</p><#if item_index == 0><p>first</p></#if></#macro>
 </body>
 </pdf>
