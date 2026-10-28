@@ -26,7 +26,7 @@ define(["require", "exports", "N/format", "N/query", "N/runtime", "../file-cabin
         const statementDate = period.statementDate ?? today();
         const { startDate } = period;
         const references = findTemplateReferences(options.source);
-        const templateSource = adaptSourceToDraftData(options.source, references);
+        const { source: templateSource, adaptations } = adaptSourceToDraftData(options.source, references);
         const customer = loadCustomer(options.entityId);
         const filter = {
             entityId: options.entityId,
@@ -60,7 +60,7 @@ define(["require", "exports", "N/format", "N/query", "N/runtime", "../file-cabin
         for (const line of lines)
             for (const path of references.linePaths)
                 fillPath(line, path);
-        return { templateSource, dataSource: { alias: DRAFT_DATA_ALIAS, data: { statements: [statement] } } };
+        return { templateSource, adaptations, dataSource: { alias: DRAFT_DATA_ALIAS, data: { statements: [statement] } } };
     };
     exports.buildDraftStatement = buildDraftStatement;
     /** The statement options saved and draft renders share, validated the same way for both. */
@@ -232,13 +232,28 @@ define(["require", "exports", "N/format", "N/query", "N/runtime", "../file-cabin
      * name the customer record type, so it becomes "Statement".
      */
     const adaptSourceToDraftData = (source, references) => {
-        const labelFrom = (labels) => (interpolation, field) => labels[field] ?? interpolation;
+        const captionedFields = [];
+        const labelFrom = (labels) => (interpolation, field) => {
+            if (labels[field] === undefined)
+                return interpolation;
+            if (!captionedFields.includes(field))
+                captionedFields.push(field);
+            return labels[field];
+        };
         const redirected = rewriteConstructCode(source, (kind) => kind === 'directive' || kind === 'interpolation', (code) => code.replace(new RegExp(BARE_STATEMENTS.source, 'g'), `${DRAFT_DATA_ALIAS}.statements`));
         assertDraftCanFeed(redirected);
-        return redirected
-            .replace(/\$\{\s*record@title\s*\}/g, 'Statement')
+        const titled = redirected.replace(/\$\{\s*record@title\s*\}/g, 'Statement');
+        const captioned = titled
             .replace(new RegExp(`\\$\\{\\s*${references.statementVariable}\\.(\\w+)@label\\s*\\}`, 'g'), labelFrom(STATEMENT_LABELS))
             .replace(new RegExp(`\\$\\{\\s*${references.lineVariable}\\.(\\w+)@label\\s*\\}`, 'g'), labelFrom(LINE_LABELS));
+        return {
+            source: captioned,
+            adaptations: [
+                ...(redirected !== source ? ['statements: rebuilt statement data'] : []),
+                ...(titled !== redirected ? ['title: Statement'] : []),
+                ...(captionedFields.length > 0 ? [`captions: ${captionedFields.join(', ')}`] : []),
+            ],
+        };
     };
     // Without this, a template the rewrite can't feed (a legacy layout reading `record.lines`, or
     // `statements` passed through a macro call or square-bracket tag) renders a plausible empty PDF.
