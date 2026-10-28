@@ -143,15 +143,21 @@ rl --method POST --data @"$SP/raw.json"   # raw BFO XML, no data: {"xml": "<?xml
   - Picking tickets (`formId`, `shipgroup`, `location` optional) and packing slips (`formId`
     optional): PDF only, `xml` is `null`.
   - GL impact (`GLIMPACT`): `record` only (no `formId`). Returns the PDF and the merged `xml`, and
-    `notes` says NetSuite prints the account's GL impact template, so it can't choose the template
-    being edited. A non-posting transaction (a sales order) prints its non-posting lines.
+    `notes` says NetSuite prints the account's preferred GL impact template (or its basic layout
+    when none is set), so it can't choose the template being edited. A non-posting transaction (a
+    sales order) prints its non-posting lines.
   - Bill of materials (`BOM`): `record` is a **work order** — NetSuite prints a work order's bill of
     materials (customer, assembly, quantity, then each component's quantity, item, options and
     inventory detail). A BOM, BOM revision or assembly id is refused (`a bill of materials prints a
     work order — record N is not a work order`). Returns the PDF and the merged `xml`, with a note
-    that NetSuite prints the account's BOM template. Sample: `SELECT id, tranid FROM transaction WHERE type = 'WorkOrd' ORDER BY id DESC FETCH FIRST 5 ROWS ONLY`.
+    that NetSuite prints the account's preferred BOM template, or its basic layout when none is set
+    (a demo account printed "Bill Of Materials" with an Inventory Detail column and no page
+    numbers). Sample: `SELECT id, tranid FROM transaction WHERE type = 'WorkOrd' ORDER BY id DESC FETCH FIRST 5 ROWS ONLY`.
   - A form that isn't set to an advanced template prints NetSuite's basic layout, so a native
     render shows what the form prints, not necessarily the template being edited.
+  - When NetSuite prints its basic layout, its HTML mode returns a NetSuite web page instead of BFO
+    markup. Native transaction, GL impact and BOM renders and saved statements then return
+    `xml: null`, and `notes` says NetSuite printed its basic layout; the PDF is still what it prints.
 - **Picking ticket** (`PICKINGTICKET`): `record` is the sales order (`salesorder` only). Saved and
   draft render the template with the sales order as `record`.
 - **Packing slip** (`PACKINGSLIP`): `record` is an `itemfulfillment` (loaded as `record`, its
@@ -207,7 +213,7 @@ rl --method POST --data @"$SP/raw.json"   # raw BFO XML, no data: {"xml": "<?xml
   `adaptations`. Always `"approximate": true`: secondary accounting books aren't shown; a
   foreign-currency transaction shows its base amounts and base currency in both column groups; the
   exchange rate is rounded to two decimals; any other `X@label` prints as the field name X; and
-  `noLinesMessage` ("No GL impact lines") is a guess. Compared with NetSuite's own print in SB2
+  `noLinesMessage` ("No GL impact lines") is a guess. `notes` gives the short version. Compared with NetSuite's own print in SB2
   (2026-10-26), an invoice and a journal match on header, captions, accounts, memos, subsidiaries,
   amounts and totals.
 - **Bill of materials** (`BOM`), saved (`templateId` / `scriptId`) and draft (`source`), with `record`
@@ -230,10 +236,16 @@ rl --method POST --data @"$SP/raw.json"   # raw BFO XML, no data: {"xml": "<?xml
     required, and the form decides the template. SuiteQL has no table that lists transaction
     forms, so ask the user for the form id (Customization → Forms → Transaction Forms, type
     Statement; the id is in the form's URL).
+    To tell which template a form prints, render it saved and compare the static text of its
+    merged `xml` (captions, headings, footer lines, with the `${…}` values left out) with the source
+    of each `STATEMENT` template (GET them by id): the one whose fixed lines all appear is the
+    form's template.
   - **Draft**: `source` and **no** `formId` (a `formId` next to `source` is refused). NetSuite can't
     run a draft through its statement engine, so the RESTlet rebuilds the statement with SuiteQL
-    and the response adds `"approximate": true`. What is rebuilt and what isn't: see "Draft
-    statements" under Gotchas.
+    and the response adds `"approximate": true`. `adaptations` lists what it changed in its copy of
+    the source (`statements: rebuilt statement data`, `title: Statement`, `captions: amountDue, …`),
+    and `notes` names the main gaps. What is rebuilt and what isn't: see "Draft statements" under
+    Gotchas.
 
 ```json
 { "mode": "saved" | "draft" | "native" | "raw",
@@ -242,8 +254,8 @@ rl --method POST --data @"$SP/raw.json"   # raw BFO XML, no data: {"xml": "<?xml
           | { "searchId": "customsearch_…", "searchType": "customer", "resultCount": 50, "truncated": false }
           | { "labelCount": 2, "startLabel": 1 } | null,
   "pdf": "<base64>", "pdfBytes": 41318, "xml": "<merged BFO markup>" | null,
-  "approximate": true,                     // draft statements; a packing slip from a sales order; labels
-  "notes": ["returnForm isn't supplied…"], // when something the template reads isn't previewed
+  "approximate": true,                     // draft statements; a packing slip from a sales order; labels; saved/draft GL impact and BOM
+  "notes": ["returnForm isn't supplied…"], // what isn't previewed or was rebuilt, and why xml is null
   "adaptations": ["title: Packing Slip"] } // what the RESTlet changed on its copy of the source
 ```
 
@@ -315,7 +327,10 @@ Restore = step 6 with the backup's contents as the draft:
    render also needs the statement form id from the user; a draft doesn't.
    For a `SEARCH` template, the sample is a saved search: ask which one, and use the
    netsuite-saved-search skill to find candidates. Prefer a search whose columns have custom
-   labels, because `${result.x@label}` prints only a custom label (blank otherwise).
+   labels, because `${result.x@label}` prints only a custom label (blank otherwise). For a quick
+   list without that skill: `SELECT id, scriptid, name, searchtype FROM savedsearch WHERE isinactive = 'F' AND LOWER(name) LIKE '%<word>%'`
+   (the table has `name` and `searchtype`, a type code such as `Opprtnty`, but no `title` or
+   `recordtype` column).
    For a custom record, list recent ones with
    `SELECT id, name FROM <customrecord_scriptid> ORDER BY id DESC FETCH FIRST 5 ROWS ONLY`, and
    read its `custrecord_…` field ids from `netsuite-cli`'s record schema.
@@ -369,11 +384,12 @@ Restore = step 6 with the backup's contents as the draft:
    show one. GL impact: saved and draft on rebuilt GL data, captioned `saved (approximate: GL data
    rebuilt with SuiteQL)` / `draft (approximate: …)`; compare with the native render of the same
    transaction (`native: true`, captioned `native (NetSuite's GL impact print)`), which prints
-   NetSuite's own data through the account's GL impact template, not the one being edited. Bill of
+   NetSuite's own data through the account's preferred GL impact template (or its basic layout), not
+   the one being edited. Bill of
    materials: `record` is a work order; saved and draft are captioned `saved (approximate: no lots or
    assembly-detail table)` / `draft (approximate: …)`; compare with the native render (`native: true`,
-   captioned `native (NetSuite's BOM print)`), which prints through the account's BOM template, not the
-   one being edited. A price list has no preview in this version. Read, validate and save
+   captioned `native (NetSuite's BOM print)`), which prints through the account's preferred BOM
+   template (or its basic layout), not the one being edited. A price list has no preview in this version. Read, validate and save
    still work. **Check templates that loop over `records`** (the
    Print Checks batch list) can't be previewed either: before rendering a `TRANSACTION` template,
    run `grep -Eq '<#list[[:space:]]+records[[:space:]]' "$SP/pdf-base-<id>.xml"` and, on a match,
@@ -398,7 +414,8 @@ Restore = step 6 with the backup's contents as the draft:
    response says `approximate: true`), `saved (approximate: label rows rebuilt with SuiteQL)` /
    `draft (approximate: …)` for labels (add `synthetic labels` when you passed `labels`), or
    `raw (BFO markup, no data)`. Report any `notes` and `adaptations` in one line
-   each. A result with `xml: null` (native picking tickets and packing slips) has no merged markup,
+   each. A result with `xml: null` (native picking tickets and packing slips, and any native render or
+   saved statement NetSuite drew in its basic layout) has no merged markup,
    so skip `pdf-validate.sh --merged` for it.
    When one turn produces several previews, send them all in that one call and name each in the
    caption. The user can mark up the PDF in Claude and send it back to point at what to change.
@@ -440,7 +457,10 @@ Restore = step 6 with the backup's contents as the draft:
    may drop an element it doesn't know (`bfo.element`: check the PDF), text in a `<div>` won't draw
    (`netsuite.div-text`), an absolute position in a `<style>` rule couldn't be checked
    (`bfo.position`), non-Latin text needs the nsfont link (`netsuite.nsfont`), or an image may not
-   load (`netsuite.image-http`, `netsuite.image-host`). `netsuite.roots` (only with `--printtype`)
+   load (`netsuite.image-http`, `netsuite.image-host`). `freemarker.loop-variable` is a loop
+   variable no enclosing `<#list>` or `<#items>` binds, usually `item_index` or `item?counter` left
+   behind after renaming `as item` to `as component`: NetSuite renders it without an error but
+   silently drops what it guards (a table header, say), so rename it to match the loop. `netsuite.roots` (only with `--printtype`)
    means the source reads data this print type never gets, such as `salesorder` (packing-slip
    data) in an invoice template, so it would print blank: confirm the print type with the user
    before rendering or saving. A clean or WARN-only result is not proof:
@@ -454,8 +474,10 @@ Restore = step 6 with the backup's contents as the draft:
      `suitecloud account:manageauth --info <authid>` on each listed id; its Account ID must equal
      the alias's `accountId` (`netsuite-cli account list`). Some CLI versions list browser-login ids
      only with `SUITECLOUD_CI` unset and certificate (M2M) ids only with it set: if the id you need
-     is missing, list again with the other setting. None match: follow the suitecloud-cli skill's
-     "Authenticate an account netsuite-cli already knows" recipe first.
+     is missing, list again with the other setting. Several match (a browser-login id and an M2M
+     id, as in CP's SB2): use the M2M one, which never needs a browser login again. None match:
+     follow the suitecloud-cli skill's "Authenticate an account netsuite-cli already knows" recipe
+     first.
    - Then, with `PROJ="$SP/sdf-<alias>"` and the template's scriptid:
    ```bash
    bash "$PD/scripts/sdf-template.sh" init <authid> "$PROJ"          # once per account; reuses an existing one
