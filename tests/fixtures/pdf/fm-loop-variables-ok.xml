@@ -1,0 +1,15 @@
+<?xml version="1.0"?><!DOCTYPE pdf PUBLIC "-//big.faceless.org//report" "report-1.1.dtd">
+<pdf>
+<head>
+	<link name="NotoSans" type="font" subtype="truetype" src="${nsfont.NotoSans_Regular}" src-bold="${nsfont.NotoSans_Bold}" bytes="2" />
+</head>
+<body padding="0.5in" size="Letter">
+<#assign row_index = 0>
+<table><#list record.item as item>
+<#if item_index==0><thead><tr><th>${"item_index"}</th></tr></thead></#if>
+<tr><td>${item?counter}</td><td>${record.line_index}</td><td>${row_index}</td><#if item_has_next><td>,</td></#if></tr>
+</#list></table>
+<#list record.expense><#items as expense><p>${expense?index}</p></#items></#list>
+<#list record.links as key, value><p>${key?is_first?c} ${value?is_last?c}</p></#list>
+</body>
+</pdf>

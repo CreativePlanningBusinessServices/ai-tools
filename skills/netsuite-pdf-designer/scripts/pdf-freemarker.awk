@@ -7,7 +7,10 @@ function blanks(count,   text) { text = ""; while (count > 512) { text = text SP
 function exes(count,   text) { text = ""; while (count > 512) { text = text EXES; count -= 512 } return text substr(EXES, 1, count) }
 function finding(severity, at_line, at_col, rule, message) { print severity "\t" at_line "\t" at_col "\t" rule "\t" message }
 function put(text) { out = out text; xmlOut = xmlOut (hiddenLevels ? blanks(length(text)) : text) }
-function emit(text) { put(mode == "interpolation" ? exes(length(text)) : blanks(length(text))); if (mode == "directive") body = body text }
+function emit(text) {
+  put(mode == "interpolation" ? exes(length(text)) : blanks(length(text)))
+  if (mode == "directive") body = body text; else if (mode == "interpolation") expression = expression text
+}
 # FreeMarker 2.3.23+ accepts camelCase names: elseIf -> elseif (directives), hasContent -> has_content (built-ins)
 function camel_to_lower(name, separator) {
   if (name !~ /^[a-z][a-zA-Z0-9]*[A-Z]/) return name
@@ -32,7 +35,7 @@ function scan_expression(   ch, name) {
       }
     } else if (mode == "interpolation") {
       if (ch == "{") braces++
-      else if (ch == "}" && --braces == 0) { put("x"); pos++; mode = ""; return }
+      else if (ch == "}" && --braces == 0) { check_loop_references(expression); put("x"); pos++; mode = ""; return }
       else if (ch == "<" && substr(line, pos) ~ /^<([\/#@]|[a-zA-Z][a-zA-Z0-9_:.-]*([ \t\r\/>]|$))/) {
         finding("ERROR", startLine, startCol, "freemarker.interpolation", "${ is never closed with }"); mode = ""; return
       }
@@ -43,6 +46,10 @@ function scan_expression(   ch, name) {
   }
 }
 function end_directive(   name, parents) {
+  if (!closing && match(body, /^(assign|global|local)[ \t\r\n]+[a-zA-Z_][a-zA-Z0-9_]*/)) {
+    assignedName = substr(body, RSTART, RLENGTH); sub(/^[a-z]+[ \t\r\n]+/, "", assignedName); assigned[assignedName] = 1
+  }
+  if (!closing) check_loop_references(body)
   if (kind == "@" || !match(body, /^[a-zA-Z_]+/)) return
   name = camel_to_lower(substr(body, 1, RLENGTH), "")
   if (!(name in directive)) { finding("ERROR", startLine, startCol, "freemarker.directive", "<#" name "> is not a FreeMarker directive"); return }
@@ -58,6 +65,7 @@ function end_directive(   name, parents) {
   if (!(name in blockDirective) || body ~ /\/[ \t\r\n]*$/) return
   if (name ~ /^(assign|global|local)$/ && body ~ /=/) return
   depth++; stackName[depth] = name; stackLine[depth] = startLine; stackCol[depth] = startCol; alternate[depth] = 0; caseSeen[depth] = 0
+  loopVariables[depth] = name ~ /^(list|items)$/ ? bound_loop_variables(body) : ""
   if (name == "noparse") mode = "noparse"
 }
 function close_block(name,   level) {
@@ -74,7 +82,34 @@ function close_block(name,   level) {
 # nesting checks inside these ranges.
 function pop_level() {
   if (stackName[depth] ~ /^(macro|function)$/) print "M\t" stackLine[depth] "\t" stackCol[depth] "\t" startLine "\t" startCol > macroFile
+  loopVariables[depth] = ""
   if (alternate[depth]) hiddenLevels--; depth--
+}
+# "list seq as item" or "list map as key, value" or "items as item" -> "item" or "key value"
+function bound_loop_variables(text,   names) {
+  if (!match(text, /[ \t\r\n]as[ \t\r\n]+[a-zA-Z_][a-zA-Z0-9_]*([ \t\r\n]*,[ \t\r\n]*[a-zA-Z_][a-zA-Z0-9_]*)?/)) return ""
+  names = substr(text, RSTART, RLENGTH); sub(/^[ \t\r\n]as[ \t\r\n]+/, "", names); gsub(/[ \t\r\n]*,[ \t\r\n]*/, " ", names)
+  return names
+}
+function loop_bound(variable,   level) {
+  for (level = depth; level > 0; level--) if (index(" " loopVariables[level] " ", " " variable " ")) return 1
+  return 0
+}
+# Renaming a loop (as item -> as component) and leaving item_index or item?counter behind renders without error in
+# NetSuite but silently drops what that expression guarded.
+function check_loop_references(text,   rest, reference, variable, before, after) {
+  gsub(/"([^"\\]|\\.)*"|'([^'\\]|\\.)*'/, "", text)
+  rest = text
+  while (match(rest, /[a-zA-Z_][a-zA-Z0-9_]*(_index|_has_next|\?(index|counter|has_next|is_first|is_last|item_parity|item_parity_cap|item_cycle|is_even_item|is_odd_item))/)) {
+    before = RSTART > 1 ? substr(rest, RSTART - 1, 1) : ""
+    after = substr(rest, RSTART + RLENGTH, 1)
+    reference = substr(rest, RSTART, RLENGTH)
+    rest = substr(rest, RSTART + RLENGTH)
+    if (before ~ /[a-zA-Z0-9_.]/ || after ~ /[a-zA-Z0-9_]/ || (reference !~ /\?/ && reference in assigned)) continue
+    variable = reference; sub(/(_index|_has_next|\?[a-z_]+)$/, "", variable)
+    if (!loop_bound(variable))
+      finding("WARN", startLine, startCol, "freemarker.loop-variable", reference " needs a loop variable " variable ", but no enclosing <#list> or <#items> binds it (a renamed loop?); NetSuite renders without error and drops what it guards")
+  }
 }
 BEGIN {
   FS = "\t"; SPACES = sprintf("%512s", ""); EXES = SPACES; gsub(/ /, "x", EXES); seekingDeclaration = 1
@@ -103,7 +138,7 @@ FNR == NR { if ($1 == "B") builtin[$2] = 1; else if ($1 == "D") directive[$2] = 
     put(substr(rest, 1, RSTART - 1)); lineText = lineText substr(rest, 1, RSTART - 1)
     pos += RSTART - 1; startLine = FNR; startCol = pos; quote = ""
     if (substr(line, pos, 4) == "<#--") { mode = "comment"; put("    "); pos += 4 }
-    else if (substr(line, pos, 2) == "${") { mode = "interpolation"; braces = 1; put("xx"); pos += 2 }
+    else if (substr(line, pos, 2) == "${") { mode = "interpolation"; braces = 1; expression = ""; put("xx"); pos += 2 }
     else {
       closing = (substr(line, pos + 1, 1) == "/"); kind = substr(line, pos + 1 + closing, 1)
       mode = "directive"; body = ""; parens = 0; put(blanks(2 + closing)); pos += 2 + closing

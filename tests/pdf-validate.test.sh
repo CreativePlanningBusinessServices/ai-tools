@@ -36,6 +36,15 @@ assert_line '^ERROR 10:1 freemarker\.stray </#list>' "a stray </#list> is report
 run_validator "$fixtures/fm-else-outside.xml"
 assert_line '^ERROR 8:1 freemarker\.misplaced <#else>' "<#else> outside an <#if> is reported"
 
+run_validator "$fixtures/fm-orphan-loop-variable.xml"
+assert_eq "$status" 0 "an orphaned loop variable is a warning, not an error"
+assert_line '^WARN 8:1 freemarker\.loop-variable item_index' "item_index left over from a renamed <#list> is reported"
+assert_line '^WARN 9:[0-9]+ freemarker\.loop-variable line\?counter' "line?counter with no loop binding line is reported"
+assert_contains "$output" "0 errors, 2 warnings" "only the two orphaned loop variables are reported"
+
+run_validator "$fixtures/fm-loop-variables-ok.xml"
+assert_contains "$output" "0 errors, 0 warnings" "bound loop variables, #items, key-value lists, string literals, fields and assigned names are not reported"
+
 run_validator "$fixtures/fm-open-interpolation.xml"
 assert_line '^ERROR 7:4 freemarker\.interpolation ' "an unclosed \${ is reported where it opens"
 
