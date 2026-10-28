@@ -8,7 +8,7 @@ define(["require", "exports", "N/format", "N/query", "N/runtime", "../file-cabin
     const STRING_LITERAL = /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/;
     const CONSTRUCT_OPENER = /<#--|<\/?#|<\/?@|\[\/?[#@]|\$\{/g;
     const CONSTRUCT_CLOSERS = { directive: '>', macro: '>', squareTag: ']', interpolation: '}' };
-    const DRAFT_NOT_SUPPORTED = "draft preview isn't supported — use a saved render through a statement form (formId)";
+    const DRAFT_NOT_SUPPORTED = 'draft preview isn\'t supported — use a saved render through a statement form (formId)';
     const STATEMENT_LABELS = {
         amountDue: 'Amount Due', billaddress: 'Billing Address', agingbal: 'Amount Due',
         aging1: 'Current', aging2: '1-30 Days', aging3: '31-60 Days', aging4: '61-90 Days', aging5: 'Over 90 Days',
@@ -322,7 +322,7 @@ define(["require", "exports", "N/format", "N/query", "N/runtime", "../file-cabin
                 else if (character === quote)
                     quote = null;
             }
-            else if (character === '"' || character === "'") {
+            else if (character === '"' || character === '\'') {
                 quote = character;
             }
             else if (depth === 0 && character === closer) {
