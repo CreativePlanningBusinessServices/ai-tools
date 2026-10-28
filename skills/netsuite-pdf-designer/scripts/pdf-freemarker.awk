@@ -49,7 +49,7 @@ function end_directive(   name, parents) {
   if (!closing && match(body, /^(assign|global|local)[ \t\r\n]+[a-zA-Z_][a-zA-Z0-9_]*/)) {
     assignedName = substr(body, RSTART, RLENGTH); sub(/^[a-z]+[ \t\r\n]+/, "", assignedName); assigned[assignedName] = 1
   }
-  if (!closing) check_loop_references(body)
+  if (!closing) check_header_references(body)
   if (kind == "@" || !match(body, /^[a-zA-Z_]+/)) return
   name = camel_to_lower(substr(body, 1, RLENGTH), "")
   if (!(name in directive)) { finding("ERROR", startLine, startCol, "freemarker.directive", "<#" name "> is not a FreeMarker directive"); return }
@@ -65,7 +65,7 @@ function end_directive(   name, parents) {
   if (!(name in blockDirective) || body ~ /\/[ \t\r\n]*$/) return
   if (name ~ /^(assign|global|local)$/ && body ~ /=/) return
   depth++; stackName[depth] = name; stackLine[depth] = startLine; stackCol[depth] = startCol; alternate[depth] = 0; caseSeen[depth] = 0
-  loopVariables[depth] = name ~ /^(list|items)$/ ? bound_loop_variables(body) : ""
+  loopVariables[depth] = name ~ /^(list|items)$/ ? bound_loop_variables(body) : name ~ /^(macro|function)$/ ? bound_parameters(body) : ""
   if (name == "noparse") mode = "noparse"
 }
 function close_block(name,   level) {
@@ -91,6 +91,23 @@ function bound_loop_variables(text,   names) {
   names = substr(text, RSTART, RLENGTH); sub(/^[ \t\r\n]as[ \t\r\n]+/, "", names); gsub(/[ \t\r\n]*,[ \t\r\n]*/, " ", names)
   return names
 }
+# "macro cell cell_index label=\"x\"" or "function pick(a, b)" -> "cell_index label" or "a b"
+function bound_parameters(text,   names, count, position, words) {
+  sub(/^[a-zA-Z_]+[ \t\r\n]+[a-zA-Z_][a-zA-Z0-9_]*/, "", text)
+  gsub(/"([^"\\]|\\.)*"|'([^'\\]|\\.)*'/, "", text)
+  gsub(/=[^ \t\r\n,)]*/, "", text); gsub(/[(),.]/, " ", text)
+  count = split(text, words, /[ \t\r\n]+/); names = ""
+  for (position = 1; position <= count; position++) if (words[position] ~ /^[a-zA-Z_][a-zA-Z0-9_]*$/) names = names " " words[position]
+  return substr(names, 2)
+}
+# A <#list>/<#items> header binds its "as" names rather than using them, and a <#macro>/<#function> header declares
+# parameters; only the rest of a header can refer to an outer loop.
+function check_header_references(text,   keyword) {
+  keyword = text; sub(/[^a-zA-Z_].*$/, "", keyword)
+  if (kind != "@" && keyword ~ /^(macro|function)$/) return
+  if (kind != "@" && keyword ~ /^(list|items)$/) sub(/[ \t\r\n]as[ \t\r\n].*$/, "", text)
+  check_loop_references(text)
+}
 function loop_bound(variable,   level) {
   for (level = depth; level > 0; level--) if (index(" " loopVariables[level] " ", " " variable " ")) return 1
   return 0
@@ -105,7 +122,8 @@ function check_loop_references(text,   rest, reference, variable, before, after)
     after = substr(rest, RSTART + RLENGTH, 1)
     reference = substr(rest, RSTART, RLENGTH)
     rest = substr(rest, RSTART + RLENGTH)
-    if (before ~ /[a-zA-Z0-9_.]/ || after ~ /[a-zA-Z0-9_]/ || (reference !~ /\?/ && reference in assigned)) continue
+    if (before ~ /[a-zA-Z0-9_.]/ || after ~ /[a-zA-Z0-9_]/) continue
+    if (reference !~ /\?/ && (reference in assigned || loop_bound(reference))) continue
     variable = reference; sub(/(_index|_has_next|\?[a-z_]+)$/, "", variable)
     if (!loop_bound(variable))
       finding("WARN", startLine, startCol, "freemarker.loop-variable", reference " needs a loop variable " variable ", but no enclosing <#list> or <#items> binds it (a renamed loop?); NetSuite renders without error and drops what it guards")

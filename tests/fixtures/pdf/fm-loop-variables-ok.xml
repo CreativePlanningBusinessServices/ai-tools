@@ -10,6 +10,9 @@
 <tr><td>${item?counter}</td><td>${record.line_index}</td><td>${row_index}</td><#if item_has_next><td>,</td></#if></tr>
 </#list></table>
 <#list record.expense><#items as expense><p>${expense?index}</p></#items></#list>
+<#list record.item as line_index><p>${line_index.item}</p><#if line_index_has_next>,</#if></#list>
+<#macro cell cell_index label="x"><td>${cell_index}${label}</td></#macro>
+<#function pick item_has_next><#return item_has_next></#function>
 <#list record.links as key, value><p>${key?is_first?c} ${value?is_last?c}</p></#list>
 </body>
 </pdf>
