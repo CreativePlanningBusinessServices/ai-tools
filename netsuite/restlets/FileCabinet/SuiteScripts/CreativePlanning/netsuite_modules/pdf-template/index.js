@@ -1,7 +1,7 @@
 define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/search", "../file-cabinet/index.js", "./statement-data.js", "./label-data.js", "./gl-data.js", "./label-data.js"], function (require, exports, log, query, record, render, search, index_js_1, statement_data_js_1, label_data_js_1, gl_data_js_1, label_data_js_2) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.formatStamp = exports.parseJsonObject = exports.parseTemplateRef = exports.adaptTitle = exports.renderTemplate = exports.backupTemplate = exports.describeTemplate = exports.SEARCH_MAX_LIMIT = exports.SEARCH_DEFAULT_LIMIT = exports.RETURN_FORM_NOTE = exports.GL_IMPACT_NOTE = exports.BOM_DRAFT_NOTE = exports.BOM_NOTE = exports.RAW_FREEMARKER_REFUSAL = exports.RAW_REFUSAL = exports.NATIVE_TEMPLATE_REFUSAL = exports.NATIVE_REFUSAL = exports.PRINT_CHECKS_REFUSAL = exports.FREEMARKER_HINT = exports.BACKUP_FOLDER = exports.LABEL_RECORDS_REFUSAL = exports.LABEL_BARCODE_NOTE = exports.ValidationError = void 0;
+    exports.formatStamp = exports.parseJsonObject = exports.parseTemplateRef = exports.adaptTitle = exports.renderTemplate = exports.backupTemplate = exports.describeTemplate = exports.SEARCH_MAX_LIMIT = exports.SEARCH_DEFAULT_LIMIT = exports.RETURN_FORM_NOTE = exports.STATEMENT_DRAFT_NOTE = exports.GL_DRAFT_NOTE = exports.NATIVE_PAGE_NOTE = exports.GL_IMPACT_NOTE = exports.BOM_DRAFT_NOTE = exports.BOM_NOTE = exports.RAW_FREEMARKER_REFUSAL = exports.RAW_REFUSAL = exports.NATIVE_TEMPLATE_REFUSAL = exports.NATIVE_REFUSAL = exports.PRINT_CHECKS_REFUSAL = exports.FREEMARKER_HINT = exports.BACKUP_FOLDER = exports.LABEL_RECORDS_REFUSAL = exports.LABEL_BARCODE_NOTE = exports.ValidationError = void 0;
     Object.defineProperty(exports, "ValidationError", { enumerable: true, get: function () { return index_js_1.ValidationError; } });
     Object.defineProperty(exports, "LABEL_BARCODE_NOTE", { enumerable: true, get: function () { return label_data_js_2.LABEL_BARCODE_NOTE; } });
     Object.defineProperty(exports, "LABEL_RECORDS_REFUSAL", { enumerable: true, get: function () { return label_data_js_2.LABEL_RECORDS_REFUSAL; } });
@@ -14,9 +14,12 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
     exports.NATIVE_TEMPLATE_REFUSAL = 'native renders what the form prints, so it takes no templateId, scriptId or source';
     exports.RAW_REFUSAL = 'xml must be BFO markup: an <?xml …?> declaration and a <pdf>, <pdfset> or <html> root';
     exports.RAW_FREEMARKER_REFUSAL = 'raw XML has no FreeMarker; use source';
-    exports.BOM_NOTE = 'NetSuite prints the account\'s bill of materials template; a native preview can\'t choose another';
+    exports.BOM_NOTE = 'NetSuite prints the account\'s preferred bill of materials template, or its basic layout when none is set; a native preview can\'t choose another';
     exports.BOM_DRAFT_NOTE = 'inventory detail lots and the assembly-detail table aren\'t shown in a template preview; compare with native: true';
-    exports.GL_IMPACT_NOTE = 'NetSuite prints the account\'s GL impact template; a native preview can\'t choose another';
+    exports.GL_IMPACT_NOTE = 'NetSuite prints the account\'s preferred GL impact template, or its basic layout when none is set; a native preview can\'t choose another';
+    exports.NATIVE_PAGE_NOTE = 'NetSuite printed its basic layout and returned a web page, not template markup, so xml is null; the PDF is what NetSuite prints';
+    exports.GL_DRAFT_NOTE = 'GL data is rebuilt with SuiteQL: primary book only, foreign-currency amounts in base currency, exchange rate to two decimals; compare with native: true';
+    exports.STATEMENT_DRAFT_NOTE = 'statement data is rebuilt with SuiteQL: one statement in the customer\'s currency, the customer\'s own transactions only, same-day transactions possibly in another order; compare with a saved render through a statement form';
     const BACKUP_KEYS = ['id', 'scriptid'];
     const TRANSACTION_RENDER_KEYS = ['templateId', 'scriptId', 'source', 'record', 'printType'];
     const STATEMENT_RENDER_KEYS = ['printType', 'entityId', 'formId', 'statementDate', 'startDate', 'openTransactionsOnly'];
@@ -162,14 +165,13 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
         const withForm = request.formId === undefined ? {} : { formId: requireId(request.formId) };
         const pdfFile = render.transaction({ entityId: target.id, printMode: render.PrintMode.PDF, ...withForm });
         const htmlFile = render.transaction({ entityId: target.id, printMode: render.PrintMode.HTML, ...withForm });
-        return {
+        return withNativeMarkup({
             mode: 'native',
             printType: 'TRANSACTION',
             record: { ...target, ...withForm },
             pdf: pdfFile.getContents(),
             pdfBytes: pdfFile.size,
-            xml: htmlFile.getContents(),
-        };
+        }, htmlFile.getContents());
     };
     // render.glImpact draws only NetSuite's own data, so a draft gets the GL data rebuilt and injected: always approximate.
     const renderGlImpact = (body) => {
@@ -180,7 +182,7 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
         const { renderer, isDraft } = prepareRenderer(template);
         const injected = (0, gl_data_js_1.injectGlImpact)(renderer.templateContent, data);
         renderer.templateContent = injected.source;
-        return withExtras({ ...renderToResult(renderer, isDraft, 'GLIMPACT', target), approximate: true }, { adaptations: injected.adaptations });
+        return withExtras({ ...renderToResult(renderer, isDraft, 'GLIMPACT', target), approximate: true }, { adaptations: injected.adaptations, notes: [exports.GL_DRAFT_NOTE] });
     };
     const renderNativeGlImpact = (body) => {
         requireNative(body.native);
@@ -189,15 +191,14 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
         const target = requireRecordRef(request.record);
         const pdfFile = render.glImpact({ internalId: target.id, printMode: render.PrintMode.PDF });
         const htmlFile = render.glImpact({ internalId: target.id, printMode: render.PrintMode.HTML });
-        return {
+        return withNativeMarkup({
             mode: 'native',
             printType: 'GLIMPACT',
             record: target,
             pdf: pdfFile.getContents(),
             pdfBytes: pdfFile.size,
-            xml: htmlFile.getContents(),
             notes: [exports.GL_IMPACT_NOTE],
-        };
+        }, htmlFile.getContents());
     };
     // The template reads the work order itself, but lots and the assembly-detail table come only from NetSuite's own print.
     const renderBom = (body) => {
@@ -224,15 +225,14 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
         requireWorkOrder(target.id);
         const pdfFile = render.bom({ entityId: target.id, printMode: render.PrintMode.PDF });
         const htmlFile = render.bom({ entityId: target.id, printMode: render.PrintMode.HTML });
-        return {
+        return withNativeMarkup({
             mode: 'native',
             printType: 'BOM',
             record: target,
             pdf: pdfFile.getContents(),
             pdfBytes: pdfFile.size,
-            xml: htmlFile.getContents(),
             notes: [exports.BOM_NOTE],
-        };
+        }, htmlFile.getContents());
     };
     // render.bom prints a work order's bill of materials; a BOM, revision or assembly id only gets an opaque
     // "unexpected SuiteScript error" (manufacturing sandbox, 2026-10-26).
@@ -286,14 +286,13 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
         const pdfFile = render.statement({ ...options, printMode: render.PrintMode.PDF });
         // HTML mode returns the merged markup (a <pdfset> of <html> children), which the preview needs.
         const htmlFile = render.statement({ ...options, printMode: render.PrintMode.HTML });
-        return {
+        return withNativeMarkup({
             mode: 'saved',
             printType: 'STATEMENT',
             record: { entityId, formId },
             pdf: pdfFile.getContents(),
             pdfBytes: pdfFile.size,
-            xml: htmlFile.getContents(),
-        };
+        }, htmlFile.getContents());
     };
     const renderDraftStatement = (body) => {
         if ('formId' in body)
@@ -318,7 +317,7 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
         addSubsidiaryRoot(renderer, customer);
         renderer.addCustomDataSource({ format: render.DataSource.OBJECT, ...draft.dataSource });
         const pdfFile = renderer.renderAsPdf();
-        return {
+        return withExtras({
             mode: 'draft',
             printType: 'STATEMENT',
             record: { entityId },
@@ -326,7 +325,7 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
             pdfBytes: pdfFile.size,
             xml: renderer.renderAsString(),
             approximate: true,
-        };
+        }, { adaptations: draft.adaptations, notes: [exports.STATEMENT_DRAFT_NOTE] });
     };
     // addSearchResults takes search.Result objects, so this one path uses N/search rather than SuiteQL.
     const renderSearch = (body) => {
@@ -503,6 +502,10 @@ define(["require", "exports", "N/log", "N/query", "N/record", "N/render", "N/sea
         ...(extras.adaptations && extras.adaptations.length > 0 && { adaptations: extras.adaptations }),
         ...(extras.notes && extras.notes.length > 0 && { notes: extras.notes }),
     });
+    // With no advanced template to print, NetSuite's HTML mode returns its web page for the record instead of BFO markup.
+    const withNativeMarkup = (result, html) => (html.trimStart().startsWith('<?xml')
+        ? { ...result, xml: html }
+        : { ...result, xml: null, notes: [...(result.notes ?? []), exports.NATIVE_PAGE_NOTE] });
     // Accounts without subsidiaries (non-OneWorld) leave the field empty, so the root is skipped.
     const addSubsidiaryRoot = (renderer, owner) => {
         const subsidiaryId = owner.getValue({ fieldId: 'subsidiary' });
