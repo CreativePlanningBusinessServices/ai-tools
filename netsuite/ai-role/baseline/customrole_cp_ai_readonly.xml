@@ -55,10 +55,6 @@
       <permlevel>VIEW</permlevel>
     </permission>
     <permission>
-      <permkey>LIST_FILECABINET</permkey>
-      <permlevel>VIEW</permlevel>
-    </permission>
-    <permission>
       <permkey>LIST_CUSTRECORDENTRY</permkey>
       <permlevel>VIEW</permlevel>
     </permission>
@@ -116,10 +112,6 @@
     </permission>
     <permission>
       <permkey>ADMI_LOGIN_OAUTH2</permkey>
-      <permlevel>FULL</permlevel>
-    </permission>
-    <permission>
-      <permkey>LIST_OTHER_ADDRESS</permkey>
       <permlevel>FULL</permlevel>
     </permission>
   </permissions>

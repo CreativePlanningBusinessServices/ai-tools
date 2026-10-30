@@ -55,10 +55,6 @@
       <permlevel>VIEW</permlevel>
     </permission>
     <permission>
-      <permkey>LIST_FILECABINET</permkey>
-      <permlevel>VIEW</permlevel>
-    </permission>
-    <permission>
       <permkey>LIST_CUSTRECORDENTRY</permkey>
       <permlevel>VIEW</permlevel>
     </permission>
@@ -153,10 +149,6 @@
     <permission>
       <permkey>LIST_PROJECTTASK</permkey>
       <permlevel>VIEW</permlevel>
-    </permission>
-    <permission>
-      <permkey>LIST_OTHER_ADDRESS</permkey>
-      <permlevel>FULL</permlevel>
     </permission>
   </permissions>
 </role>

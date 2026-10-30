@@ -13,13 +13,21 @@ Added on top of the baseline (all View):
 | `TRAN_CUSTCRED`, `TRAN_VENDCRED` | Credit memos and vendor credits are in use (348 and 410) |
 | `TRAN_CASHSALE`, `TRAN_CASHRFND`, `TRAN_CUSTRFND` | Cash sales (31k), cash refunds and customer refunds are in use |
 | `TRAN_OPPRTNTY` | Opportunities are in use (15); the ERP flow links them to contracts and projects |
-| `TRAN_EXPREPT` | Expense reports are in use (16k) |
+| `TRAN_EXPREPT` | Expense reports are in use (16k). They carry employee reimbursement data; a client account needs the client's confirmation for this one |
 | `LIST_JOB`, `LIST_PROJECTTASK` | Projects and project tasks back the ERP support cases |
 
 Deliberately not added although used: `Deposit`, `Check`, `Transfer`, `CardChrg` (bank and payment
 instruments).
 
-Baseline entries moved out or changed (see `../../ONBOARDING.md`, "What validation taught us"):
-`TRAN_PURCHORD` is absent because SB2 has no purchase orders and NetSuite drops it silently;
-`ADMI_WORKFLOW` is absent because it accepts only Full; `LIST_OTHER_ADDRESS` (Full) is listed because
-NetSuite adds it on its own, and a re-import shows it.
+Left out of the committed file:
+- `TRAN_PURCHORD`: SB2 has no purchase orders and NetSuite drops it silently.
+- `ADMI_WORKFLOW`: accepts only Full.
+- `LIST_FILECABINET`: optional per-account opt-in (broad File Cabinet read); SB2 doesn't need it. The
+  deployed SB2 role still holds it from the first deploy, because SDF redeploys never remove
+  permissions; remove it in the UI if wanted.
+
+NetSuite-imposed permission (not in the role definition): `LIST_OTHER_ADDRESS` at Full is added by
+NetSuite on deploy and shows in a re-import. It is a Full on address records and needs Jon's explicit
+acceptance. ONBOARDING.md step 12 includes an address write that must fail.
+
+Accepted by: ____
