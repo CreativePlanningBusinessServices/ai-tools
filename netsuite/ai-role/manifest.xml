@@ -1,0 +1,10 @@
+<manifest projecttype="ACCOUNTCUSTOMIZATION">
+  <projectname>CP AI Read-Only Role</projectname>
+  <frameworkversion>1.0</frameworkversion>
+  <dependencies>
+    <features>
+      <feature required="false">WEBSERVICES</feature>
+      <feature required="false">SUBSIDIARIES</feature>
+    </features>
+  </dependencies>
+</manifest>
