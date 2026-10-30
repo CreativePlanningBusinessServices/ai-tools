@@ -128,15 +128,21 @@ Common patterns:
 
 ### 7. Translate
 
-Translate with `mcp__claude_ai_EDI_Cosmos_DB__edi_translate`. Pass the template as `templateContent`: the **full, unchanged text** of `<working-dir>/<provider>-template.json` (`cat` it). On every run also pass `today` set to the job data's `today`, so dates don't move between iterations. Inputs, defaults and error messages are in [docs/edi-translate.md](docs/edi-translate.md).
+Translate with `mcp__claude_ai_EDI_Cosmos_DB__edi_translate`. Pass the template as `templateContentGzip`: `<working-dir>/<provider>-template.json` gzipped and base64-encoded. Build it from the file and paste the output into the call unchanged:
+```bash
+gzip -c <working-dir>/<provider>-template.json | base64
+```
+Pasting the text as `templateContent` costs you twice, once to read the file and again to write it into the call. An 85 KB template is about 46k tokens each way, and its gzipped form is about 9 times fewer characters. A copying mistake can't slip through either: the server's checksum rejects a damaged value instead of translating a different template. Re-encode after every edit, because any change alters the whole value. Pass only one of `templateContent` and `templateContentGzip`.
+
+On every run also pass `today` set to the job data's `today`, so dates don't move between iterations. Inputs, defaults and error messages are in [docs/edi-translate.md](docs/edi-translate.md).
 
 **Iterate on a small sample.** Build `<working-dir>/sample.json`: a JSON array of 5–10 records that between them hit the template's branches (a subscriber with dependents, each coverage type, a waived coverage, …). Pick them with `jq`, e.g.
 ```bash
 jq '[.data[0:3][], (.data[3:] | map(select(.["Relationship Code"] != "Self")))[0:2][]]' <working-dir>/<job_id>.json > <working-dir>/sample.json
 ```
-Call `edi_translate` with `data` = the array in `sample.json` and `templateContent`. The result has two content blocks: a header (`Translated output: 4,210 characters (complete). today=…`) and the output verbatim. Write the second block to `<working-dir>/output.edi` (`output.xml` for an XML template) and inspect it with `grep` / `awk` — split X12 into one segment per line first with `tr '~' '\n'`. Synthetic records for branch checks (Step 8) go through the same call: add them to the sample.
+Call `edi_translate` with `dataGzip` = `sample.json` encoded the same way (`gzip -c <working-dir>/sample.json | base64`) and `templateContentGzip`. Real records run a few KB each, so even a small sample is cheaper gzipped. The result has two content blocks: a header (`Translated output: 4,210 characters (complete). today=…`) and the output verbatim. Write the second block to `<working-dir>/output.edi` (`output.xml` for an XML template) and inspect it with `grep` / `awk` — split X12 into one segment per line first with `tr '~' '\n'`. Synthetic records for branch checks (Step 8) go through the same call: add them to `sample.json` and re-encode it.
 
-**Then translate the full feed once, before delivering.** Call `edi_translate` with `organizationId`, `jobId` (the job from Step 2) and `templateContent`. The server reads that job's complete data itself, so nothing large passes through the conversation on the way in. The output is **real, unanonymized data**, and every page of it lands in the conversation, so don't save it to a file by default — writing a file means typing the whole output out again. Page through it: when the header says `TRUNCATED`, call again with the `offset` it gives and the same inputs until it says `(end of output)`. An error-free run means every record rendered; read the SE, GE and IEA counts from the last page. Content checks belong on the sample.
+**Then translate the full feed once, before delivering.** Call `edi_translate` with `organizationId`, `jobId` (the job from Step 2) and `templateContentGzip`. The server reads that job's complete data itself, so nothing large passes through the conversation on the way in. The output is **real, unanonymized data**, and every page of it lands in the conversation, so don't save it to a file by default — writing a file means typing the whole output out again. Page through it: when the header says `TRUNCATED`, call again with the `offset` it gives and the same inputs until it says `(end of output)`. Every page sends the template again, which is where the gzipped form saves the most. An error-free run means every record rendered; read the SE, GE and IEA counts from the last page. Content checks belong on the sample.
 
 A `Template error at rules[0].children[2]: …` error names the rule whose expression failed — fix that rule and translate again.
 
@@ -212,7 +218,7 @@ Print:
 
 ## Checking a real run's generated file
 
-Translating your local template proves what that template produces. Once a job has run through translation, read the file the pipeline actually wrote instead of assuming it matches. A safe test run is `mcp__claude_ai_EDI_Cosmos_DB__edi_start_job` (translation-only, always `doNotSendToProvider`) after the template is uploaded with `mcp__claude_ai_EDI_Cosmos_DB__edi_upload_schedule_template`.
+Translating your local template proves what that template produces. Once a job has run through translation, read the file the pipeline actually wrote instead of assuming it matches. A safe test run is `mcp__claude_ai_EDI_Cosmos_DB__edi_start_job` (translation-only, always `doNotSendToProvider`) after the template is uploaded with `mcp__claude_ai_EDI_Cosmos_DB__edi_upload_schedule_template`. The upload tool also takes `templateContentGzip`, built the same way.
 
 1. **Find the job** — `mcp__claude_ai_EDI_Cosmos_DB__edi_list_jobs` (`organizationId`, `scheduleId`, `limit: 1`). It has a generated file only when `generatedFileURL` is non-empty (status stage `translation` or later, name `complete`/`completed`). A job that failed at extraction or translation has none — read its `status.errorMessage` instead.
 2. **Fetch the file** — `mcp__claude_ai_EDI_Blob_Storage__edi_get_generated_file` with `job_id_or_url` set to the job's `generatedFileURL` (the job `id` also works for outbound jobs). The result has two content blocks: a header line (`Generated file <name>: 13,577 characters (complete).`) and the file itself, verbatim. Save the second block to `<working-dir>/<job_id>.generated.txt`. It is real, unanonymized data, same as job data.
