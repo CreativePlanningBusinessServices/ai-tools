@@ -12,6 +12,7 @@ Claude Code skills and NetSuite scripts maintained by Creative Planning.
 | `skills/netsuite-email-designer` | Preview, edit, save and create email templates, with an email-client compatibility check |
 | `skills/netsuite-pdf-designer` | Preview, validate, edit, save and create Advanced PDF/HTML templates (invoices, statements and other transaction PDFs), with a BFO/FreeMarker validator |
 | `netsuite/restlets` | The five RESTlets those skills call, ready to deploy into an account |
+| `netsuite/ai-role` | The read-only NetSuite role the AI support agent signs in with (baseline plus one tailored copy per account) and the checklist for onboarding an account |
 | `skills/edi-template-builder` | Build and revise EDI benefits-feed templates (X12 834 and others) |
 | `skills/suitecloud-cli` | When and how to use the SuiteCloud CLI for NetSuite object definitions (forms, records, fields, scripts…), and how to set up its machine-to-machine auth from an existing netsuite-cli account |
 

@@ -1,0 +1,10 @@
+# Keys NetSuite refused on deploy in this account (features it doesn't have). Appended by view-role.py deploy.
+LIST_TEGATAACCOUNT
+REPO_EMAIL
+REPO_GSTSUMMARY
+REPO_PSTSUMMARY
+TRAN_GST_REFUND
+TRAN_RECEIVEINBOUND
+TRAN_TAXLIAB
+TRAN_TEGPYBL
+TRAN_TEGRCVBL
