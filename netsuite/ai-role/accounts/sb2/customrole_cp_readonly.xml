@@ -1,4 +1,4 @@
-<role scriptid="customrole_cp_ai_readonly">
+<role scriptid="customrole_cp_readonly">
   <centertype>ACCOUNTCENTER</centertype>
   <coreadminpermission>F</coreadminpermission>
   <employeerestriction>NONE</employeerestriction>
@@ -8,7 +8,7 @@
   <issinglesignononly>F</issinglesignononly>
   <issupportrole>F</issupportrole>
   <iswebserviceonlyrole>F</iswebserviceonlyrole>
-  <name>CP AI Support (Read Only)</name>
+  <name>CP Support (Read Only)</name>
   <restrictbydevice>F</restrictbydevice>
   <restricttimeandexpenses>F</restricttimeandexpenses>
   <subsidiaryoption>ALL</subsidiaryoption>
@@ -148,6 +148,42 @@
     </permission>
     <permission>
       <permkey>LIST_PROJECTTASK</permkey>
+      <permlevel>VIEW</permlevel>
+    </permission>
+    <permission>
+      <permkey>ADMI_CUSTFORM</permkey>
+      <permlevel>VIEW</permlevel>
+    </permission>
+    <permission>
+      <permkey>ADMI_CUSTENTRYFORM</permkey>
+      <permlevel>VIEW</permlevel>
+    </permission>
+    <permission>
+      <permkey>ADMI_CUSTBODYFIELD</permkey>
+      <permlevel>VIEW</permlevel>
+    </permission>
+    <permission>
+      <permkey>ADMI_CUSTCOLUMNFIELD</permkey>
+      <permlevel>VIEW</permlevel>
+    </permission>
+    <permission>
+      <permkey>ADMI_CUSTENTITYFIELD</permkey>
+      <permlevel>VIEW</permlevel>
+    </permission>
+    <permission>
+      <permkey>ADMI_CUSTEVENTFIELD</permkey>
+      <permlevel>VIEW</permlevel>
+    </permission>
+    <permission>
+      <permkey>ADMI_CUSTITEMFIELD</permkey>
+      <permlevel>VIEW</permlevel>
+    </permission>
+    <permission>
+      <permkey>ADMI_CUSTFIELDTAB</permkey>
+      <permlevel>VIEW</permlevel>
+    </permission>
+    <permission>
+      <permkey>LIST_EMAILTEMPLATE</permkey>
       <permlevel>VIEW</permlevel>
     </permission>
   </permissions>
