@@ -50,8 +50,11 @@ def deploy_dropping_rejected(args):
         output = result.stdout + result.stderr
         rejected = sorted(set(REJECTED_KEY.findall(output)))
         if not rejected:
-            print(f'attempt {attempt}: no rejected key')
             print('\n'.join(output.strip().splitlines()[-6:]))
+            # Any other failure (auth, "Record must be unique", validation) must stop here, before a re-import.
+            if result.returncode != 0:
+                sys.exit(f'attempt {attempt}: deploy failed (exit {result.returncode}) with no refused key to drop')
+            print(f'attempt {attempt}: deployed, no refused key')
             return
         print(f'attempt {attempt}: NetSuite refused {", ".join(rejected)}; dropping and retrying')
         with open(dropped_path, 'a') as dropped:
