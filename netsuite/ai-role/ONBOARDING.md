@@ -143,7 +143,11 @@ and `<ID>_AI`.
    CSV Import Job Status page (`/app/setup/upload/csv/csvstatus.nl`) needs it, and Full is its only level.
    The page shows every job's file, user and result line ("48 of 126 records imported successfully"). Each
    job's CSV Response file, with the per-row errors, stays out of reach: NetSuite shows it only to the user
-   who ran the import ("You are not allowed to view the results of a different user's imports"). It also lets the
+   who ran the import ("You are not allowed to view the results of a different user's imports"), unless the
+   role has "Core Administration Permissions". That box is a header setting, not a key, and baseline/'s
+   header turns it on for every account (`<coreadminpermission>T</coreadminpermission>`, since 2026-11-03),
+   so the agent can read the per-row errors wherever it can see the job list. Roles deployed before then keep
+   it off until they are redeployed or the box is checked in the UI. `ADMI_IMPORTCSVFILE` also lets the
    role run CSV imports in the UI. The agent cannot (its browser can't click, fill or upload, and its
    NetSuite CLI writes are blocked), but anyone signing in with this role could, so it is opt-in per client.
 8. **Put the role on the employee.** The agent signs in as one employee with this role. Either:

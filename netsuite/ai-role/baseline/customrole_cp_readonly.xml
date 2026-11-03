@@ -1,6 +1,6 @@
 <role scriptid="customrole_cp_readonly">
   <centertype>ACCOUNTCENTER</centertype>
-  <coreadminpermission>F</coreadminpermission>
+  <coreadminpermission>T</coreadminpermission>
   <employeerestriction>NONE</employeerestriction>
   <employeeselectionunrestricted>F</employeeselectionunrestricted>
   <isinactive>F</isinactive>

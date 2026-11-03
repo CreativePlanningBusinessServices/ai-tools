@@ -198,3 +198,16 @@ not see it. The jobs' CSV Response files (per-row errors) still refuse the role:
 to the user who ran the import. Full is the permission's only level, and it lets the role run CSV imports
 in the UI; the agent itself cannot. Deployed 2026-11-03 (re-imported: 327 permissions). Accepted by: Jon,
 2026-11-03.
+
+## Core Administration Permissions (added 2026-11-03)
+
+`coreadminpermission` T: the "Core Administration Permissions" box on the role, a header setting rather
+than a permission key, now on in baseline/ for every account. With it the role opens any user's CSV
+Response file (`/app/setup/upload/csv/uploadlogcsv.nl?wqid=<id>`), which "Import CSV File" alone refuses. Case 14566's
+v2 response file then showed 77 "This record already exists" rows, 24 rows rejected with them (blank Error)
+and 1 "The total can not be negative.", the same findings the tech reached. The box is broad: it also opens
+other administration pages to the role. The agent still cannot change anything through them (its browser
+can't click, fill or upload, and its NetSuite CLI writes are blocked), but anyone signing in with this role
+could, so the role must stay on the agent's employee only. Jon checked the box in the UI on 2026-11-03 and
+made it the default for every account; `customrole_cp_readonly.xml` is the re-import after it (327 permissions, only `coreadminpermission` changed).
+Accepted by: Jon, 2026-11-03.
