@@ -45,6 +45,8 @@ def main():
 
 def deploy_dropping_rejected(args):
     dropped_path = os.path.join('accounts', args.alias, 'dropped.txt')
+    added_path = os.path.join('accounts', args.alias, 'added.txt')
+    added = read_key_levels(added_path)
     for attempt in range(1, args.max_attempts + 1):
         build(args)
         result = subprocess.run(['suitecloud', 'project:deploy'], cwd=args.out, capture_output=True, text=True)
@@ -57,6 +59,11 @@ def deploy_dropping_rejected(args):
                 sys.exit(f'attempt {attempt}: deploy failed (exit {result.returncode}) with no refused key to drop')
             print(f'attempt {attempt}: deployed, no refused key')
             return
+        # An approved key is never dropped quietly, and added.txt would put it back on every rebuild anyway.
+        refused_added = [key for key in rejected if key in added]
+        if refused_added:
+            sys.exit(f'attempt {attempt}: NetSuite refused {", ".join(refused_added)} from {added_path}; '
+                     'fix or remove that line and tell the client')
         print(f'attempt {attempt}: NetSuite refused {", ".join(rejected)}; dropping and retrying')
         with open(dropped_path, 'a') as dropped:
             dropped.write(''.join(f'{key}\n' for key in rejected))
