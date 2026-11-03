@@ -1,0 +1,3 @@
+# Keys this account adds beyond read-only, with their levels. Read by view-role.py build; wins over every other list.
+# Approved by Jon (admin in 4244448) on 2026-11-03.
+ADMI_IMPORTCSVFILE FULL  # the CSV Import Job Status page (each job's result line); Full is its only level

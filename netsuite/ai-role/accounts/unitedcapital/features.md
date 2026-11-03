@@ -189,3 +189,12 @@ step 1). SDF accepts the key although its permission list lacks it: validation a
 passed on 2026-11-02.
 
 Accepted by: ____
+
+## Import CSV File (added 2026-11-03)
+
+`ADMI_IMPORTCSVFILE` at Full (`added.txt`), so the triage agent can read the CSV Import Job Status page:
+each job's file, user and result line. Case 14566's re-upload imported 48 of 126 rows and the agent could
+not see it. The jobs' CSV Response files (per-row errors) still refuse the role: NetSuite shows them only
+to the user who ran the import. Full is the permission's only level, and it lets the role run CSV imports
+in the UI; the agent itself cannot. Deployed 2026-11-03 (re-imported: 327 permissions). Accepted by: Jon,
+2026-11-03.
