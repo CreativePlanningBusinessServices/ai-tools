@@ -140,3 +140,9 @@ The read-only role can run both joins: in United Capital, role 1535 (`unitedcapi
 customers on "Set Churn Date on Customer Record" through the `workflow` join, and the `workflowhistory`
 join ran without error. The triage agent's guard allows this ad-hoc run (POST with `"run": true`) from
 2026-11-01 on the case-triage-agent `feature/sdf-read` branch.
+
+## Core Administration Permissions (2026-11-03)
+
+baseline/ now turns on "Core Administration Permissions" (`coreadminpermission` T) for every account, so the
+agent can open other users' CSV Response files. The role deployed here still has it off
+(`customrole_cp_readonly.xml` shows F) until the next deploy, or until the box is checked in the UI.

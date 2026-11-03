@@ -1,6 +1,6 @@
 <role scriptid="customrole_cp_readonly">
   <centertype>ACCOUNTCENTER</centertype>
-  <coreadminpermission>F</coreadminpermission>
+  <coreadminpermission>T</coreadminpermission>
   <custrecord_cash360_role_access>F</custrecord_cash360_role_access>
   <employeerestriction>NONE</employeerestriction>
   <employeeselectionunrestricted>F</employeeselectionunrestricted>
