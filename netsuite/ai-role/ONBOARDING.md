@@ -25,6 +25,7 @@ no-view-level.txt                            keys that have no View level (SDF r
 scripts/view-role.py                         builds the role into a scratch SDF project, and deploys it
 accounts/<alias>/customrole_cp_readonly.xml  that account's role, re-imported after deploy (as it exists)
 accounts/<alias>/dropped.txt                 keys that account refused on deploy, or the client asked to leave off
+accounts/<alias>/added.txt                   "KEY LEVEL" lines the client approved beyond read-only (win over all lists)
 accounts/<alias>/custom-records.txt          custom record types listed on the role there
 accounts/<alias>/features.md                 decisions for that account, with an "Accepted by" line
 deploy.xml                                   ships Objects/Roles/customrole_cp_readonly.xml only
@@ -136,6 +137,15 @@ and `<ID>_AI`.
    re-import plus that one line, deployed from the scratch folder: the role then differs from the live
    one by exactly that line. An SDF redeploy never removes a permission: to take one off a deployed role
    (`LIST_SYSTEMNOTES` when a client asks later), remove it in the UI, list it in `dropped.txt` and re-import.
+
+   A permission beyond read-only goes in `accounts/<alias>/added.txt` as `KEY LEVEL`, only with the client's
+   approval recorded there and in `features.md`. The one offered so far is `ADMI_IMPORTCSVFILE FULL`: the
+   CSV Import Job Status page (`/app/setup/upload/csv/csvstatus.nl`) needs it, and Full is its only level.
+   The page shows every job's file, user and result line ("48 of 126 records imported successfully"). Each
+   job's CSV Response file, with the per-row errors, stays out of reach: NetSuite shows it only to the user
+   who ran the import ("You are not allowed to view the results of a different user's imports"). It also lets the
+   role run CSV imports in the UI. The agent cannot (its browser can't click, fill or upload, and its
+   NetSuite CLI writes are blocked), but anyone signing in with this role could, so it is opt-in per client.
 8. **Put the role on the employee.** The agent signs in as one employee with this role. Either:
    - your own employee in that account (`ent` from step 3b). No extra user license, and audit trails
      show you with this role. United Capital uses employee 5 this way, for the browser too (step 13): the

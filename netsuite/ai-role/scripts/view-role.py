@@ -4,7 +4,8 @@
   build   Write a scratch SDF project holding the role: every permission key SuiteCloud knows, at View,
           minus exclusions.txt and no-view-level.txt, with baseline/'s levels on top (baseline adds
           keys the SDK list lacks, such as LIST_SYSTEMNOTES), minus the account's dropped keys, plus the
-          account's custom record types at View (each also listed as a manifest dependency).
+          account's custom record types at View (each also listed as a manifest dependency), plus the
+          account's added keys at their own levels (permissions a client approved beyond read-only).
   deploy  Deploy that project, and when NetSuite refuses a key ("Invalid permkey reference key X"),
           append X to the account's dropped file, rebuild and deploy again.
 
@@ -72,11 +73,13 @@ def build(args):
     # The account's dropped keys win over baseline/ too: NetSuite refused them, or the client asked for them off.
     dropped = read_keys(os.path.join(account_dir, 'dropped.txt'))
     custom_records = sorted(read_keys(os.path.join(account_dir, 'custom-records.txt')))
+    added = read_key_levels(os.path.join(account_dir, 'added.txt'))
 
     levels = {key: 'VIEW' for key in sdk_permission_keys() if key not in excluded}
     levels.update(baseline)
     for key in dropped:
         levels.pop(key, None)
+    levels.update(added)
     permissions = [(key, levels[key]) for key in sorted(levels)]
     permissions += [(custom_record_permkey(record), 'VIEW') for record in custom_records]
 
@@ -118,6 +121,22 @@ def read_keys(path):
         return set()
     with open(path) as keys:
         return {line.split('#')[0].strip() for line in keys} - {''}
+
+
+def read_key_levels(path):
+    """Lines of "KEY LEVEL", e.g. "ADMI_IMPORTCSVFILE FULL"; "#" starts a comment."""
+    if not os.path.exists(path):
+        return {}
+    levels = {}
+    with open(path) as keys:
+        for number, line in enumerate(keys, 1):
+            fields = line.split('#')[0].split()
+            if not fields:
+                continue
+            if len(fields) != 2 or fields[1] not in ('VIEW', 'CREATE', 'EDIT', 'FULL'):
+                sys.exit(f'{path}:{number}: expected "KEY LEVEL" with LEVEL one of VIEW, CREATE, EDIT, FULL')
+            levels[fields[0]] = fields[1]
+    return levels
 
 
 def read_permissions(path):
