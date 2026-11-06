@@ -154,7 +154,8 @@ and `<ID>_AI`.
    - your own employee in that account (`ent` from step 3b). No extra user license, and audit trails
      show you with this role. United Capital uses employee 5 this way, for the browser too (step 13): the
      agent's browser switches to this role on every pass, and each browser login signs you out of that
-     account, because NetSuite allows one session per user.
+     account, because NetSuite allows one session per user. Set Administrator as your default role there
+     (step 13.6), or your next sign-in lands in this role.
    - a dedicated employee "CP AI Support" with login access and only this role, when the client prefers
      the agent not to sign in as you. It takes a user license, and creating it needs the UI.
 
@@ -264,7 +265,13 @@ and `<ID>_AI`.
        is required for a login that holds other roles: each pass switches the browser to it through the
        account's change-role link and reads it back, or runs without the browser. Leave it out only for a
        login whose only role is this one.
-    6. Run one pass on a case for this customer and check the log says `browser <account host> ready (…,
+    6. If the login holds other roles (your own employee), give it a default role, so the agent's switch
+       doesn't follow you into your next sign-in. Without a default, NetSuite signs a user into the role
+       they used last, which after a pass is this read-only role. In the account, open My Roles (Change
+       Role, or `/app/login/secure/myroles/myroles.nl`), click the **⋮** menu on Administrator's row and
+       choose **Make Default**. It is not under Set Preferences. The agent still switches to this role on
+       every pass. United Capital: set on 2026-11-04.
+    7. Run one pass on a case for this customer and check the log says `browser <account host> ready (…,
        in role <role id>)` or `switched to role <role id>`.
     Record the result of the multiple-sessions check from step 2.
 14. **SDF through the agent's wrapper**, not raw `suitecloud`. Write a pass policy into a scratch run folder
