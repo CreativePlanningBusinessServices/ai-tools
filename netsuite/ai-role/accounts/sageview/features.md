@@ -32,7 +32,7 @@ left out.
 refused), `ADMI_LOGIN_OAUTH2`, `ADMI_RESTWEBSERVICES`, `ADMI_APP_DEPLOYMENT` and `ADMI_WORKFLOW` Full.
 `coreadminpermission` is on. Two-factor is `OFF` on the role (see Browser).
 
-Role 2461 was added to employee 130897 ("CPES Support-1", `cpes+sageview@creativeplanning.com`), which also
+Role 2461 was added to employee 130897 ("CPES Support-1"), which also
 holds Administrator and NetSuite 360.
 
 ## Verification (step 11, 12, 14), as `sageview-ai`
