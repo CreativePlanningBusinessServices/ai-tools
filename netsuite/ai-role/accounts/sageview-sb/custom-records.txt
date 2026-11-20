@@ -1,0 +1,166 @@
+# Custom record types with "Use Permission List" that the role lists at View (see features.md).
+customrecord_10782_cntryfmts_by_edition	# Allowed Country Formats By Edition
+customrecord_11724_bank_fee_sched	# Zengin Bank Fee Schedule
+customrecord_12194_file_template_request	# Payment File Template Request
+customrecord_15906_ep_logs	# Electronic Payments Logs
+customrecord_2663_approval_routing	# Approval Routing
+customrecord_2663_bank_details	# Company Bank Details
+customrecord_2663_batch	# Payment Batch
+customrecord_2663_batch_details	# Batch Details
+customrecord_2663_batch_transaction_info	# Batch Transaction Information
+customrecord_2663_bill_eft_payment	# Bill EFT Payment Information
+customrecord_2663_dummy_list	# EP Dummy List
+customrecord_2663_entity_bank_details	# Bank Details
+customrecord_2663_file_admin	# Payment File Administration
+customrecord_2663_format_details	# Format Details
+customrecord_2663_payment_aggregation	# Payment Aggregation
+customrecord_2663_payment_file_format	# Payment File Format
+customrecord_2663_payment_schedule	# Payment Schedule
+customrecord_2663_queue_settings	# EP Queue Settings
+customrecord_8299_client_audit_trail	# Client Audit Trail
+customrecord_8299_license_cache	# License Cache
+customrecord_8299_license_server	# License Server Details
+customrecord_8391_dd_format_spcfc_types	# Direct Debit File Format Specific Types
+customrecord_assetlifetimes	# FAM Lifetimes
+customrecord_bg_procinstance	# BG Process Instance
+customrecord_bg_proclog	# BG Process Log
+customrecord_bg_queueinstance	# BG Queue Instance
+customrecord_bg_summaryrecord	# BG Summary Records
+customrecord_cseg_acquisition_sv	# Acquisition SV
+customrecord_cseg_cp_asset_name	# Asset Alt Name
+customrecord_cseg_office	# Office
+customrecord_cseg_organiclegacy	# Growth Type
+customrecord_dad_enabled_record_type	# File Drag and Drop Record Type
+customrecord_dad_file	# DnD File
+customrecord_dad_file_html	# DnD File Html
+customrecord_dt_tile	# Dashboard Tile
+customrecord_dt_translations	# Dashboard Tile Translations
+customrecord_ed_preference	# ED Preferences
+customrecord_ep_preference	# Electronic Payments Preference
+customrecord_ep_proc_results	# EP Thread Processing Results
+customrecord_fam_assetresetdata	# FAM Asset Reset Data
+customrecord_fam_assetvalues	# FAM Asset Values
+customrecord_fam_leasecontract	# Lease Contract
+customrecord_fam_leasepayments	# Lease Payments
+customrecord_fam_oldforecastdata	# FAM Old Forecast Data
+customrecord_fam_process	# FAM Process
+customrecord_fam_recent_diagnosis	# FAM Recent Diagnosis
+customrecord_fam_specialdepreciation	# FAM Special Depreciation
+customrecord_fam_tpaf_mapping	# FAM Transaction Field Map
+customrecord_laa_accounting_standard	# NetLease Lease Accounting Standard
+customrecord_laa_account_history	# NetLease Lease Type Account History
+customrecord_laa_automation_rule	# NetLease Automation Rule
+customrecord_laa_automation_trigger_type	# NetLease Automation Trigger
+customrecord_laa_contract_provision	# NetLease Contract Provision
+customrecord_laa_custom_calendar	# NetLease Custom Calendar
+customrecord_laa_custom_calendar_period	# NetLease Custom Calendar Period
+customrecord_laa_custom_filter	# NetLease Custom Filter
+customrecord_laa_custom_sourcing	# NetLease Custom Sourcing
+customrecord_laa_fee_type	# NetLease Fee Type
+customrecord_laa_global_settings	# NetLease Global Settings
+customrecord_laa_lease	# NetLease Lease
+customrecord_laa_lease_classification	# NetLease Lease Classification
+customrecord_laa_lease_fee	# NetLease Fee
+customrecord_laa_lease_modification	# NetLease Modification
+customrecord_laa_lease_payment	# NetLease Lease Payment
+customrecord_laa_lease_proposal	# NetLease Lease Proposal
+customrecord_laa_lease_type	# NetLease Lease Type
+customrecord_laa_lse_schedule_line	# NetLease Schedule Line
+customrecord_laa_product_message	# NetLease Product Message
+customrecord_laa_provision_type	# NetLease Provision Type
+customrecord_laa_reclass_je_type	# NetLease Reclass Journal Type
+customrecord_laa_renewal_type	# NetLease Renewal Type
+customrecord_laa_report	# NetLease Report
+customrecord_laa_report_package	# NetLease Report Package
+customrecord_laa_system_job	# NetLease System Job
+customrecord_laa_system_job_batch	# NetLease System Job Batch
+customrecord_laa_termination	# NetLease Termination
+customrecord_laa_transaction_processing	# NetLease Transaction Processing
+customrecord_laa_transfer	# NetLease Transfer Proposal
+# not reachable through SDF: customrecord_nact_accrual	# NetClose Accrual
+# not reachable through SDF: customrecord_nact_accrualtype	# NetClose Accrual Type
+# not reachable through SDF: customrecord_nact_accrual_automation	# NetClose Accrual Automation
+# not reachable through SDF: customrecord_nact_accrual_modification	# NetClose Accrual Modification
+# not reachable through SDF: customrecord_nact_accrual_sl	# NetClose Accrual Schedule Line
+# not reachable through SDF: customrecord_nact_amort	# NetClose Amortization
+# not reachable through SDF: customrecord_nact_amort_commence_perm	# NetClose Amortization Commence
+# not reachable through SDF: customrecord_nact_amort_mod	# NetClose Amortization Modification
+# not reachable through SDF: customrecord_nact_amort_sl	# NetClose Amortization Schedule Line
+# not reachable through SDF: customrecord_nact_amort_type	# NetClose Amortization Type
+# not reachable through SDF: customrecord_nact_bank	# NetClose Bank Institution
+# not reachable through SDF: customrecord_nact_bankacct	# NetClose Bank Account
+# not reachable through SDF: customrecord_nact_bankmatch	# NetClose Bank Match Group
+# not reachable through SDF: customrecord_nact_bankmatchtran	# NetClose Bank Match Item
+# not reachable through SDF: customrecord_nact_banktran	# NetClose Bank Transaction
+# not reachable through SDF: customrecord_nact_bank_rule	# NetClose Bank Automation
+# not reachable through SDF: customrecord_nact_bank_rule_match	# NetClose Bank Matching Criteria
+# not reachable through SDF: customrecord_nact_close_control	# NetClose Close Control
+# not reachable through SDF: customrecord_nact_comment	# NetClose Comment
+# not reachable through SDF: customrecord_nact_dependent_task	# NetClose Dependent Task
+# not reachable through SDF: customrecord_nact_email_automation	# NetClose Email Automation
+# not reachable through SDF: customrecord_nact_flux_account_mapping	# NetClose Flux Account Mapping
+# not reachable through SDF: customrecord_nact_flux_anlsys	# NetClose Flux Analysis
+# not reachable through SDF: customrecord_nact_flux_group	# NetClose Flux Analysis Group
+# not reachable through SDF: customrecord_nact_flux_scenario	# NetClose Flux Scenario
+# not reachable through SDF: customrecord_nact_global_settings	# NetClose Global Settings
+# not reachable through SDF: customrecord_nact_lock_modules	# NetClose Lock Modules
+# not reachable through SDF: customrecord_nact_non_working_days	# NetClose Non Working Days
+# not reachable through SDF: customrecord_nact_overdue_reason	# NetClose Overdue Reason
+# not reachable through SDF: customrecord_nact_product_message	# NetClose Product Message
+# not reachable through SDF: customrecord_nact_recon	# NetClose Reconciliation
+# not reachable through SDF: customrecord_nact_reconitem	# NetClose Reconciliation Item
+# not reachable through SDF: customrecord_nact_recon_activity_perm	# NetClose Recon Limited Activity
+# not reachable through SDF: customrecord_nact_recon_clearing_info	# NetClose Reconciliation Clearing Info
+# not reachable through SDF: customrecord_nact_recon_journal_perm	# NetClose Recon Journal
+# not reachable through SDF: customrecord_nact_recon_rules	# NetClose Account Grouping
+# not reachable through SDF: customrecord_nact_relative_date	# NetClose Relative Date
+# not reachable through SDF: customrecord_nact_report	# NetClose Report
+# not reachable through SDF: customrecord_nact_sent_email_automation	# NetClose Sent Email Automation
+# not reachable through SDF: customrecord_nact_sop	# NetClose Accounting Procedure
+# not reachable through SDF: customrecord_nact_sop_step	# NetClose Accounting Procedure Step
+# not reachable through SDF: customrecord_nact_sourcing	# NetClose Sourcing
+# not reachable through SDF: customrecord_nact_task	# NetClose Task
+# not reachable through SDF: customrecord_nact_taskclassification	# NetClose Task Classification
+# not reachable through SDF: customrecord_nact_task_activity_perm	# NetClose Task Limited Activity
+# not reachable through SDF: customrecord_nact_work_calendar	# NetClose Work Calendar
+customrecord_nav_category	# Navigation Category
+customrecord_nav_shortcut	# Navigation Shortcut
+customrecord_nav_shortcutgroup	# Navigation Shortcut Group
+customrecord_nav_shortcut_tooltip	# Navigation Shortcut Tooltip
+customrecord_ncfar_altdeprdef	# FAM Default Alt Depreciation
+customrecord_ncfar_altdepreciation	# FAM Alternate Depreciation
+customrecord_ncfar_altdepr_proposal	# FAM Proposal Alt Depreciation
+customrecord_ncfar_altmethods	# FAM Alternate Methods
+customrecord_ncfar_asset	# FAM Asset
+customrecord_ncfar_assetproposal	# FAM Asset Proposal
+customrecord_ncfar_assettype	# FAM Asset Type
+customrecord_ncfar_assetusage	# FAM Asset Usage
+customrecord_ncfar_deprhistory	# FAM Depreciation History
+customrecord_ncfar_deprmethod	# FAM Depreciation Method
+customrecord_ncfar_expenseincome	# FAM Expense/Income
+customrecord_ncfar_systemsetup	# FAM System Setup
+customrecord_ncfar_transferaccounts	# FAM Asset Transfer Accounts
+# left out (payment processor data): customrecord_netsuitepay	# Versapay SuitePayment
+# not reachable through SDF: customrecord_nsapm_pts_setupsummary	# NSAPM PTS Set Up Summary
+# not reachable through SDF: customrecord_nsapm_rpm_setup_date_range	# NSAPM RPM SetUp Date Range
+# not reachable through SDF: customrecord_nsapm_rpm_setup_general	# NSAPM RPM Setup General
+# not reachable through SDF: customrecord_nsapm_rpm_setup_recordpages	# NSAPM RPM SetUp Record Pages
+# not reachable through SDF: customrecord_nsapm_setup_employee_access	# NSAPM Setup Employees Access
+# not reachable through SDF: customrecord_nsapm_setup_parent	# NSAPM Setup Parent
+# not reachable through SDF: customrecord_nsapm_setup_roles_access	# NSAPM Setup Roles Access
+# not reachable through SDF: customrecord_ns_sftp_configuration	# Outbound Configuration
+# not reachable through SDF: customrecord_ns_sftp_decrypt_config	# Decryption Configuration
+# not reachable through SDF: customrecord_ns_sftp_ib_configuration	# Inbound Configuration
+# not reachable through SDF: customrecord_ns_sftp_ib_download_status	# Payment Files Download Status
+customrecord_ob_org_tree	# Org Browser Tree
+# not reachable through SDF: customrecord_ps_sftp_fld_map	# Outbound Folder Mapping
+# not reachable through SDF: customrecord_ps_sftp_ib_fld_map	# Inbound Folder Mapping
+customrecord_repairmaintcategory	# FAM Repair & Maint Category
+customrecord_repairmaintsubcategory	# FAM Repair & Maint Sub A
+customrecord_repairmaintsubcategoryb	# FAM Repair & Maint Sub B
+# not reachable through SDF: customrecord_scs_email_configuration	# SuperSync Email Configuration
+# not reachable through SDF: customrecord_scs_email_matching_log	# SuperSync Email Matching Log
+# not reachable through SDF: customrecord_scs_email_match_type	# SuperSync Email Matching Type
+# not reachable through SDF: customrecord_scs_email_profile	# SuperSync Email Profile
+# not reachable through SDF: customrecord_scs_email_record_field	# SuperSync Email Record Field
+# not reachable through SDF: customrecord_scs_email_record_form	# SuperSync Email Record Form
