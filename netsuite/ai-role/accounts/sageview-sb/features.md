@@ -21,4 +21,4 @@
 
 ## Still to do
 
-- Production (875176), then the pilot config entry for customer 439432.
+- Production done on 2026-11-20 (`accounts/sageview/`).
