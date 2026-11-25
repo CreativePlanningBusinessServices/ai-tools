@@ -103,6 +103,12 @@ and `<ID>_AI`.
    Review the list with the client and delete lines (or turn them into `#` comments) for types holding
    bank details, payment credentials or card data; record each decision in `features.md`. United
    Capital kept its bank-detail records at Jon's request and left out the Versapay/Solupay ones.
+
+   Custom transaction types (`customsale_*`, `customtransaction_*`, `custompurchase_*`) also need a line, or the
+   role can't see their transactions at all; the baseline doesn't cover them. List them with
+   `SELECT scriptid, name FROM customtransactiontype` and add each one to `custom-records.txt` (Benedictine's
+   eTap donations were a third of its transactions). Step 11's transaction count, compared with the admin
+   alias's, catches a missing one.
 6. **Build and validate.**
    ```bash
    python3 scripts/view-role.py build --alias <alias> --authid <ID>_M2M --out /tmp/cp-role-<alias>
@@ -254,7 +260,11 @@ and `<ID>_AI`.
        agent-browser --session netsuite-ai-<alias> --session-name netsuite-ai-<alias> --headed open https://<account host>/app/center/card.nl
        totp-cli add netsuite-ai-<alias>
        ```
-    4. Save the login to the agent-browser vault (it prompts for the password):
+    4. Save the login to the agent-browser vault (it prompts for the password). `auth save` runs through
+       agent-browser's default daemon, which encrypts with the `AGENT_BROWSER_ENCRYPTION_KEY` it was started
+       with, so it must be the key in Claude's settings (the one the agent runs with). If the shell exports a
+       different one (`~/.zshrc`), run `agent-browser close` first and export the settings key for the save;
+       otherwise the agent gets "Decryption failed: aead::Error" and the login stays on the login page.
        ```bash
        agent-browser --session netsuite-ai-<alias> --session-name netsuite-ai-<alias> auth save netsuite-ai-<alias> \
          --url https://<account host>/app/center/card.nl --username <login email> --password-stdin

@@ -1,0 +1,117 @@
+# Custom record types with "Use Permission List" that the role lists at View (see features.md).
+customrecord_10782_cntryfmts_by_edition	# Allowed Country Formats By Edition
+customrecord_11724_bank_fee_sched	# Zengin Bank Fee Schedule
+customrecord_12194_file_template_request	# Payment File Template Request
+customrecord_15906_ep_logs	# Electronic Payments Logs
+customrecord_2663_approval_routing	# Approval Routing
+customrecord_2663_batch	# Payment Batch
+customrecord_2663_batch_details	# Batch Details
+customrecord_2663_batch_transaction_info	# Batch Transaction Information
+customrecord_2663_dummy_list	# EP Dummy List
+customrecord_2663_file_admin	# Payment File Administration
+customrecord_2663_format_details	# Format Details
+customrecord_2663_payment_aggregation	# Payment Aggregation
+customrecord_2663_payment_file_format	# Payment File Format
+customrecord_2663_payment_schedule	# Payment Schedule
+customrecord_2663_queue_settings	# EP Queue Settings
+customrecord_8299_client_audit_trail	# Client Audit Trail
+customrecord_8299_license_cache	# License Cache
+customrecord_8299_license_server	# License Server Details
+customrecord_8391_dd_format_spcfc_types	# Direct Debit File Format Specific Types
+customrecord_cseg1	# Sales Type
+customrecord_dad_enabled_record_type	# File Drag and Drop Record Type
+customrecord_dad_file	# DnD File
+customrecord_dad_file_html	# DnD File Html
+customrecord_dt_tile	# Dashboard Tile
+customrecord_dt_translations	# Dashboard Tile Translations
+customrecord_ed_preference	# ED Preferences
+customrecord_ep_preference	# Electronic Payments Preference
+customrecord_ep_proc_results	# EP Thread Processing Results
+customrecord_nav_category	# Navigation Category
+customrecord_nav_shortcut	# Navigation Shortcut
+customrecord_nav_shortcut_tooltip	# Navigation Shortcut Tooltip
+customrecord_nav_shortcutgroup	# Navigation Shortcut Group
+customrecord_ns_ibe_account_config	# Account Configuration
+customrecord_ns_ibe_account_environment	# Account Environment
+customrecord_ns_ibe_bug_statuses	# Bug Statuses
+customrecord_ns_ibe_gap_types	# Gap Types
+customrecord_ns_ibe_migration_bundle	# Migration Bundle
+customrecord_ns_ibe_project_statuses	# Project Statuses
+customrecord_ns_ibe_release_version	# Release Version
+customrecord_ns_ibe_req_channel_or_area	# Channel/Area
+customrecord_ns_ibe_req_plan_statuses	# Planning Statuses
+customrecord_ns_ibe_req_statuses	# Requirement Statuses
+customrecord_ns_ibe_req_types	# Requirement Types
+customrecord_ns_ibe_skill_type	# Skills
+customrecord_ns_one_change_log	# Change Log
+customrecord_ns_one_pm_summary	# Project Summary
+customrecord_ns_pm_issues	# Project Issues
+customrecord_ns_pm_key_milestones	# Key Milestones
+customrecord_ns_pm_project_risks	# Project Risks
+customrecord_ns_ps_meeting_notes	# NetSuite PS Meeting Notes
+customrecord_ns_req_bug_resolut_statuses	# Bug Resolution Statuses
+customrecord_ns_req_bug_severities	# Bug Severities
+customrecord_ns_ts_issue_statuses	# NetSuite TS Issue Statuses
+customrecord_ns_ts_test_issue	# Test Issues
+customrecord_ob_org_tree	# Org Browser Tree
+customrecord_sas_approval_logs	# Email Approval Log
+customrecord_sas_approval_preferences	# Approval Preference
+customrecord_sas_mapping_setup	# Mapping Setup
+customrecordcustomrecord_association	# Associations
+customsale_legacy_etap_transactio	# Legacy eTap Transaction (custom transaction type, CuTrSale)
+
+# left out (bank account details, payment or donation-gateway setup):
+# customrecord_2663_bank_details	# Company Bank Details
+# customrecord_2663_bill_eft_payment	# Bill EFT Payment Information
+# customrecord_2663_entity_bank_details	# Bank Details
+# customrecord_od_setup	# Online Donation Setup
+# customrecord_od_setup_donor_key	# Online Donor Key
+
+# not reachable through SDF ("not in the account"):
+# customtransaction_npo_receivable_wrt_off	# Receivable Write-Off (custom transaction type) (no records)
+# customtransaction_npo_release_from_restr	# Release from Restriction (custom transaction type) (no records)
+# customrecord_atlas_finworkbook_strings	# SuiteSuccess FinWB Strings
+# customrecord_b360_benchmark_data	# Benchmark 360 Benchmark Data
+# customrecord_b360_kpi_list	# Benchmark 360 KPI List
+# customrecord_b360_kpi_snapshot	# Benchmark 360 KPI Snapshot
+# customrecord_b360_preference_audit_log	# Benchmark 360 Preferences Audit Log
+# customrecord_b360_preferences	# Benchmark 360 Preferences
+# customrecord_b360_repository	# Benchmark 360 Repository Setup
+# customrecord_b360_scheduled_job	# Benchmark 360 Scheduled Job
+# customrecord_b360_subsidiary_mapping	# Benchmark 360 Subsidiary Mapping
+# customrecord_country_states_text	# Country and states text
+# customrecord_cseg_dm_household	# Household
+# customrecord_cseg_npo_exp_type	# Functional Expense
+# customrecord_cseg_npo_fund_p	# Program
+# customrecord_cseg_npo_grant_segm	# Grant
+# customrecord_cseg_npo_region	# Region
+# customrecord_cseg_npo_restrictn	# Restriction
+# customrecord_cseg_npo_rev_sub	# Revenue Subtype
+# customrecord_cseg_npo_rev_type	# Revenue Type
+# customrecord_cseg_npo_use_year	# Time Restriction
+# customrecord_dm_constituent_relationship	# Constituent Relationship
+# customrecord_dm_household_preferences	# Household Preferences
+# customrecord_dm_relationship_labels	# Relationship Label
+# customrecord_dm_soft_credit	# Soft Credit
+# customrecord_item360_criteria_config	# Item 360 Criteria Configuration
+# customrecord_item360_criteria_grid	# Item 360 Criteria Grid
+# customrecord_item360_user_access	# Item 360 Access
+# customrecord_nfpc_prof_list	# Constituent Profile List
+# customrecord_nfpf_segment_user_settings	# Custom Segment User Settings
+# customrecord_npo_grant_milestone	# Grant Milestone
+# customrecord_npo_grant_priority_list	# Grant Priority
+# customrecord_npo_grant_restr_list	# Grant Restriction
+# customrecord_npo_grant_status_list	# Grant Status
+# customrecord_npo_grant_term_list	# Grant Term
+# customrecord_npo_grant_type_list	# Grant Type
+# customrecord_npo_milestone_type	# Grant Milestone Type
+# customrecord_npo_sgmt_code_recd	# Segment Code
+# customrecord_nsapm_pts_setupsummary	# NSAPM PTS Set Up Summary
+# customrecord_nsapm_rpm_setup_date_range	# NSAPM RPM SetUp Date Range
+# customrecord_nsapm_rpm_setup_general	# NSAPM RPM Setup General
+# customrecord_nsapm_rpm_setup_recordpages	# NSAPM RPM SetUp Record Pages
+# customrecord_nsapm_setup_employee_access	# NSAPM Setup Employees Access
+# customrecord_nsapm_setup_parent	# NSAPM Setup Parent
+# customrecord_nsapm_setup_roles_access	# NSAPM Setup Roles Access
+# customrecord_od_amounts	# Online Donation Amounts
+# customrecord_od_donation_frequencies	# Online Donation Frequencies

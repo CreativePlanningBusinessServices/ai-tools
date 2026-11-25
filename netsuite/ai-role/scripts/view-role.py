@@ -110,7 +110,7 @@ def custom_record_permkey(record):
 
 
 def segment_id(record):
-    return record[len('customrecord_'):] if record.startswith('customrecord_cseg_') else None
+    return record[len('customrecord_'):] if record.startswith('customrecord_cseg') else None
 
 
 def sdk_permission_keys():
