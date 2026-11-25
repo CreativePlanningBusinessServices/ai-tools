@@ -70,8 +70,8 @@ set it to Monastery (Jon's choice).
   employee data".
 - Pilot config: customer 441319 with alias `benedictine-ai`, `sdfAuthId` `11996600_AI`, browser host
   `11996600.app.netsuite.com`, role 1447.
-- Still to confirm: Administrator as the login's default role (My Roles), and whether the account allows
-  multiple sessions per user.
+- Administrator is the login's default role (My Roles, set by Jon on 2026-11-25), and the account allows
+  multiple sessions per user, so the agent's browser doesn't sign anyone out.
 
 ## Logins on Jon's Mac
 
